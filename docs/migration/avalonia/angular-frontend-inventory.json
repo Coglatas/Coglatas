@@ -6,7 +6,8 @@
     "commit": "4e6a10903a5a472ca89f833aba993a29e1b2cf73",
     "inventoryDate": "2026-09-13",
     "issue": 765,
-    "parentIssue": 798
+    "parentIssue": 764,
+    "executionRoadmapIssue": 798
   },
   "ngrx": {
     "declaredDependencies": [
