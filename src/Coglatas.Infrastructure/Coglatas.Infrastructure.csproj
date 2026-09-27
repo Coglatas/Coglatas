@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Coglatas.Application\Coglatas.Application.csproj" />
     <ProjectReference Include="..\Coglatas.Domain\Coglatas.Domain.csproj" />
+    <ProjectReference Include="..\Coglatas.UI.Core\Coglatas.UI.Core.csproj" />
   </ItemGroup>
 
 </Project>
