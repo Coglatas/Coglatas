@@ -73,8 +73,12 @@ test('source inventory, legacy freeze snapshot and v5.8.1 target map cover the s
   assert.deepEqual(targetPaths, inventoryPaths, 'v5.8.1 target map must match the pinned source route set exactly');
   assert.equal(new Set(targetPaths).size, 38, 'pinned target route set must not contain duplicates');
   assert.equal(inventory.source.commit, pinnedSourceSha, 'source inventory must remain pinned to the approved snapshot');
+  assert.equal(inventory.source.parentIssue, 764, 'inventory parent program must remain #764');
+  assert.equal(inventory.source.executionRoadmapIssue, 798, 'inventory execution roadmap must remain #798');
   assert.equal(legacyFreeze.sourceSnapshot, pinnedSourceSha, 'legacy freeze must remain pinned to the approved snapshot');
   assert.equal(targetMap.sourceSnapshot, pinnedSourceSha, 'v5.8.1 target map must remain pinned to the approved snapshot');
+  assert.equal(targetMap.parentProgram, 764, 'target map parent program must remain #764');
+  assert.equal(targetMap.executionRoadmap, 798, 'target map execution roadmap must remain #798');
 });
 
 test('every v5.8.1 target route has PNL/mode, disposition and execution owner', async () => {
@@ -147,15 +151,21 @@ test('embedded Project WorkSurface surfaces are explicit migration units', async
 
   const kanban = embedded.get('project-kanban');
   assert.equal(kanban?.owner, 782);
+  assert.equal(kanban?.november, false);
+  assert.equal(kanban?.freeze, 'Maintenance Only');
   assert.ok(kanban?.support.includes(814));
 
   const gantt = embedded.get('project-gantt');
   assert.equal(gantt?.owner, 787);
+  assert.equal(gantt?.november, false);
+  assert.equal(gantt?.freeze, 'Maintenance Only');
   assert.ok(gantt?.support.includes(777));
   assert.ok(gantt?.support.includes(782));
 
   const table = embedded.get('project-table');
   assert.equal(table?.owner, 782);
+  assert.equal(table?.november, true);
+  assert.equal(table?.freeze, 'November Required');
   assert.ok(table?.support.includes(776));
 });
 
@@ -188,12 +198,28 @@ test('Graph/Dock are owned Avalonia-first capabilities and Calendar remains prom
 
   assert.equal(graph?.owner, 816);
   assert.equal(graph?.disposition, 'AvaloniaFirst');
+  assert.equal(graph?.freeze, 'Avalonia First');
   assert.equal(dock?.owner, 815);
   assert.equal(dock?.disposition, 'AvaloniaFirst');
+  assert.equal(dock?.freeze, 'Avalonia First');
   assert.equal(calendar?.disposition, 'Deferred');
   assert.equal(calendar?.owner, null);
+  assert.equal(calendar?.freeze, 'Avalonia First');
   assert.deepEqual(calendar?.semanticOwners, [782, 784]);
   assert.match(calendar?.promotionRule ?? '', /dedicated implementation Issue/);
+});
+
+test('platform support remains provisional and delegated to #767', async () => {
+  const targetMap = await readJson(targetMapPath);
+  assert.equal(targetMap.platformPolicy?.sourceOfTruthIssue, 767);
+  assert.equal(targetMap.platformPolicy?.status, 'provisional-pending-AV-MIG-03-evidence');
+  assert.equal(targetMap.platformPolicy?.desktop?.role, 'reference-target');
+  assert.equal(targetMap.platformPolicy?.desktop?.tier, 'pending-#767');
+  assert.equal(targetMap.platformPolicy?.desktop?.releaseBlocking, 'not-claimed-by-#765');
+  for (const platform of ['browserWasm', 'android', 'ios']) {
+    assert.equal(targetMap.platformPolicy?.[platform]?.tier, 'pending-#767');
+    assert.equal(targetMap.platformPolicy?.[platform]?.unsupportedOrSkippedIsPass, false);
+  }
 });
 
 test('browser/session persisted state is fully classified and never claims authorization authority', async () => {
