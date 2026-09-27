@@ -10,7 +10,6 @@ namespace Coglatas.Application.Projects;
 /// </summary>
 public static class FirstPartyProjectFilesMaterializationV1
 {
-    public const int SchemaVersion = 1;
     public const int MaxSourceCount = 16;
     public const int MaxSourceBytes = 256 * 1024;
     public const int MaxTotalBytes = 1024 * 1024;
@@ -108,24 +107,3 @@ public sealed record TaskExecutionMaterializedText(
     string ContentSha256,
     long ByteCount,
     string Text);
-
-/// <summary>
-/// Ephemeral server materialization consumed by the selected runtime. It
-/// contains no source name, path, storage key, URL, or browser-supplied ID.
-/// </summary>
-public sealed record TaskExecutionMaterializedSourceContent(
-    Guid ProvenanceId,
-    Guid FileObjectId,
-    Guid AttachmentId,
-    string MediaType,
-    string ContentSha256,
-    long ByteCount,
-    string Text);
-
-public sealed record TaskExecutionMaterializationBatch(
-    Guid RunId,
-    Guid TenantId,
-    IReadOnlyList<TaskExecutionMaterializedSourceContent> Sources)
-{
-    public long TotalByteCount => Sources.Sum(source => source.ByteCount);
-}
