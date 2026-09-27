@@ -126,8 +126,10 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
         // ApiExplorer flattens form DTOs and can omit their property-level
         // Required attributes. Preserve those runtime validation rules in
         // the multipart schema used by clients and scanners.
-        if (operation.RequestBody?.Content?.TryGetValue("multipart/form-data", out var multipart) != true ||
-            multipart.Schema is not OpenApiSchema formSchema)
+        var content = operation.RequestBody?.Content;
+        if (content is null ||
+            !content.TryGetValue("multipart/form-data", out var multipart) ||
+            multipart?.Schema is not OpenApiSchema formSchema)
         {
             return;
         }
