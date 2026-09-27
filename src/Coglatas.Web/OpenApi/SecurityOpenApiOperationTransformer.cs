@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
@@ -15,7 +16,7 @@ namespace Coglatas.Web.OpenApi;
 /// </summary>
 public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTransformer
 {
-    private const string CookieSchemeName = "CookieAuth";
+    public const string CookieSchemeName = "CookieAuth";
     private const string AuthenticationCookieName = ".Coglatas.Auth";
 
     public Task TransformAsync(
@@ -135,8 +136,9 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
         // ApiExplorer flattens form DTOs and can omit their property-level
         // Required attributes. Preserve those runtime validation rules in
         // the multipart schema used by clients and scanners.
-        if (operation.RequestBody?.Content?.TryGetValue("multipart/form-data", out var multipart) != true ||
-            multipart is null ||
+        var content = operation.RequestBody?.Content;
+        if (content is null ||
+            !content.TryGetValue("multipart/form-data", out var multipart) ||
             multipart.Schema is not OpenApiSchema formSchema)
         {
             return;
@@ -152,8 +154,8 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
                     continue;
                 }
 
-                formSchema.Required ??= new HashSet<string>();
-                formSchema.Required.Add(propertyName);
+                var required = formSchema.Required ??= new HashSet<string>();
+                required.Add(propertyName);
             }
         }
     }
@@ -168,7 +170,7 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
             return explicitName;
         }
 
-        var jsonOptions = context.ApplicationServices.GetService(typeof(IOptions<JsonOptions>)) as IOptions<JsonOptions>;
+        var jsonOptions = context.ApplicationServices?.GetService(typeof(IOptions<JsonOptions>)) as IOptions<JsonOptions>;
         return jsonOptions?.Value.JsonSerializerOptions.PropertyNamingPolicy?.ConvertName(property.Name)
             ?? property.Name;
     }
