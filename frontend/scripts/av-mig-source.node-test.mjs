@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { inputs } from './check-av-mig-source.mjs';
@@ -76,6 +76,44 @@ const values = { failure: 1, loginIndex: 1, ownerIndex: 0, success: 0 };
       try {
         const result = runProbe(directory, mutate);
         assert.equal(result.status, expected, result.stderr);
+      } finally {
+        rmSync(directory, { force: true, recursive: true });
+      }
+    });
+  }
+}
+
+{
+  const routeSourcePath = fileURLToPath(new URL('../src/app/app.routes.ts', import.meta.url)),
+    script = fileURLToPath(new URL('./check-av-mig-source.mjs', import.meta.url)),
+    cases = [
+      [
+        'component binding drift',
+        (source) => source.replace('m.LoginPageComponent', 'm.SessionExpiredPageComponent'),
+      ],
+      [
+        'redirect target drift',
+        (source) => source.replace("redirectTo: 'login'", "redirectTo: 'workspaces'"),
+      ],
+      [
+        'fallback kind drift',
+        (source) => source.replace('component: PagePlaceholderComponent,', "redirectTo: 'login',"),
+      ],
+    ];
+
+  for (const [name, mutate] of cases) {
+    test(`production source inventory CLI rejects ${name}`, () => {
+      const directory = mkdtempSync(resolve(tmpdir(), 'av-mig-route-'));
+      try {
+        const dataPath = resolve(directory, 'inputs.json'),
+          routePath = resolve(directory, 'app.routes.ts'),
+          original = readFileSync(routeSourcePath, 'utf8'),
+          mutated = mutate(original);
+        assert.notEqual(mutated, original, `${name}: mutation must alter route source`);
+        writeFileSync(dataPath, JSON.stringify(inputs()));
+        writeFileSync(routePath, mutated);
+        const result = spawnSync(process.execPath, [script, dataPath, routePath], { encoding: 'utf8' });
+        assert.equal(result.status, values.failure, result.stderr);
       } finally {
         rmSync(directory, { force: true, recursive: true });
       }
