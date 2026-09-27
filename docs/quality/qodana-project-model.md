@@ -36,6 +36,8 @@ Qodana Community for .NET is intentionally the .NET lane. Frontend policy is enf
 
 This keeps the profile deliberately strict while avoiding the previous unrestricted `ALL` inventory, which also enabled low-value typo/information-only inspections and could add substantial noise and scan cost.
 
+Repository-wide duplication analysis is also enabled explicitly with JetBrains inspection IDs `DuplicatedCode` and `DuplicatedStatements`. Keeping these inspections explicit prevents a future change to the recommended profile or default severity from silently removing duplication coverage. Their SARIF findings flow through the same per-inspection debt ratchet as every other Qodana rule: historical findings may be recorded as a reviewed baseline, while any count above that baseline fails the gate.
+
 Generated output, dependencies, runtime data, test artifacts and the inactive legacy frontend remain excluded. First-party backend source and tests remain in scope.
 
 ## Solution and configuration

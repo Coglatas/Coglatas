@@ -18,6 +18,13 @@ profile:
   inspections:
     - group: StrictDefaultSeverities
       enabled: true
+    # Keep repository-wide duplication detection explicit even if JetBrains
+    # changes the recommended/default severity profile in a future release.
+    - inspection: DuplicatedCode
+      enabled: true
+    # Also catch repeated statement sequences inside C# control-flow branches.
+    - inspection: DuplicatedStatements
+      enabled: true
 
 # Prepare the complete .NET project model before inspections start.
 bootstrap: bash scripts/quality/qodana-bootstrap.sh
