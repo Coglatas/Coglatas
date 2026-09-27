@@ -18,6 +18,22 @@ public sealed partial class DurableTaskExecutionResultRuntime
     {
         foreach (var source in sources)
         {
+            var provenance = new TaskExecutionMaterializedSource
+            {
+                TenantId = run.TenantId,
+                WorkspaceId = run.WorkspaceId,
+                ProjectId = run.ProjectId,
+                TaskItemId = run.TaskItemId,
+                TaskExecutionRunId = run.Id,
+                FileObjectId = source.FileObjectId,
+                AttachmentId = source.AttachmentId,
+                SchemaVersion = TaskExecutionMaterializedSource.SchemaVersion1,
+                ContentSha256 = source.ReportSource.ContentSha256,
+                MediaType = source.ReportSource.MediaType,
+                MaterializedByteCount = source.ReportSource.ByteCount,
+                MaterializedAtUtc = source.ReportSource.MaterializedAtUtc
+            };
+
             await using var command = CreateCommand("""
                 INSERT INTO task_execution_materialized_sources (
                     "Id", "TenantId", "WorkspaceId", "ProjectId", "TaskItemId",
@@ -25,21 +41,22 @@ public sealed partial class DurableTaskExecutionResultRuntime
                     "ContentSha256", "MediaType", "MaterializedByteCount", "MaterializedAtUtc")
                 VALUES (
                     @id, @tenantId, @workspaceId, @projectId, @taskItemId,
-                    @runId, @fileObjectId, @attachmentId, 1,
+                    @runId, @fileObjectId, @attachmentId, @schemaVersion,
                     @contentSha256, @mediaType, @byteCount, @materializedAtUtc);
                 """);
             AddParameter(command, "id", source.ProvenanceId);
-            AddParameter(command, "tenantId", run.TenantId);
-            AddParameter(command, "workspaceId", run.WorkspaceId);
-            AddParameter(command, "projectId", run.ProjectId);
-            AddParameter(command, "taskItemId", run.TaskItemId);
-            AddParameter(command, "runId", run.Id);
-            AddParameter(command, "fileObjectId", source.FileObjectId);
-            AddParameter(command, "attachmentId", source.AttachmentId);
-            AddParameter(command, "contentSha256", source.ReportSource.ContentSha256);
-            AddParameter(command, "mediaType", source.ReportSource.MediaType);
-            AddParameter(command, "byteCount", source.ReportSource.ByteCount);
-            AddParameter(command, "materializedAtUtc", source.ReportSource.MaterializedAtUtc);
+            AddParameter(command, "tenantId", provenance.TenantId);
+            AddParameter(command, "workspaceId", provenance.WorkspaceId);
+            AddParameter(command, "projectId", provenance.ProjectId);
+            AddParameter(command, "taskItemId", provenance.TaskItemId);
+            AddParameter(command, "runId", provenance.TaskExecutionRunId);
+            AddParameter(command, "fileObjectId", provenance.FileObjectId);
+            AddParameter(command, "attachmentId", provenance.AttachmentId);
+            AddParameter(command, "schemaVersion", provenance.SchemaVersion);
+            AddParameter(command, "contentSha256", provenance.ContentSha256);
+            AddParameter(command, "mediaType", provenance.MediaType);
+            AddParameter(command, "byteCount", provenance.MaterializedByteCount);
+            AddParameter(command, "materializedAtUtc", provenance.MaterializedAtUtc);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
     }
