@@ -134,7 +134,8 @@ public sealed class SecurityHeadersMiddlewareTests
                 .Features.Get<IServerAddressesFeature>()?.Addresses.Single()
                 ?? throw new InvalidOperationException("Test server address was not available.");
             using var handler = new HttpClientHandler { AllowAutoRedirect = false };
-            // ReSharper disable once ShortLivedHttpClient\n            using var client = new HttpClient(handler) { BaseAddress = new Uri(address) };
+            // ReSharper disable once ShortLivedHttpClient
+            using var client = new HttpClient(handler) { BaseAddress = new Uri(address) };
             using var request = new HttpRequestMessage(HttpMethod.Get, "/");
             request.Headers.Host = host;
 
