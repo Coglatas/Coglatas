@@ -10,7 +10,7 @@ namespace Coglatas.Infrastructure.Persistence;
 
 public static class AppDbContextSeed
 {
-    public static readonly Guid DefaultTenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private static readonly Guid DefaultTenantId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     // These values belong only to the explicitly opted-in Test-environment
     // browser-smoke fixture. They are deliberately synthetic and are not a
@@ -478,12 +478,12 @@ public static class AppDbContextSeed
             .ToListAsync(cancellationToken);
         dbContext.AnnouncementReads.RemoveRange(smokeUserAnnouncementReads);
 
-        var project = await dbContext.Projects.FirstOrDefaultAsync(
-            candidate => candidate.TenantId == tenantId && candidate.WorkspaceId == workspace.Id && candidate.Slug == projectSlug,
-            cancellationToken);
-        if (project is null)
-        {
-            project = new Project
+        var project = await EnsureSeedProjectAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            projectSlug,
+            () => new Project
             {
                 TenantId = tenantId,
                 WorkspaceId = workspace.Id,
@@ -495,73 +495,35 @@ public static class AppDbContextSeed
                 Status = ProjectStatus.Active,
                 StartDate = DateOnly.FromDateTime(now.UtcDateTime.Date),
                 DueDate = DateOnly.FromDateTime(now.UtcDateTime.Date.AddDays(14))
-            };
-            await dbContext.Projects.AddAsync(project, cancellationToken);
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        else
-        {
-            project.OwnerUserId = user.Id;
-            project.CreatedByUserId = user.Id;
-            project.Name = "Browser Smoke Project";
-            project.Description = "Synthetic project for the real-backend browser smoke test.";
-            // Test fixture refresh must not activate an existing Project. A
-            // slug collision with a never-activated fixture remains in its
-            // current lifecycle state; only the explicit activation command
-            // may make a persisted Project Active.
-            project.StartDate = DateOnly.FromDateTime(now.UtcDateTime.Date);
-            project.DueDate = DateOnly.FromDateTime(now.UtcDateTime.Date.AddDays(14));
-            if (project.IsDeleted)
+            },
+            existing =>
             {
-                project.Restore();
-            }
-        }
-
-        var projectMember = await dbContext.ProjectMembers.FirstOrDefaultAsync(
-            candidate => candidate.TenantId == tenantId && candidate.ProjectId == project.Id && candidate.UserId == user.Id,
+                existing.OwnerUserId = user.Id;
+                existing.CreatedByUserId = user.Id;
+                existing.Name = "Browser Smoke Project";
+                existing.Description = "Synthetic project for the real-backend browser smoke test.";
+                existing.StartDate = DateOnly.FromDateTime(now.UtcDateTime.Date);
+                existing.DueDate = DateOnly.FromDateTime(now.UtcDateTime.Date.AddDays(14));
+            },
+            true,
             cancellationToken);
-        if (projectMember is null)
-        {
-            await dbContext.ProjectMembers.AddAsync(new ProjectMember
-            {
-                TenantId = tenantId,
-                ProjectId = project.Id,
-                UserId = user.Id,
-                Role = ProjectRole.Owner,
-                JoinedAt = now
-            }, cancellationToken);
-        }
-        else
-        {
-            projectMember.Role = ProjectRole.Owner;
-            if (projectMember.JoinedAt == default)
-            {
-                projectMember.JoinedAt = now;
-            }
-        }
 
-        var recipientProjectMember = await dbContext.ProjectMembers.FirstOrDefaultAsync(
-            candidate => candidate.TenantId == tenantId && candidate.ProjectId == project.Id && candidate.UserId == recipient.Id,
+        await EnsureSeedProjectMemberAsync(
+            dbContext,
+            tenantId,
+            project.Id,
+            user.Id,
+            ProjectRole.Owner,
+            now,
             cancellationToken);
-        if (recipientProjectMember is null)
-        {
-            await dbContext.ProjectMembers.AddAsync(new ProjectMember
-            {
-                TenantId = tenantId,
-                ProjectId = project.Id,
-                UserId = recipient.Id,
-                Role = ProjectRole.Contributor,
-                JoinedAt = now
-            }, cancellationToken);
-        }
-        else
-        {
-            recipientProjectMember.Role = ProjectRole.Contributor;
-            if (recipientProjectMember.JoinedAt == default)
-            {
-                recipientProjectMember.JoinedAt = now;
-            }
-        }
+        await EnsureSeedProjectMemberAsync(
+            dbContext,
+            tenantId,
+            project.Id,
+            recipient.Id,
+            ProjectRole.Contributor,
+            now,
+            cancellationToken);
 
         var task = await dbContext.TaskItems.FirstOrDefaultAsync(
             candidate => candidate.TenantId == tenantId && candidate.ProjectId == project.Id && candidate.Title == taskTitle,
@@ -855,14 +817,12 @@ public static class AppDbContextSeed
         const string taskTitle = "PR07 authorized notification task";
         var today = DateOnly.FromDateTime(now.UtcDateTime.Date);
 
-        var project = await dbContext.Projects.FirstOrDefaultAsync(candidate =>
-            candidate.TenantId == tenantId &&
-            candidate.WorkspaceId == workspace.Id &&
-            candidate.Slug == projectSlug,
-            cancellationToken);
-        if (project is null)
-        {
-            project = new Project
+        var project = await EnsureSeedProjectAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            projectSlug,
+            () => new Project
             {
                 TenantId = tenantId,
                 WorkspaceId = workspace.Id,
@@ -874,54 +834,21 @@ public static class AppDbContextSeed
                 Status = ProjectStatus.Active,
                 StartDate = today,
                 DueDate = today.AddDays(7)
-            };
-            await dbContext.Projects.AddAsync(project, cancellationToken);
-        }
-        else
-        {
-            project.OwnerUserId = owner.Id;
-            project.CreatedByUserId = owner.Id;
-            project.Name = projectTitle;
-            project.Description = "Synthetic isolated Project for PR07-D notification delivery acceptance.";
-            // Preserve the existing lifecycle state on fixture refresh.
-            project.StartDate = today;
-            project.DueDate = today.AddDays(7);
-            if (project.IsDeleted)
+            },
+            existing =>
             {
-                project.Restore();
-            }
-        }
+                existing.OwnerUserId = owner.Id;
+                existing.CreatedByUserId = owner.Id;
+                existing.Name = projectTitle;
+                existing.Description = "Synthetic isolated Project for PR07-D notification delivery acceptance.";
+                existing.StartDate = today;
+                existing.DueDate = today.AddDays(7);
+            },
+            false,
+            cancellationToken);
 
-        async Task EnsureProjectMemberAsync(User member, ProjectRole role)
-        {
-            var existing = await dbContext.ProjectMembers.FirstOrDefaultAsync(candidate =>
-                candidate.TenantId == tenantId &&
-                candidate.ProjectId == project.Id &&
-                candidate.UserId == member.Id,
-                cancellationToken);
-            if (existing is null)
-            {
-                await dbContext.ProjectMembers.AddAsync(new ProjectMember
-                {
-                    TenantId = tenantId,
-                    ProjectId = project.Id,
-                    UserId = member.Id,
-                    Role = role,
-                    JoinedAt = now
-                }, cancellationToken);
-            }
-            else
-            {
-                existing.Role = role;
-                if (existing.JoinedAt == default)
-                {
-                    existing.JoinedAt = now;
-                }
-            }
-        }
-
-        await EnsureProjectMemberAsync(owner, ProjectRole.Owner);
-        await EnsureProjectMemberAsync(recipient, ProjectRole.Contributor);
+        await EnsureSeedProjectMemberAsync(dbContext, tenantId, project.Id, owner.Id, ProjectRole.Owner, now, cancellationToken);
+        await EnsureSeedProjectMemberAsync(dbContext, tenantId, project.Id, recipient.Id, ProjectRole.Contributor, now, cancellationToken);
 
         var task = await dbContext.TaskItems.FirstOrDefaultAsync(candidate =>
             candidate.TenantId == tenantId &&
@@ -1018,78 +945,67 @@ public static class AppDbContextSeed
             }, cancellationToken);
         }
 
-        var workflow = await dbContext.TaskWorkflowDefinitions.FirstOrDefaultAsync(
-            candidate => candidate.TenantId == tenantId && candidate.ProjectId == project.Id,
+        var workflow = await EnsureSeedWorkflowAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            "Browser Smoke PR04 Workflow",
+            false,
+            null,
+            false,
+            false,
+            null,
+            null,
             cancellationToken);
-        if (workflow is null)
-        {
-            workflow = new TaskWorkflowDefinition
-            {
-                TenantId = tenantId,
-                WorkspaceId = workspace.Id,
-                ProjectId = project.Id,
-                Name = "Browser Smoke PR04 Workflow",
-                ReviewEnforcementEnabled = false
-            };
-            await dbContext.TaskWorkflowDefinitions.AddAsync(workflow, cancellationToken);
-        }
 
-        async Task<TaskWorkflowStage> StageAsync(string name, TaskStageCategory category, long sortKey, bool initial, bool terminal)
-        {
-            var stage = await dbContext.TaskWorkflowStages.FirstOrDefaultAsync(
-                candidate =>
-                    candidate.TenantId == tenantId &&
-                    candidate.ProjectId == project.Id &&
-                    candidate.InternalCategory == category,
-                cancellationToken);
-            if (stage is null)
-            {
-                stage = new TaskWorkflowStage
-                {
-                    TenantId = tenantId,
-                    WorkspaceId = workspace.Id,
-                    ProjectId = project.Id,
-                    DefinitionId = workflow.Id,
-                    Name = name,
-                    InternalCategory = category,
-                    SortKey = sortKey,
-                    IsInitialStage = initial,
-                    IsTerminalStage = terminal
-                };
-                await dbContext.TaskWorkflowStages.AddAsync(stage, cancellationToken);
-            }
-
-            return stage;
-        }
-
-        var todo = await StageAsync("Todo", TaskStageCategory.Todo, 1024, true, false);
-        var done = await StageAsync("Done", TaskStageCategory.Done, 2048, false, true);
+        var todo = await EnsureSeedWorkflowStageAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            workflow.Id,
+            "Todo",
+            TaskStageCategory.Todo,
+            1024,
+            true,
+            false,
+            null,
+            false,
+            false,
+            null,
+            null,
+            cancellationToken);
+        var done = await EnsureSeedWorkflowStageAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            workflow.Id,
+            "Done",
+            TaskStageCategory.Done,
+            2048,
+            false,
+            true,
+            null,
+            false,
+            false,
+            null,
+            null,
+            cancellationToken);
         assignedTask.WorkflowStageId = todo.Id;
         assignedTask.PlannedEndDate = assignedTask.DueDate;
 
         async Task<TaskItem> TaskAsync(string title)
         {
-            var task = await dbContext.TaskItems.FirstOrDefaultAsync(
-                candidate => candidate.TenantId == tenantId && candidate.ProjectId == project.Id && candidate.Title == title,
+            var task = await EnsureSeedTaskAsync(
+                dbContext,
+                tenantId,
+                workspace.Id,
+                project.Id,
+                title,
+                recipient.Id,
                 cancellationToken);
-            if (task is null)
-            {
-                task = new TaskItem
-                {
-                    TenantId = tenantId,
-                    WorkspaceId = workspace.Id,
-                    ProjectId = project.Id,
-                    Title = title,
-                    CreatedByUserId = recipient.Id
-                };
-                await dbContext.TaskItems.AddAsync(task, cancellationToken);
-            }
-            else if (task.IsDeleted)
-            {
-                task.Restore();
-            }
-
-            task.WorkspaceId = workspace.Id;
             task.WorkflowStageId = todo.Id;
             task.Status = TaskItemStatus.NotStarted;
             task.Priority = TaskPriority.Medium;
@@ -1370,127 +1286,72 @@ public static class AppDbContextSeed
         projectScope.VersionNo = 1;
         projectScope.UpdatedByUserId = user.Id;
 
-        var projectMember = await dbContext.ProjectMembers.FirstOrDefaultAsync(
-            candidate =>
-                candidate.TenantId == tenantId &&
-                candidate.ProjectId == project.Id &&
-                candidate.UserId == user.Id,
+        await EnsureSeedProjectMemberAsync(
+            dbContext,
+            tenantId,
+            project.Id,
+            user.Id,
+            ProjectRole.Owner,
+            U22DemoActivityOccurredAt,
             cancellationToken);
-        if (projectMember is null)
-        {
-            await dbContext.ProjectMembers.AddAsync(new ProjectMember
-            {
-                TenantId = tenantId,
-                ProjectId = project.Id,
-                UserId = user.Id,
-                Role = ProjectRole.Owner,
-                JoinedAt = U22DemoActivityOccurredAt
-            }, cancellationToken);
-        }
-        else
-        {
-            projectMember.Role = ProjectRole.Owner;
-            if (projectMember.JoinedAt == default)
-            {
-                projectMember.JoinedAt = U22DemoActivityOccurredAt;
-            }
-        }
 
-        var workflow = await dbContext.TaskWorkflowDefinitions.FirstOrDefaultAsync(
-            candidate => candidate.TenantId == tenantId && candidate.ProjectId == project.Id,
+        var workflow = await EnsureSeedWorkflowAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            "U-22 Synthetic Demo Workflow",
+            false,
+            ProjectKanbanSwimlane.None,
+            true,
+            true,
+            1,
+            1,
             cancellationToken);
-        if (workflow is null)
-        {
-            workflow = new TaskWorkflowDefinition
-            {
-                TenantId = tenantId,
-                WorkspaceId = workspace.Id,
-                ProjectId = project.Id,
-                Name = "U-22 Synthetic Demo Workflow",
-                ReviewEnforcementEnabled = false,
-                KanbanDefaultSwimlane = ProjectKanbanSwimlane.None,
-                VersionNo = 1
-            };
-            await dbContext.TaskWorkflowDefinitions.AddAsync(workflow, cancellationToken);
-        }
-        else
-        {
-            workflow.WorkspaceId = workspace.Id;
-            workflow.Name = "U-22 Synthetic Demo Workflow";
-            workflow.ReviewEnforcementEnabled = false;
-            workflow.KanbanDefaultSwimlane = ProjectKanbanSwimlane.None;
-            workflow.VersionNo = 1;
-        }
 
-        async Task<TaskWorkflowStage> StageAsync(
-            string name,
-            TaskStageCategory category,
-            long sortKey,
-            bool isInitial,
-            bool isTerminal)
-        {
-            var stage = await dbContext.TaskWorkflowStages.FirstOrDefaultAsync(
-                candidate =>
-                    candidate.TenantId == tenantId &&
-                    candidate.ProjectId == project.Id &&
-                    candidate.InternalCategory == category,
-                cancellationToken);
-            if (stage is null)
-            {
-                stage = new TaskWorkflowStage
-                {
-                    TenantId = tenantId,
-                    WorkspaceId = workspace.Id,
-                    ProjectId = project.Id,
-                    DefinitionId = workflow.Id,
-                    Name = name,
-                    InternalCategory = category,
-                    SortKey = sortKey,
-                    IsInitialStage = isInitial,
-                    IsTerminalStage = isTerminal,
-                    VersionNo = 1
-                };
-                await dbContext.TaskWorkflowStages.AddAsync(stage, cancellationToken);
-            }
-            else
-            {
-                stage.WorkspaceId = workspace.Id;
-                stage.DefinitionId = workflow.Id;
-                stage.Name = name;
-                stage.SortKey = sortKey;
-                stage.IsInitialStage = isInitial;
-                stage.IsTerminalStage = isTerminal;
-                stage.VersionNo = 1;
-            }
-
-            return stage;
-        }
-
-        await StageAsync("Todo", TaskStageCategory.Todo, 1024, true, false);
-        var inProgress = await StageAsync("In progress", TaskStageCategory.InProgress, 2048, false, false);
-
-        var task = await dbContext.TaskItems.FirstOrDefaultAsync(
-            candidate =>
-                candidate.TenantId == tenantId &&
-                candidate.ProjectId == project.Id &&
-                candidate.Title == U22DemoTaskTitle,
+        await EnsureSeedWorkflowStageAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            workflow.Id,
+            "Todo",
+            TaskStageCategory.Todo,
+            1024,
+            true,
+            false,
+            null,
+            true,
+            false,
+            1,
+            1,
             cancellationToken);
-        if (task is null)
-        {
-            task = new TaskItem
-            {
-                TenantId = tenantId,
-                WorkspaceId = workspace.Id,
-                ProjectId = project.Id,
-                Title = U22DemoTaskTitle,
-                CreatedByUserId = user.Id
-            };
-            await dbContext.TaskItems.AddAsync(task, cancellationToken);
-        }
-        else if (task.IsDeleted)
-        {
-            task.Restore();
-        }
+        var inProgress = await EnsureSeedWorkflowStageAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            workflow.Id,
+            "In progress",
+            TaskStageCategory.InProgress,
+            2048,
+            false,
+            false,
+            null,
+            true,
+            false,
+            1,
+            1,
+            cancellationToken);
+
+        var task = await EnsureSeedTaskAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            U22DemoTaskTitle,
+            user.Id,
+            cancellationToken);
 
         // This is one current workflow state, not a fabricated execution
         // history. Keep the legacy percentage at zero so the fixture never
@@ -1643,40 +1504,23 @@ public static class AppDbContextSeed
             dbContext.GroupMembers.Remove(managerGroupMember);
         }
 
-        var managerWorkspaceMember = await dbContext.WorkspaceMembers.FirstOrDefaultAsync(
-            candidate =>
-                candidate.TenantId == tenantId &&
-                candidate.WorkspaceId == workspace.Id &&
-                candidate.UserId == manager.Id,
+        await EnsureSeedWorkspaceMemberAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            manager.Id,
+            WorkspaceRole.Member,
+            MembershipStatus.Active,
+            now,
+            false,
             cancellationToken);
-        if (managerWorkspaceMember is null)
-        {
-            await dbContext.WorkspaceMembers.AddAsync(new WorkspaceMember
-            {
-                TenantId = tenantId,
-                WorkspaceId = workspace.Id,
-                UserId = manager.Id,
-                Role = WorkspaceRole.Member,
-                Status = MembershipStatus.Active,
-                JoinedAt = now
-            }, cancellationToken);
-        }
-        else
-        {
-            managerWorkspaceMember.Role = WorkspaceRole.Member;
-            managerWorkspaceMember.Status = MembershipStatus.Active;
-            managerWorkspaceMember.JoinedAt ??= now;
-        }
 
-        var project = await dbContext.Projects.FirstOrDefaultAsync(
-            candidate =>
-                candidate.TenantId == tenantId &&
-                candidate.WorkspaceId == workspace.Id &&
-                candidate.Slug == projectSlug,
-            cancellationToken);
-        if (project is null)
-        {
-            project = new Project
+        var project = await EnsureSeedProjectAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            projectSlug,
+            () => new Project
             {
                 TenantId = tenantId,
                 WorkspaceId = workspace.Id,
@@ -1689,160 +1533,100 @@ public static class AppDbContextSeed
                 Status = ProjectStatus.Active,
                 StartDate = DateOnly.FromDateTime(now.UtcDateTime.Date),
                 DueDate = DateOnly.FromDateTime(now.UtcDateTime.Date.AddDays(14))
-            };
-            await dbContext.Projects.AddAsync(project, cancellationToken);
-        }
-        else
-        {
-            project.GroupId = group.Id;
-            project.OwnerUserId = owner.Id;
-            project.CreatedByUserId = owner.Id;
-            project.Name = "PR05 Browser Acceptance Project";
-            project.Description = "Synthetic Project Kanban data for PR05 real-backend browser acceptance.";
-            // Preserve the existing lifecycle state on fixture refresh.
-            project.StartDate = DateOnly.FromDateTime(now.UtcDateTime.Date);
-            project.DueDate = DateOnly.FromDateTime(now.UtcDateTime.Date.AddDays(14));
-            if (project.IsDeleted)
+            },
+            existing =>
             {
-                project.Restore();
-            }
-        }
-
-        async Task ProjectMemberAsync(User user, ProjectRole role)
-        {
-            var member = await dbContext.ProjectMembers.FirstOrDefaultAsync(
-                candidate =>
-                    candidate.TenantId == tenantId &&
-                    candidate.ProjectId == project.Id &&
-                    candidate.UserId == user.Id,
-                cancellationToken);
-            if (member is null)
-            {
-                await dbContext.ProjectMembers.AddAsync(new ProjectMember
-                {
-                    TenantId = tenantId,
-                    ProjectId = project.Id,
-                    UserId = user.Id,
-                    Role = role,
-                    JoinedAt = now
-                }, cancellationToken);
-                return;
-            }
-
-            member.Role = role;
-            if (member.JoinedAt == default)
-            {
-                member.JoinedAt = now;
-            }
-        }
-
-        await ProjectMemberAsync(owner, ProjectRole.Owner);
-        await ProjectMemberAsync(manager, ProjectRole.Manager);
-        await ProjectMemberAsync(recipient, ProjectRole.Contributor);
-
-        var workflow = await dbContext.TaskWorkflowDefinitions.FirstOrDefaultAsync(
-            candidate => candidate.TenantId == tenantId && candidate.ProjectId == project.Id,
+                existing.GroupId = group.Id;
+                existing.OwnerUserId = owner.Id;
+                existing.CreatedByUserId = owner.Id;
+                existing.Name = "PR05 Browser Acceptance Project";
+                existing.Description = "Synthetic Project Kanban data for PR05 real-backend browser acceptance.";
+                existing.StartDate = DateOnly.FromDateTime(now.UtcDateTime.Date);
+                existing.DueDate = DateOnly.FromDateTime(now.UtcDateTime.Date.AddDays(14));
+            },
+            false,
             cancellationToken);
-        if (workflow is null)
-        {
-            workflow = new TaskWorkflowDefinition
-            {
-                TenantId = tenantId,
-                WorkspaceId = workspace.Id,
-                ProjectId = project.Id,
-                Name = "PR05 Browser Acceptance Workflow",
-                ReviewEnforcementEnabled = false,
-                KanbanDefaultSwimlane = ProjectKanbanSwimlane.None,
-                VersionNo = 1
-            };
-            await dbContext.TaskWorkflowDefinitions.AddAsync(workflow, cancellationToken);
-        }
-        else
-        {
-            workflow.WorkspaceId = workspace.Id;
-            workflow.Name = "PR05 Browser Acceptance Workflow";
-            workflow.ReviewEnforcementEnabled = false;
-            workflow.KanbanDefaultSwimlane = ProjectKanbanSwimlane.None;
-            workflow.VersionNo = 1;
-        }
 
-        async Task<TaskWorkflowStage> StageAsync(
-            string name,
-            TaskStageCategory category,
-            long sortKey,
-            bool initial,
-            bool terminal,
-            int? wipWarningLimit)
-        {
-            var stage = await dbContext.TaskWorkflowStages.FirstOrDefaultAsync(
-                candidate =>
-                    candidate.TenantId == tenantId &&
-                    candidate.ProjectId == project.Id &&
-                    candidate.InternalCategory == category,
-                cancellationToken);
-            if (stage is null)
-            {
-                stage = new TaskWorkflowStage
-                {
-                    TenantId = tenantId,
-                    WorkspaceId = workspace.Id,
-                    ProjectId = project.Id,
-                    DefinitionId = workflow.Id,
-                    Name = name,
-                    InternalCategory = category,
-                    SortKey = sortKey,
-                    WipWarningLimit = wipWarningLimit,
-                    IsInitialStage = initial,
-                    IsTerminalStage = terminal,
-                    VersionNo = 1
-                };
-                await dbContext.TaskWorkflowStages.AddAsync(stage, cancellationToken);
-            }
-            else
-            {
-                stage.WorkspaceId = workspace.Id;
-                stage.DefinitionId = workflow.Id;
-                stage.Name = name;
-                stage.SortKey = sortKey;
-                stage.WipWarningLimit = wipWarningLimit;
-                stage.IsInitialStage = initial;
-                stage.IsTerminalStage = terminal;
-                stage.VersionNo = 1;
-            }
+        await EnsureSeedProjectMemberAsync(dbContext, tenantId, project.Id, owner.Id, ProjectRole.Owner, now, cancellationToken);
+        await EnsureSeedProjectMemberAsync(dbContext, tenantId, project.Id, manager.Id, ProjectRole.Manager, now, cancellationToken);
+        await EnsureSeedProjectMemberAsync(dbContext, tenantId, project.Id, recipient.Id, ProjectRole.Contributor, now, cancellationToken);
 
-            return stage;
-        }
+        var workflow = await EnsureSeedWorkflowAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            "PR05 Browser Acceptance Workflow",
+            false,
+            ProjectKanbanSwimlane.None,
+            true,
+            true,
+            1,
+            1,
+            cancellationToken);
 
-        var todo = await StageAsync("Todo", TaskStageCategory.Todo, 1000, true, false, 4);
-        await StageAsync("Done", TaskStageCategory.Done, 2000, false, true, null);
-        await StageAsync("Cancelled", TaskStageCategory.Cancelled, 3000, false, true, null);
+        var todo = await EnsureSeedWorkflowStageAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            workflow.Id,
+            "Todo",
+            TaskStageCategory.Todo,
+            1000,
+            true,
+            false,
+            4,
+            true,
+            true,
+            1,
+            1,
+            cancellationToken);
+        await EnsureSeedWorkflowStageAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            workflow.Id,
+            "Done",
+            TaskStageCategory.Done,
+            2000,
+            false,
+            true,
+            null,
+            true,
+            true,
+            1,
+            1,
+            cancellationToken);
+        await EnsureSeedWorkflowStageAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            workflow.Id,
+            "Cancelled",
+            TaskStageCategory.Cancelled,
+            3000,
+            false,
+            true,
+            null,
+            true,
+            true,
+            1,
+            1,
+            cancellationToken);
 
         async Task TaskAsync(string title, long sortKey)
         {
-            var task = await dbContext.TaskItems.FirstOrDefaultAsync(
-                candidate =>
-                    candidate.TenantId == tenantId &&
-                    candidate.ProjectId == project.Id &&
-                    candidate.Title == title,
+            var task = await EnsureSeedTaskAsync(
+                dbContext,
+                tenantId,
+                workspace.Id,
+                project.Id,
+                title,
+                manager.Id,
                 cancellationToken);
-            if (task is null)
-            {
-                task = new TaskItem
-                {
-                    TenantId = tenantId,
-                    WorkspaceId = workspace.Id,
-                    ProjectId = project.Id,
-                    Title = title,
-                    CreatedByUserId = manager.Id
-                };
-                await dbContext.TaskItems.AddAsync(task, cancellationToken);
-            }
-            else if (task.IsDeleted)
-            {
-                task.Restore();
-            }
-
-            task.WorkspaceId = workspace.Id;
             task.WorkflowStageId = todo.Id;
             task.Kind = WorkItemKind.Task;
             task.Description = $"Synthetic {title} for PR05 real-backend browser acceptance.";
@@ -1907,45 +1691,23 @@ public static class AppDbContextSeed
                     candidate.Slug == groupSlug,
                 cancellationToken);
 
-        var managerWorkspaceMember = dbContext.WorkspaceMembers.Local.FirstOrDefault(
-            candidate =>
-                candidate.TenantId == tenantId &&
-                candidate.WorkspaceId == workspace.Id &&
-                candidate.UserId == manager.Id)
-            ?? await dbContext.WorkspaceMembers.FirstOrDefaultAsync(
-                candidate =>
-                    candidate.TenantId == tenantId &&
-                    candidate.WorkspaceId == workspace.Id &&
-                    candidate.UserId == manager.Id,
-                cancellationToken);
-        if (managerWorkspaceMember is null)
-        {
-            await dbContext.WorkspaceMembers.AddAsync(new WorkspaceMember
-            {
-                TenantId = tenantId,
-                WorkspaceId = workspace.Id,
-                UserId = manager.Id,
-                Role = WorkspaceRole.Member,
-                Status = MembershipStatus.Active,
-                JoinedAt = now
-            }, cancellationToken);
-        }
-        else
-        {
-            managerWorkspaceMember.Role = WorkspaceRole.Member;
-            managerWorkspaceMember.Status = MembershipStatus.Active;
-            managerWorkspaceMember.JoinedAt ??= now;
-        }
-
-        var project = await dbContext.Projects.FirstOrDefaultAsync(
-            candidate =>
-                candidate.TenantId == tenantId &&
-                candidate.WorkspaceId == workspace.Id &&
-                candidate.Slug == projectSlug,
+        await EnsureSeedWorkspaceMemberAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            manager.Id,
+            WorkspaceRole.Member,
+            MembershipStatus.Active,
+            now,
+            true,
             cancellationToken);
-        if (project is null)
-        {
-            project = new Project
+
+        var project = await EnsureSeedProjectAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            projectSlug,
+            () => new Project
             {
                 TenantId = tenantId,
                 WorkspaceId = workspace.Id,
@@ -1959,128 +1721,89 @@ public static class AppDbContextSeed
                 StartDate = today,
                 DueDate = today.AddDays(45),
                 VersionNo = 1
-            };
-            await dbContext.Projects.AddAsync(project, cancellationToken);
-        }
-        else
-        {
-            project.GroupId = group.Id;
-            project.OwnerUserId = owner.Id;
-            project.CreatedByUserId = owner.Id;
-            project.Name = "PR06 Browser Acceptance Project";
-            project.Description = "Synthetic canonical Gantt data for PR06 real-backend browser acceptance.";
-            // Preserve the existing lifecycle state on fixture refresh.
-            project.StartDate = today;
-            project.DueDate = today.AddDays(45);
-            if (project.IsDeleted)
+            },
+            existing =>
             {
-                project.Restore();
-            }
-        }
-
-        async Task ProjectMemberAsync(User user, ProjectRole role)
-        {
-            var member = await dbContext.ProjectMembers.FirstOrDefaultAsync(
-                candidate =>
-                    candidate.TenantId == tenantId &&
-                    candidate.ProjectId == project.Id &&
-                    candidate.UserId == user.Id,
-                cancellationToken);
-            if (member is null)
-            {
-                await dbContext.ProjectMembers.AddAsync(new ProjectMember
-                {
-                    TenantId = tenantId,
-                    ProjectId = project.Id,
-                    UserId = user.Id,
-                    Role = role,
-                    JoinedAt = now
-                }, cancellationToken);
-                return;
-            }
-
-            member.Role = role;
-            if (member.JoinedAt == default)
-            {
-                member.JoinedAt = now;
-            }
-        }
-
-        await ProjectMemberAsync(owner, ProjectRole.Owner);
-        await ProjectMemberAsync(manager, ProjectRole.Manager);
-        await ProjectMemberAsync(viewer, ProjectRole.Viewer);
-
-        var workflow = await dbContext.TaskWorkflowDefinitions.FirstOrDefaultAsync(
-            candidate => candidate.TenantId == tenantId && candidate.ProjectId == project.Id,
+                existing.GroupId = group.Id;
+                existing.OwnerUserId = owner.Id;
+                existing.CreatedByUserId = owner.Id;
+                existing.Name = "PR06 Browser Acceptance Project";
+                existing.Description = "Synthetic canonical Gantt data for PR06 real-backend browser acceptance.";
+                existing.StartDate = today;
+                existing.DueDate = today.AddDays(45);
+            },
+            false,
             cancellationToken);
-        if (workflow is null)
-        {
-            workflow = new TaskWorkflowDefinition
-            {
-                TenantId = tenantId,
-                WorkspaceId = workspace.Id,
-                ProjectId = project.Id,
-                Name = "PR06 Browser Acceptance Workflow",
-                ReviewEnforcementEnabled = false,
-                KanbanDefaultSwimlane = ProjectKanbanSwimlane.None,
-                VersionNo = 1
-            };
-            await dbContext.TaskWorkflowDefinitions.AddAsync(workflow, cancellationToken);
-        }
-        else
-        {
-            workflow.WorkspaceId = workspace.Id;
-            workflow.Name = "PR06 Browser Acceptance Workflow";
-            workflow.ReviewEnforcementEnabled = false;
-            workflow.KanbanDefaultSwimlane = ProjectKanbanSwimlane.None;
-        }
 
-        async Task<TaskWorkflowStage> StageAsync(
-            string name,
-            TaskStageCategory category,
-            long sortKey,
-            bool initial,
-            bool terminal)
-        {
-            var stage = await dbContext.TaskWorkflowStages.FirstOrDefaultAsync(
-                candidate =>
-                    candidate.TenantId == tenantId &&
-                    candidate.ProjectId == project.Id &&
-                    candidate.InternalCategory == category,
-                cancellationToken);
-            if (stage is null)
-            {
-                stage = new TaskWorkflowStage
-                {
-                    TenantId = tenantId,
-                    WorkspaceId = workspace.Id,
-                    ProjectId = project.Id,
-                    DefinitionId = workflow.Id,
-                    Name = name,
-                    InternalCategory = category,
-                    SortKey = sortKey,
-                    IsInitialStage = initial,
-                    IsTerminalStage = terminal,
-                    VersionNo = 1
-                };
-                await dbContext.TaskWorkflowStages.AddAsync(stage, cancellationToken);
-            }
-            else
-            {
-                stage.WorkspaceId = workspace.Id;
-                stage.DefinitionId = workflow.Id;
-                stage.Name = name;
-                stage.SortKey = sortKey;
-                stage.IsInitialStage = initial;
-                stage.IsTerminalStage = terminal;
-            }
+        await EnsureSeedProjectMemberAsync(dbContext, tenantId, project.Id, owner.Id, ProjectRole.Owner, now, cancellationToken);
+        await EnsureSeedProjectMemberAsync(dbContext, tenantId, project.Id, manager.Id, ProjectRole.Manager, now, cancellationToken);
+        await EnsureSeedProjectMemberAsync(dbContext, tenantId, project.Id, viewer.Id, ProjectRole.Viewer, now, cancellationToken);
 
-            return stage;
-        }
+        var workflow = await EnsureSeedWorkflowAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            "PR06 Browser Acceptance Workflow",
+            false,
+            ProjectKanbanSwimlane.None,
+            true,
+            true,
+            1,
+            null,
+            cancellationToken);
 
-        var todo = await StageAsync("Todo", TaskStageCategory.Todo, 1000, true, false);
-        var inProgress = await StageAsync("In Progress", TaskStageCategory.InProgress, 2000, false, false);
-        await StageAsync("Done", TaskStageCategory.Done, 3000, false, true);
+        var todo = await EnsureSeedWorkflowStageAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            workflow.Id,
+            "Todo",
+            TaskStageCategory.Todo,
+            1000,
+            true,
+            false,
+            null,
+            true,
+            false,
+            1,
+            null,
+            cancellationToken);
+        var inProgress = await EnsureSeedWorkflowStageAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            workflow.Id,
+            "In Progress",
+            TaskStageCategory.InProgress,
+            2000,
+            false,
+            false,
+            null,
+            true,
+            false,
+            1,
+            null,
+            cancellationToken);
+        await EnsureSeedWorkflowStageAsync(
+            dbContext,
+            tenantId,
+            workspace.Id,
+            project.Id,
+            workflow.Id,
+            "Done",
+            TaskStageCategory.Done,
+            3000,
+            false,
+            true,
+            null,
+            true,
+            false,
+            1,
+            null,
+            cancellationToken);
 
         async Task<TaskItem> TaskAsync(
             string title,
@@ -2091,30 +1814,14 @@ public static class AppDbContextSeed
             int progressPercent,
             bool blocked = false)
         {
-            var task = await dbContext.TaskItems.FirstOrDefaultAsync(
-                candidate =>
-                    candidate.TenantId == tenantId &&
-                    candidate.ProjectId == project.Id &&
-                    candidate.Title == title,
+            var task = await EnsureSeedTaskAsync(
+                dbContext,
+                tenantId,
+                workspace.Id,
+                project.Id,
+                title,
+                manager.Id,
                 cancellationToken);
-            if (task is null)
-            {
-                task = new TaskItem
-                {
-                    TenantId = tenantId,
-                    WorkspaceId = workspace.Id,
-                    ProjectId = project.Id,
-                    Title = title,
-                    CreatedByUserId = manager.Id
-                };
-                await dbContext.TaskItems.AddAsync(task, cancellationToken);
-            }
-            else if (task.IsDeleted)
-            {
-                task.Restore();
-            }
-
-            task.WorkspaceId = workspace.Id;
             task.WorkflowStageId = stage.Id;
             task.Kind = WorkItemKind.Task;
             task.MilestoneId = null;
@@ -2436,10 +2143,7 @@ public static class AppDbContextSeed
                 member.Status = MembershipStatus.Active;
             }
 
-            if (!member.JoinedAt.HasValue)
-            {
-                member.JoinedAt = DateTimeOffset.UtcNow;
-            }
+            member.JoinedAt ??= DateTimeOffset.UtcNow;
         }
     }
 
@@ -2556,6 +2260,288 @@ public static class AppDbContextSeed
         }
     }
 
+    private static async Task EnsureSeedWorkspaceMemberAsync(
+        AppDbContext dbContext,
+        Guid tenantId,
+        Guid workspaceId,
+        Guid userId,
+        WorkspaceRole role,
+        MembershipStatus status,
+        DateTimeOffset joinedAt,
+        bool checkLocalFirst,
+        CancellationToken cancellationToken)
+    {
+        var member = checkLocalFirst
+            ? dbContext.WorkspaceMembers.Local.FirstOrDefault(candidate =>
+                candidate.TenantId == tenantId &&
+                candidate.WorkspaceId == workspaceId &&
+                candidate.UserId == userId)
+            : null;
+        member ??= await dbContext.WorkspaceMembers.FirstOrDefaultAsync(
+            candidate =>
+                candidate.TenantId == tenantId &&
+                candidate.WorkspaceId == workspaceId &&
+                candidate.UserId == userId,
+            cancellationToken);
+
+        if (member is null)
+        {
+            await dbContext.WorkspaceMembers.AddAsync(new WorkspaceMember
+            {
+                TenantId = tenantId,
+                WorkspaceId = workspaceId,
+                UserId = userId,
+                Role = role,
+                Status = status,
+                JoinedAt = joinedAt
+            }, cancellationToken);
+            return;
+        }
+
+        member.Role = role;
+        member.Status = status;
+        member.JoinedAt ??= joinedAt;
+    }
+
+    private static async Task<Project> EnsureSeedProjectAsync(
+        AppDbContext dbContext,
+        Guid tenantId,
+        Guid workspaceId,
+        string slug,
+        Func<Project> create,
+        Action<Project> refresh,
+        bool saveAfterCreate,
+        CancellationToken cancellationToken)
+    {
+        var project = await dbContext.Projects.FirstOrDefaultAsync(
+            candidate =>
+                candidate.TenantId == tenantId &&
+                candidate.WorkspaceId == workspaceId &&
+                candidate.Slug == slug,
+            cancellationToken);
+        if (project is null)
+        {
+            project = create();
+            await dbContext.Projects.AddAsync(project, cancellationToken);
+            if (saveAfterCreate)
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            return project;
+        }
+
+        refresh(project);
+        if (project.IsDeleted)
+        {
+            project.Restore();
+        }
+
+        return project;
+    }
+
+    private static async Task EnsureSeedProjectMemberAsync(
+        AppDbContext dbContext,
+        Guid tenantId,
+        Guid projectId,
+        Guid userId,
+        ProjectRole role,
+        DateTimeOffset joinedAt,
+        CancellationToken cancellationToken)
+    {
+        var member = await dbContext.ProjectMembers.FirstOrDefaultAsync(
+            candidate =>
+                candidate.TenantId == tenantId &&
+                candidate.ProjectId == projectId &&
+                candidate.UserId == userId,
+            cancellationToken);
+        if (member is null)
+        {
+            await dbContext.ProjectMembers.AddAsync(new ProjectMember
+            {
+                TenantId = tenantId,
+                ProjectId = projectId,
+                UserId = userId,
+                Role = role,
+                JoinedAt = joinedAt
+            }, cancellationToken);
+            return;
+        }
+
+        member.Role = role;
+        if (member.JoinedAt == default)
+        {
+            member.JoinedAt = joinedAt;
+        }
+    }
+
+    private static async Task<TaskItem> EnsureSeedTaskAsync(
+        AppDbContext dbContext,
+        Guid tenantId,
+        Guid workspaceId,
+        Guid projectId,
+        string title,
+        Guid createdByUserId,
+        CancellationToken cancellationToken)
+    {
+        var task = await dbContext.TaskItems.FirstOrDefaultAsync(
+            candidate =>
+                candidate.TenantId == tenantId &&
+                candidate.ProjectId == projectId &&
+                candidate.Title == title,
+            cancellationToken);
+        if (task is null)
+        {
+            task = new TaskItem
+            {
+                TenantId = tenantId,
+                WorkspaceId = workspaceId,
+                ProjectId = projectId,
+                Title = title,
+                CreatedByUserId = createdByUserId
+            };
+            await dbContext.TaskItems.AddAsync(task, cancellationToken);
+        }
+        else if (task.IsDeleted)
+        {
+            task.Restore();
+        }
+
+        task.WorkspaceId = workspaceId;
+        return task;
+    }
+
+    private static async Task<TaskWorkflowDefinition> EnsureSeedWorkflowAsync(
+        AppDbContext dbContext,
+        Guid tenantId,
+        Guid workspaceId,
+        Guid projectId,
+        string name,
+        bool reviewEnforcementEnabled,
+        ProjectKanbanSwimlane? kanbanDefaultSwimlane,
+        bool refreshExisting,
+        bool updateKanbanDefaultSwimlane,
+        long? createdVersionNo,
+        long? existingVersionNo,
+        CancellationToken cancellationToken)
+    {
+        var workflow = await dbContext.TaskWorkflowDefinitions.FirstOrDefaultAsync(
+            candidate => candidate.TenantId == tenantId && candidate.ProjectId == projectId,
+            cancellationToken);
+        if (workflow is null)
+        {
+            workflow = new TaskWorkflowDefinition
+            {
+                TenantId = tenantId,
+                WorkspaceId = workspaceId,
+                ProjectId = projectId,
+                Name = name,
+                ReviewEnforcementEnabled = reviewEnforcementEnabled
+            };
+            if (kanbanDefaultSwimlane.HasValue)
+            {
+                workflow.KanbanDefaultSwimlane = kanbanDefaultSwimlane.Value;
+            }
+            if (createdVersionNo.HasValue)
+            {
+                workflow.VersionNo = createdVersionNo.Value;
+            }
+
+            await dbContext.TaskWorkflowDefinitions.AddAsync(workflow, cancellationToken);
+            return workflow;
+        }
+
+        if (!refreshExisting)
+        {
+            return workflow;
+        }
+
+        workflow.WorkspaceId = workspaceId;
+        workflow.Name = name;
+        workflow.ReviewEnforcementEnabled = reviewEnforcementEnabled;
+        if (updateKanbanDefaultSwimlane && kanbanDefaultSwimlane.HasValue)
+        {
+            workflow.KanbanDefaultSwimlane = kanbanDefaultSwimlane.Value;
+        }
+        if (existingVersionNo.HasValue)
+        {
+            workflow.VersionNo = existingVersionNo.Value;
+        }
+
+        return workflow;
+    }
+
+    private static async Task<TaskWorkflowStage> EnsureSeedWorkflowStageAsync(
+        AppDbContext dbContext,
+        Guid tenantId,
+        Guid workspaceId,
+        Guid projectId,
+        Guid definitionId,
+        string name,
+        TaskStageCategory category,
+        long sortKey,
+        bool isInitial,
+        bool isTerminal,
+        int? wipWarningLimit,
+        bool refreshExisting,
+        bool updateWipWarningLimit,
+        long? createdVersionNo,
+        long? existingVersionNo,
+        CancellationToken cancellationToken)
+    {
+        var stage = await dbContext.TaskWorkflowStages.FirstOrDefaultAsync(
+            candidate =>
+                candidate.TenantId == tenantId &&
+                candidate.ProjectId == projectId &&
+                candidate.InternalCategory == category,
+            cancellationToken);
+        if (stage is null)
+        {
+            stage = new TaskWorkflowStage
+            {
+                TenantId = tenantId,
+                WorkspaceId = workspaceId,
+                ProjectId = projectId,
+                DefinitionId = definitionId,
+                Name = name,
+                InternalCategory = category,
+                SortKey = sortKey,
+                WipWarningLimit = wipWarningLimit,
+                IsInitialStage = isInitial,
+                IsTerminalStage = isTerminal
+            };
+            if (createdVersionNo.HasValue)
+            {
+                stage.VersionNo = createdVersionNo.Value;
+            }
+
+            await dbContext.TaskWorkflowStages.AddAsync(stage, cancellationToken);
+            return stage;
+        }
+
+        if (!refreshExisting)
+        {
+            return stage;
+        }
+
+        stage.WorkspaceId = workspaceId;
+        stage.DefinitionId = definitionId;
+        stage.Name = name;
+        stage.SortKey = sortKey;
+        stage.IsInitialStage = isInitial;
+        stage.IsTerminalStage = isTerminal;
+        if (updateWipWarningLimit)
+        {
+            stage.WipWarningLimit = wipWarningLimit;
+        }
+        if (existingVersionNo.HasValue)
+        {
+            stage.VersionNo = existingVersionNo.Value;
+        }
+
+        return stage;
+    }
+
     private static async Task SeedRadialMenusAsync(
         AppDbContext dbContext,
         IReadOnlyDictionary<string, CommandDefinition> commands,
@@ -2563,8 +2549,8 @@ public static class AppDbContextSeed
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        await SeedProfileAsync(dbContext, commands, "default.project", "Default Project", CommandContextType.Project, new[]
-        {
+        await SeedProfileAsync(dbContext, commands, "default.project", "Default Project", CommandContextType.Project,
+        [
             (RadialMenuDirection.Up, "project.open"),
             (RadialMenuDirection.UpRight, "project.members"),
             (RadialMenuDirection.Right, "dm.open"),
@@ -2573,10 +2559,10 @@ public static class AppDbContextSeed
             (RadialMenuDirection.DownLeft, "activityLog.create"),
             (RadialMenuDirection.Left, "artifact.upload"),
             (RadialMenuDirection.UpLeft, "gantt.open")
-        }, tenantId, now, cancellationToken);
+        ], tenantId, now, cancellationToken);
 
-        await SeedProfileAsync(dbContext, commands, "default.task", "Default Task", CommandContextType.TaskItem, new[]
-        {
+        await SeedProfileAsync(dbContext, commands, "default.task", "Default Task", CommandContextType.TaskItem,
+        [
             (RadialMenuDirection.Up, "task.changeStatus"),
             (RadialMenuDirection.UpRight, "task.assignUser"),
             (RadialMenuDirection.Right, "task.addComment"),
@@ -2585,7 +2571,7 @@ public static class AppDbContextSeed
             (RadialMenuDirection.DownLeft, "activityLog.create"),
             (RadialMenuDirection.Left, "project.open"),
             (RadialMenuDirection.UpLeft, "gantt.open")
-        }, tenantId, now, cancellationToken);
+        ], tenantId, now, cancellationToken);
     }
 
     private static async Task SeedProfileAsync(

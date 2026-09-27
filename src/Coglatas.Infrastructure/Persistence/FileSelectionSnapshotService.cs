@@ -3,7 +3,6 @@ using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Files;
 using Coglatas.Application.Search;
 using Coglatas.Domain.Entities;
-using Coglatas.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Coglatas.Infrastructure.Persistence;
@@ -20,7 +19,7 @@ public sealed class FileSelectionSnapshotService(
     IFileAuthorizationService authorization,
     IFileObjectService files) : IFileSelectionSnapshotService
 {
-    public const int MaximumSelectionCount = 100;
+    private const int MaximumSelectionCount = 100;
     private static readonly TimeSpan SnapshotLifetime = TimeSpan.FromMinutes(5);
 
     public async Task<Result<FileSelectionSnapshotCaptureResponse>> CaptureAsync(
@@ -39,9 +38,7 @@ public sealed class FileSelectionSnapshotService(
 
         var normalizedQuery = request.Q?.Trim() ?? string.Empty;
         if (normalizedQuery.Length == 0 &&
-            request.FileKind == FileSearchKind.All &&
-            !request.FromDate.HasValue &&
-            !request.OnlyMyUploads)
+            request is { FileKind: FileSearchKind.All, FromDate: null, OnlyMyUploads: false })
         {
             return Result<FileSelectionSnapshotCaptureResponse>.Failure("Choose a search or filter before selecting all results.");
         }
@@ -200,8 +197,7 @@ public sealed class FileSelectionSnapshotService(
         actorUserId = currentUser.UserId ?? Guid.Empty;
         return currentUser.IsAuthenticated &&
             actorUserId != Guid.Empty &&
-            currentTenant.IsAvailable &&
-            !currentTenant.IsPlatformScope;
+            currentTenant is { IsAvailable: true, IsPlatformScope: false };
     }
 
     private IQueryable<Attachment> MatchingWorkspaceFiles(
@@ -212,16 +208,7 @@ public sealed class FileSelectionSnapshotService(
         DateTimeOffset? fromDate,
         bool onlyMyUploads)
     {
-        var query = dbContext.Attachments
-            .AsNoTracking()
-            .Where(attachment =>
-                attachment.WorkspaceId == workspaceId &&
-                attachment.OwnerType == AttachmentOwnerType.Workspace &&
-                attachment.OwnerId == workspaceId &&
-                !attachment.DeletedAt.HasValue &&
-                attachment.FileObject != null &&
-                !attachment.FileObject.DeletedAt.HasValue &&
-                attachment.FileObject.Status != FileObjectStatus.Deleted);
+        var query = FileAttachmentQueryFilters.WorkspaceFiles(dbContext, workspaceId);
 
         if (normalizedQuery.Length > 0)
         {
@@ -234,33 +221,10 @@ public sealed class FileSelectionSnapshotService(
             query = query.Where(attachment => attachment.FileObject!.UploadedByUserId == actorUserId);
         }
 
-        query = ApplyFileKindFilter(query, fileKind);
+        query = FileAttachmentQueryFilters.ApplyKind(query, fileKind);
         return query.Where(attachment =>
             !fromDate.HasValue ||
             (attachment.FileObject!.UpdatedAt ?? attachment.FileObject.CreatedAt) >= fromDate.Value);
     }
 
-    private static IQueryable<Attachment> ApplyFileKindFilter(
-        IQueryable<Attachment> query,
-        FileSearchKind fileKind) => fileKind switch
-    {
-        FileSearchKind.Image => query.Where(attachment =>
-            EF.Functions.ILike(attachment.FileObject!.ContentType, "image/%")),
-        FileSearchKind.Pdf => query.Where(attachment =>
-            EF.Functions.ILike(attachment.FileObject!.ContentType, "application/pdf%")),
-        FileSearchKind.Video => query.Where(attachment =>
-            EF.Functions.ILike(attachment.FileObject!.ContentType, "video/%")),
-        FileSearchKind.Archive => query.Where(attachment =>
-            EF.Functions.ILike(attachment.FileObject!.ContentType, "application/zip%") ||
-            EF.Functions.ILike(attachment.FileObject.ContentType, "application/x-zip-compressed%") ||
-            EF.Functions.ILike(attachment.FileObject.OriginalFileName, "%.zip")),
-        FileSearchKind.Document => query.Where(attachment =>
-            !EF.Functions.ILike(attachment.FileObject!.ContentType, "image/%") &&
-            !EF.Functions.ILike(attachment.FileObject.ContentType, "application/pdf%") &&
-            !EF.Functions.ILike(attachment.FileObject.ContentType, "video/%") &&
-            !EF.Functions.ILike(attachment.FileObject.ContentType, "application/zip%") &&
-            !EF.Functions.ILike(attachment.FileObject.ContentType, "application/x-zip-compressed%") &&
-            !EF.Functions.ILike(attachment.FileObject.OriginalFileName, "%.zip")),
-        _ => query,
-    };
 }

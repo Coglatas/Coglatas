@@ -54,11 +54,13 @@ public sealed class MessageFollowUpService(
             return Result<MessageFollowUpStateResponse>.Failure("Message not found.");
         }
 
-        var message = await GetReadableMessageAsync(userId, messageId, cancellationToken);
+        var message = await GetReadableMessageOrAuditDenialAsync(
+            userId,
+            messageId,
+            "MessageFollowUpSaveDenied",
+            cancellationToken);
         if (message is null)
         {
-            await AuditAsync(userId, messageId, "MessageFollowUpSaveDenied", "deny", cancellationToken);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
             return Result<MessageFollowUpStateResponse>.Failure("Message not found.");
         }
 
@@ -94,11 +96,13 @@ public sealed class MessageFollowUpService(
 
         // Reauthorize the Message before looking up the caller's saved row so
         // deletion cannot reveal whether an inaccessible identity was saved.
-        var message = await GetReadableMessageAsync(userId, messageId, cancellationToken);
+        var message = await GetReadableMessageOrAuditDenialAsync(
+            userId,
+            messageId,
+            "MessageFollowUpRemoveDenied",
+            cancellationToken);
         if (message is null)
         {
-            await AuditAsync(userId, messageId, "MessageFollowUpRemoveDenied", "deny", cancellationToken);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
             return Result<MessageFollowUpStateResponse>.Failure("Message not found.");
         }
 
@@ -112,6 +116,23 @@ public sealed class MessageFollowUpService(
 
         return Result<MessageFollowUpStateResponse>.Success(
             new MessageFollowUpStateResponse(messageId, false, null));
+    }
+
+    private async Task<Message?> GetReadableMessageOrAuditDenialAsync(
+        Guid userId,
+        Guid messageId,
+        string deniedAction,
+        CancellationToken cancellationToken)
+    {
+        var message = await GetReadableMessageAsync(userId, messageId, cancellationToken);
+        if (message is not null)
+        {
+            return message;
+        }
+
+        await AuditAsync(userId, messageId, deniedAction, "deny", cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return null;
     }
 
     private async Task<Message?> GetReadableMessageAsync(
@@ -136,8 +157,7 @@ public sealed class MessageFollowUpService(
         userId = currentUser.UserId ?? Guid.Empty;
         return currentUser.IsAuthenticated &&
                userId != Guid.Empty &&
-               currentTenant.IsAvailable &&
-               !currentTenant.IsPlatformScope;
+               currentTenant is { IsAvailable: true, IsPlatformScope: false };
     }
 
     private Task AuditAsync(

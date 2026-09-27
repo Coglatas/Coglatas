@@ -63,7 +63,7 @@
       "privilegedAllowed": true
     },
     "NYGsatoshi/Coglatas": {
-      "sha": "a83fc584cb9de79fc08410af6d50b647bb541293",
+      "sha": "e03555c4be3700aa23f6e0bfe86b740b042dd5fa",
       "version": "qodana-debt-ratchet-v2",
       "purpose": "Immutable same-repository reusable Qodana gate with non-increasing inspection debt ratchet",
       "privilegedAllowed": true,
