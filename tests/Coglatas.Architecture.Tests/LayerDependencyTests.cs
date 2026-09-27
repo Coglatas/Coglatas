@@ -1,4 +1,3 @@
-using System.Reflection;
 using ArchUnitNET.Domain;
 using ArchUnitNET.Fluent;
 using ArchUnitNET.Loader;
@@ -12,10 +11,10 @@ public sealed class LayerDependencyTests
 {
     private static readonly ArchUnitNET.Domain.Architecture LoadedArchitecture = new ArchLoader()
         .LoadAssemblies(
-            Assembly.Load("Coglatas.Domain"),
-            Assembly.Load("Coglatas.Application"),
-            Assembly.Load("Coglatas.Infrastructure"),
-            Assembly.Load("Coglatas.Web"))
+            System.Reflection.Assembly.Load("Coglatas.Domain"),
+            System.Reflection.Assembly.Load("Coglatas.Application"),
+            System.Reflection.Assembly.Load("Coglatas.Infrastructure"),
+            System.Reflection.Assembly.Load("Coglatas.Web"))
         .Build();
 
     private static readonly IObjectProvider<IType> DomainLayer =
