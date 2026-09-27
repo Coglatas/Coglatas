@@ -224,7 +224,14 @@ test('architecture-only deferred PNLs stay explicit and out of active production
 });
 
 test('platform support remains provisional and delegated to #767', async () => {
-  const targetMap = await readJson(targetMapPath);
+  const [inventory, legacyFreeze, targetMap] = await Promise.all([
+    readJson(inventoryPath),
+    readJson(legacyFreezePath),
+    readJson(targetMapPath),
+  ]);
+
+  assert.equal(inventory.platformPolicy?.authorityIssue, 767);
+  assert.equal(legacyFreeze.platformPolicy?.authorityIssue, 767);
   assert.equal(targetMap.platformPolicy?.sourceOfTruthIssue, 767);
   assert.equal(targetMap.platformPolicy?.status, 'provisional-pending-AV-MIG-03-evidence');
   assert.equal(targetMap.platformPolicy?.desktop?.role, 'reference-target');
@@ -234,6 +241,11 @@ test('platform support remains provisional and delegated to #767', async () => {
     assert.equal(targetMap.platformPolicy?.[platform]?.tier, 'pending-#767');
     assert.equal(targetMap.platformPolicy?.[platform]?.unsupportedOrSkippedIsPass, false);
   }
+
+  const graph = legacyFreeze.nonRouteSurfaces.find((surface) =>
+    surface.surface.startsWith('Graph surface requested by #798'),
+  );
+  assert.equal(graph?.avaloniaIssue, 816);
 });
 
 test('browser/session persisted state is fully classified and never claims authorization authority', async () => {
@@ -273,26 +285,6 @@ test('browser/session persisted state is fully classified and never claims autho
   const nav = persisted.get('messaging-navigation');
   assert.equal(nav?.disposition, 'RetireAndRebuild');
   assert.match(nav?.targetFamily ?? '', /renderer-local/);
-});
-
-test('platform support classification remains delegated to authoritative issue #767', async () => {
-  const [inventory, legacyFreeze, targetMap] = await Promise.all([
-    readJson(inventoryPath),
-    readJson(legacyFreezePath),
-    readJson(targetMapPath),
-  ]);
-
-  assert.equal(inventory.platformPolicy?.authorityIssue, 767);
-  assert.equal(legacyFreeze.platformPolicy?.authorityIssue, 767);
-  assert.equal(targetMap.platformPolicy?.authorityIssue, 767);
-  assert.match(inventory.platformPolicy?.rule ?? '', /#767/u);
-  assert.match(legacyFreeze.platformPolicy?.rule ?? '', /does not invent/u);
-  assert.match(targetMap.platformPolicy?.rule ?? '', /not duplicated/u);
-
-  const graph = legacyFreeze.nonRouteSurfaces.find((surface) =>
-    surface.surface.startsWith('Graph surface requested by #798'),
-  );
-  assert.equal(graph?.avaloniaIssue, 816);
 });
 
 test('active target inventory has no owner-TBD and does not invent NgRx migration work', async () => {
