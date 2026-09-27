@@ -189,7 +189,7 @@ export class SourceInventory {
       `${route.path}: freeze class disagreement`,
     );
   }
-  /* eslint-disable max-statements, one-var, sort-vars */
+  /* eslint-disable max-statements, sort-vars */
   static verify(data, routeSource) {
     const [inventory, freeze, target] = data,
       freezeByPath = new Map(freeze.routes.map((route) => [route.path, route])),
@@ -244,7 +244,7 @@ export class SourceInventory {
     }
     return paths.length;
   }
-  /* eslint-enable max-statements, one-var, sort-vars */
+  /* eslint-enable max-statements, sort-vars */
   static loadInputs(path) {
     if (path) { return JSON.parse(readFileSync(path, 'utf8')); }
     return SourceInventory.inputs();
