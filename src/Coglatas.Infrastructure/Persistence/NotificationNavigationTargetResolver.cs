@@ -118,19 +118,18 @@ public sealed class NotificationNavigationTargetResolver(
             return Unavailable(initial.StateVersion);
         }
 
-        var finalAuthorization = await currentAuthorization.ResolveAsync(
+        var reauthorized = await ReauthorizeNavigationTargetAsync(
+            initial,
             tenantId,
             userId,
             notificationId,
             cancellationToken);
-        if (!IsSameAuthorizedTarget(initial, finalAuthorization))
+        if (!reauthorized.IsSameTarget)
         {
-            return finalAuthorization.IsOwned
-                ? Unavailable(finalAuthorization.StateVersion)
-                : finalAuthorization;
+            return reauthorized.Resolution;
         }
 
-        return finalAuthorization with
+        return reauthorized.Resolution with
         {
             Route = $"/artifacts/{target.ArtifactId}",
             WorkspaceId = target.WorkspaceId
@@ -164,33 +163,52 @@ public sealed class NotificationNavigationTargetResolver(
             return Unavailable(initial.StateVersion);
         }
 
-        // Recursive Conversation authorization remains owned by the canonical
-        // current-state resolver. Re-run it after metadata resolution so a
-        // concurrent revocation fails closed before any route is returned.
-        var finalAuthorization = await currentAuthorization.ResolveAsync(
+        var reauthorized = await ReauthorizeNavigationTargetAsync(
+            initial,
             tenantId,
             userId,
             notificationId,
             cancellationToken);
-        if (!IsSameAuthorizedTarget(initial, finalAuthorization))
+        if (!reauthorized.IsSameTarget)
         {
-            return finalAuthorization.IsOwned
-                ? Unavailable(finalAuthorization.StateVersion)
-                : finalAuthorization;
+            return reauthorized.Resolution;
         }
 
-        return finalAuthorization with
+        return reauthorized.Resolution with
         {
             Route = $"/conversations/{target.ConversationId}?messageId={target.MessageId}",
             WorkspaceId = target.WorkspaceId
         };
     }
 
+    private async Task<(bool IsSameTarget, NotificationTargetResolution Resolution)> ReauthorizeNavigationTargetAsync(
+        NotificationTargetResolution initial,
+        Guid tenantId,
+        Guid userId,
+        Guid notificationId,
+        CancellationToken cancellationToken)
+    {
+        var current = await currentAuthorization.ResolveAsync(
+            tenantId,
+            userId,
+            notificationId,
+            cancellationToken);
+        if (IsSameAuthorizedTarget(initial, current))
+        {
+            return (true, current);
+        }
+
+        return (
+            false,
+            current.IsOwned
+                ? Unavailable(current.StateVersion)
+                : current);
+    }
+
     private static bool IsSameAuthorizedTarget(
         NotificationTargetResolution initial,
         NotificationTargetResolution current) =>
-        current.IsOwned &&
-        current.IsAvailable &&
+        current is { IsOwned: true, IsAvailable: true } &&
         string.Equals(initial.Route, current.Route, StringComparison.Ordinal);
 
     private static bool TryParseGuidRoute(string route, string prefix, out Guid id)

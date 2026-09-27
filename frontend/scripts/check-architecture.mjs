@@ -31,9 +31,8 @@ export function findAgGridEnterpriseImports(sources) {
   return sources.filter(({ source }) => AG_GRID_ENTERPRISE_PATTERN.test(source)).map(({ path }) => path);
 }
 
-export function findLegacyThemeTokens(sources) {
-  return sources.filter(({ source }) => LEGACY_THEME_TOKEN_PATTERN.test(source)).map(({ path }) => path);
-}
+export const findLegacyThemeTokens = (sources) =>
+  sources.filter(({ source }) => LEGACY_THEME_TOKEN_PATTERN.test(source)).map(({ path }) => path);
 
 async function files(directory) {
   const entries = await readdir(directory, { withFileTypes: true });

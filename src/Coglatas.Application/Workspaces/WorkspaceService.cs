@@ -27,7 +27,7 @@ public sealed class WorkspaceService(
 
     public async Task<Result<IReadOnlyList<WorkspaceDashboardListItemResponse>>> ListAsync(CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<IReadOnlyList<WorkspaceDashboardListItemResponse>>.Failure(AuthenticationRequiredError());
         }
@@ -52,7 +52,7 @@ public sealed class WorkspaceService(
 
     public async Task<Result<IReadOnlyList<WorkspaceListItemResponse>>> ListArchivedAsync(CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<IReadOnlyList<WorkspaceListItemResponse>>.Failure(new ApplicationErrorDetail(
                 "AuthenticationRequired",
@@ -71,7 +71,7 @@ public sealed class WorkspaceService(
 
     public async Task<Result<WorkspaceCapabilitiesResponse>> GetCapabilitiesAsync(CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<WorkspaceCapabilitiesResponse>.Failure(new ApplicationErrorDetail(
                 "AuthenticationRequired",
@@ -95,7 +95,7 @@ public sealed class WorkspaceService(
         string? clientRequestIdentity,
         CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<WorkspaceDetailResponse>.Failure(new ApplicationErrorDetail(
                 "AuthenticationRequired",
@@ -255,7 +255,7 @@ public sealed class WorkspaceService(
 
     public async Task<Result<WorkspaceDetailResponse>> GetAsync(Guid workspaceId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId) || !await authorization.CanViewWorkspace(userId, workspaceId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanViewWorkspace(userId, workspaceId, cancellationToken))
         {
             return Result<WorkspaceDetailResponse>.Failure(NotFoundError());
         }
@@ -268,7 +268,7 @@ public sealed class WorkspaceService(
 
     public async Task<Result<WorkspaceDetailResponse>> UpdateAsync(Guid workspaceId, UpdateWorkspaceRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<WorkspaceDetailResponse>.Failure(AuthenticationRequiredError());
         }
@@ -323,7 +323,7 @@ public sealed class WorkspaceService(
 
     public async Task<Result> ArchiveAsync(Guid workspaceId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result.Failure(AuthenticationRequiredError());
         }
@@ -372,7 +372,7 @@ public sealed class WorkspaceService(
 
     public async Task<Result> RestoreAsync(Guid workspaceId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result.Failure(AuthenticationRequiredError());
         }
@@ -420,7 +420,7 @@ public sealed class WorkspaceService(
 
     public async Task<Result<IReadOnlyList<WorkspaceMemberResponse>>> ListMembersAsync(Guid workspaceId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId) || !await authorization.CanViewWorkspace(userId, workspaceId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanViewWorkspace(userId, workspaceId, cancellationToken))
         {
             return Result<IReadOnlyList<WorkspaceMemberResponse>>.Failure(NotFoundError());
         }
@@ -431,7 +431,7 @@ public sealed class WorkspaceService(
 
     public async Task<Result<WorkspaceMemberResponse>> AddMemberAsync(Guid workspaceId, AddWorkspaceMemberRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var actorUserId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var actorUserId))
         {
             return Result<WorkspaceMemberResponse>.Failure(AuthenticationRequiredError());
         }
@@ -490,7 +490,7 @@ public sealed class WorkspaceService(
 
     public async Task<Result<WorkspaceMemberResponse>> UpdateMemberAsync(Guid workspaceId, Guid userId, UpdateWorkspaceMemberRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var actorUserId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var actorUserId))
         {
             return Result<WorkspaceMemberResponse>.Failure(AuthenticationRequiredError());
         }
@@ -535,7 +535,7 @@ public sealed class WorkspaceService(
 
     public async Task<Result> RemoveMemberAsync(Guid workspaceId, Guid userId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var actorUserId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var actorUserId))
         {
             return Result.Failure(AuthenticationRequiredError());
         }
@@ -587,12 +587,6 @@ public sealed class WorkspaceService(
                    "Canonical Workspace general membership synchronization is unavailable."));
     }
 
-    private bool TryCurrentUser(out Guid userId)
-    {
-        userId = currentUser.UserId ?? Guid.Empty;
-        return currentUser.IsAuthenticated && currentUser.UserId.HasValue;
-    }
-
     private Task AuditAsync(Guid actorUserId, string action, Guid targetId, CancellationToken cancellationToken)
     {
         return auditLogger.LogAsync(new AuditLogEntry(actorUserId, action, "Workspace", targetId), cancellationToken);
@@ -611,7 +605,7 @@ public sealed class WorkspaceService(
             "workspace",
             workspaceId,
             change,
-            cancellationToken) ?? Task.CompletedTask;
+            cancellationToken);
     }
 
     private static ApplicationErrorDetail AuthenticationRequiredError() =>
@@ -711,7 +705,5 @@ public sealed class WorkspaceService(
         return new WorkspaceMemberResponse(member.UserId, member.User?.DisplayName ?? string.Empty, member.User?.Email ?? string.Empty, member.Role, member.Status, member.JoinedAt);
     }
 
-    private sealed class WorkspaceRequiredInitializationException : Exception
-    {
-    }
+    private sealed class WorkspaceRequiredInitializationException : Exception;
 }

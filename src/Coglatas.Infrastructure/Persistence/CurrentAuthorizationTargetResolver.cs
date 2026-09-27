@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Notifications;
 using Coglatas.Application.Realtime;
@@ -53,7 +52,7 @@ public sealed class CurrentAuthorizationTargetResolver(
         Guid userId,
         CancellationToken cancellationToken)
     {
-        if (!await HasCurrentTenantUserAsync(tenantId, userId, cancellationToken))
+        if (!await AuthorizationTargetShared.HasCurrentTenantUserAsync(dbContext, tenantId, userId, cancellationToken))
         {
             return Unavailable(notification.StateVersion);
         }
@@ -162,7 +161,7 @@ public sealed class CurrentAuthorizationTargetResolver(
             recipientUserId,
             envelope.AggregateId,
             cancellationToken);
-        if (notification is null || !await HasCurrentTenantUserAsync(tenantId, recipientUserId, cancellationToken))
+        if (notification is null || !await AuthorizationTargetShared.HasCurrentTenantUserAsync(dbContext, tenantId, recipientUserId, cancellationToken))
         {
             return false;
         }
@@ -177,9 +176,9 @@ public sealed class CurrentAuthorizationTargetResolver(
         }
 
         if (NotificationCurrentAuthorizationPolicy.RequiresReferenceOnlyCreatedPayload(notification.RelatedEntityType) &&
-            (!TryGetGuid(envelope.Payload, "notificationId", out var payloadNotificationId) ||
+            (!AuthorizationTargetShared.TryGetGuid(envelope.Payload, "notificationId", out var payloadNotificationId) ||
              payloadNotificationId != envelope.AggregateId ||
-             !IsReferenceOnlyNotificationCreatedPayload(
+             !AuthorizationTargetShared.IsReferenceOnlyNotificationCreatedPayload(
                  envelope.Payload,
                  payloadNotificationId,
                  envelope.AggregateVersion)))
@@ -192,7 +191,7 @@ public sealed class CurrentAuthorizationTargetResolver(
             recipientUserId,
             envelope.AggregateId,
             cancellationToken);
-        return resolution.IsOwned && resolution.IsAvailable;
+        return resolution is { IsOwned: true, IsAvailable: true };
     }
 
     public async Task<bool> CanDeliverReadStateAsync(
@@ -204,12 +203,12 @@ public sealed class CurrentAuthorizationTargetResolver(
         if (!IsTenantInScope(tenantId) ||
             envelope.EventType != "Notifications.NotificationReadStateChanged.v1" ||
             envelope.TenantId != tenantId ||
-            !await HasCurrentTenantUserAsync(tenantId, recipientUserId, cancellationToken))
+            !await AuthorizationTargetShared.HasCurrentTenantUserAsync(dbContext, tenantId, recipientUserId, cancellationToken))
         {
             return false;
         }
 
-        var hasNotificationId = TryGetNullableGuid(envelope.Payload, "notificationId", out var notificationId);
+        var hasNotificationId = AuthorizationTargetShared.TryGetNullableGuid(envelope.Payload, "notificationId", out var notificationId);
         if (!hasNotificationId)
         {
             return false;
@@ -218,7 +217,7 @@ public sealed class CurrentAuthorizationTargetResolver(
         if (!notificationId.HasValue)
         {
             return envelope.AggregateId == recipientUserId &&
-                string.Equals(GetString(envelope.Payload, "change"), "allRead", StringComparison.Ordinal);
+                string.Equals(AuthorizationTargetShared.GetString(envelope.Payload, "change"), "allRead", StringComparison.Ordinal);
         }
 
         if (envelope.AggregateId != notificationId.Value)
@@ -226,7 +225,7 @@ public sealed class CurrentAuthorizationTargetResolver(
             return false;
         }
 
-        var change = GetString(envelope.Payload, "change");
+        var change = AuthorizationTargetShared.GetString(envelope.Payload, "change");
         if (change is not ("read" or "deleted"))
         {
             return false;
@@ -261,7 +260,7 @@ public sealed class CurrentAuthorizationTargetResolver(
         var resolution = change == "deleted"
             ? await ResolveNotificationTargetAsync(notification, tenantId, recipientUserId, cancellationToken)
             : await ResolveAsync(tenantId, recipientUserId, notificationId.Value, cancellationToken);
-        return resolution.IsOwned && resolution.IsAvailable;
+        return resolution is { IsOwned: true, IsAvailable: true };
     }
 
     public async Task<IReadOnlySet<Guid>> FilterAvailableNotificationIdsAsync(
@@ -273,7 +272,7 @@ public sealed class CurrentAuthorizationTargetResolver(
         if (!IsTenantInScope(tenantId) ||
             userId == Guid.Empty ||
             notificationIds.Count == 0 ||
-            !await HasCurrentTenantUserAsync(tenantId, userId, cancellationToken))
+            !await AuthorizationTargetShared.HasCurrentTenantUserAsync(dbContext, tenantId, userId, cancellationToken))
         {
             return new HashSet<Guid>();
         }
@@ -282,7 +281,7 @@ public sealed class CurrentAuthorizationTargetResolver(
         var notifications = await dbContext.Notifications
             .AsNoTracking()
             .Where(item =>
-                requestedIds.Contains(item.Id) &&
+                Enumerable.Contains(requestedIds, item.Id) &&
                 item.TenantId == tenantId &&
                 item.UserId == userId &&
                 item.DeletedAt == null)
@@ -304,7 +303,7 @@ public sealed class CurrentAuthorizationTargetResolver(
             var visibleProjectIds = dbContext.VisibleProjectsFor(userId).Select(project => project.Id);
             var visibleArtifactIds = await dbContext.Artifacts
                 .AsNoTracking()
-                .Where(item => artifactIds.Contains(item.Id) && item.TenantId == tenantId && item.DeletedAt == null)
+                .Where(item => Enumerable.Contains(artifactIds, item.Id) && item.TenantId == tenantId && item.DeletedAt == null)
                 .Where(item => visibleProjectIds.Contains(item.ProjectId))
                 .Select(item => item.Id)
                 .ToListAsync(cancellationToken);
@@ -326,7 +325,7 @@ public sealed class CurrentAuthorizationTargetResolver(
             var messageIds = messageNotifications.Select(item => item.RelatedEntityId!.Value).Distinct().ToArray();
             var messages = await dbContext.Messages
                 .AsNoTracking()
-                .Where(item => messageIds.Contains(item.Id) && item.TenantId == tenantId && item.DeletedAt == null)
+                .Where(item => Enumerable.Contains(messageIds, item.Id) && item.TenantId == tenantId && item.DeletedAt == null)
                 .Where(item => item.WorkspaceId == item.Conversation!.WorkspaceId)
                 .Select(item => new { item.Id, item.ConversationId })
                 .ToListAsync(cancellationToken);
@@ -351,7 +350,7 @@ public sealed class CurrentAuthorizationTargetResolver(
                      item.RelatedEntityType != "Artifact" && item.RelatedEntityType != "Message"))
         {
             var resolution = await ResolveAsync(tenantId, userId, notification.Id, cancellationToken);
-            if (resolution.IsOwned && resolution.IsAvailable)
+            if (resolution is { IsOwned: true, IsAvailable: true })
             {
                 available.Add(notification.Id);
             }
@@ -372,9 +371,9 @@ public sealed class CurrentAuthorizationTargetResolver(
             !TaskEventTypes.Contains(envelope.EventType) ||
             envelope.TenantId != tenantId ||
             envelope.AggregateType != "Task" ||
-            !TryGetGuid(envelope.Payload, "taskId", out var taskId) ||
+            !AuthorizationTargetShared.TryGetGuid(envelope.Payload, "taskId", out var taskId) ||
             taskId != envelope.AggregateId ||
-            !TryGetGuid(envelope.Payload, "projectId", out var projectId))
+            !AuthorizationTargetShared.TryGetGuid(envelope.Payload, "projectId", out var projectId))
         {
             return false;
         }
@@ -406,9 +405,9 @@ public sealed class CurrentAuthorizationTargetResolver(
             envelope.EventType != "Projects.ProjectChanged.v1" ||
             envelope.TenantId != tenantId ||
             envelope.AggregateType != "Project" ||
-            !TryGetGuid(envelope.Payload, "projectId", out var projectId) ||
+            !AuthorizationTargetShared.TryGetGuid(envelope.Payload, "projectId", out var projectId) ||
             projectId != envelope.AggregateId ||
-            !TryGetGuid(envelope.Payload, "workspaceId", out var workspaceId))
+            !AuthorizationTargetShared.TryGetGuid(envelope.Payload, "workspaceId", out var workspaceId))
         {
             return false;
         }
@@ -442,7 +441,7 @@ public sealed class CurrentAuthorizationTargetResolver(
             targetType == RealtimeSubscriptionType.User &&
             targetResourceId == userId &&
             envelope.AggregateId == userId &&
-            TryGetGuid(envelope.Payload, "affectedUserId", out var affectedUserId) &&
+            AuthorizationTargetShared.TryGetGuid(envelope.Payload, "affectedUserId", out var affectedUserId) &&
             affectedUserId == userId;
         return Task.FromResult(allowed);
     }
@@ -453,7 +452,7 @@ public sealed class CurrentAuthorizationTargetResolver(
         Guid taskId,
         CancellationToken cancellationToken)
     {
-        if (!await HasCurrentTenantUserAsync(tenantId, userId, cancellationToken))
+        if (!await AuthorizationTargetShared.HasCurrentTenantUserAsync(dbContext, tenantId, userId, cancellationToken))
         {
             return null;
         }
@@ -548,7 +547,7 @@ public sealed class CurrentAuthorizationTargetResolver(
         Guid projectId,
         CancellationToken cancellationToken)
     {
-        if (!await HasCurrentTenantUserAsync(tenantId, userId, cancellationToken))
+        if (!await AuthorizationTargetShared.HasCurrentTenantUserAsync(dbContext, tenantId, userId, cancellationToken))
         {
             return null;
         }
@@ -637,25 +636,6 @@ public sealed class CurrentAuthorizationTargetResolver(
         return new ResolvedDigestTarget(digest.WorkspaceId);
     }
 
-    private async Task<bool> HasCurrentTenantUserAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken)
-    {
-        return await dbContext.Users.AsNoTracking().AnyAsync(user =>
-            user.Id == userId &&
-            user.DeletedAt == null &&
-            user.Status == UserStatus.Active,
-            cancellationToken) &&
-            await dbContext.Tenants.AsNoTracking().AnyAsync(tenant =>
-                tenant.Id == tenantId &&
-                tenant.DeletedAt == null &&
-                tenant.Status == TenantStatus.Active,
-                cancellationToken) &&
-            await dbContext.TenantUsers.AsNoTracking().AnyAsync(member =>
-                member.TenantId == tenantId &&
-                member.UserId == userId &&
-                member.Status == TenantUserStatus.Active,
-                cancellationToken);
-    }
-
     private Task<Notification?> FindRecipientNotificationAsync(
         Guid tenantId,
         Guid userId,
@@ -710,99 +690,6 @@ public sealed class CurrentAuthorizationTargetResolver(
     private static NotificationTargetResolution NotOwned() => new(false, false, null, 0);
 
     private static NotificationTargetResolution Unavailable(long stateVersion) => new(true, false, null, stateVersion);
-
-    private static bool TryGetGuid(JsonElement payload, string name, out Guid value)
-    {
-        value = Guid.Empty;
-        if (payload.ValueKind != JsonValueKind.Object ||
-            !payload.TryGetProperty(name, out var property))
-        {
-            return false;
-        }
-
-        return property.ValueKind == JsonValueKind.String &&
-            Guid.TryParse(property.GetString(), out value);
-    }
-
-    /// <summary>
-    /// Task/digest notification signals deliberately contain only identity and
-    /// ordering metadata. Enforcing that at delivery makes a replay of an
-    /// accidentally widened historical payload fail closed instead of
-    /// exposing a Task title, route, or relationship state.
-    /// </summary>
-    private static bool IsReferenceOnlyNotificationCreatedPayload(
-        JsonElement payload,
-        Guid notificationId,
-        long? aggregateVersion)
-    {
-        if (payload.ValueKind != JsonValueKind.Object || aggregateVersion is not > 0)
-        {
-            return false;
-        }
-
-        var expectedProperties = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "notificationId",
-            "stateVersion",
-            "requiresRefetch"
-        };
-        var propertyCount = 0;
-        foreach (var property in payload.EnumerateObject())
-        {
-            if (!expectedProperties.Contains(property.Name))
-            {
-                return false;
-            }
-
-            propertyCount++;
-        }
-
-        return propertyCount == expectedProperties.Count &&
-            TryGetGuid(payload, "notificationId", out var payloadNotificationId) &&
-            payloadNotificationId == notificationId &&
-            TryGetLong(payload, "stateVersion", out var stateVersion) &&
-            stateVersion == aggregateVersion &&
-            payload.TryGetProperty("requiresRefetch", out var requiresRefetch) &&
-            requiresRefetch.ValueKind is JsonValueKind.True;
-    }
-
-    private static bool TryGetLong(JsonElement payload, string name, out long value)
-    {
-        value = 0;
-        return payload.ValueKind == JsonValueKind.Object &&
-            payload.TryGetProperty(name, out var property) &&
-            property.ValueKind == JsonValueKind.Number &&
-            property.TryGetInt64(out value);
-    }
-
-    private static bool TryGetNullableGuid(JsonElement payload, string name, out Guid? value)
-    {
-        value = null;
-        if (payload.ValueKind != JsonValueKind.Object || !payload.TryGetProperty(name, out var property))
-        {
-            return false;
-        }
-
-        if (property.ValueKind == JsonValueKind.Null)
-        {
-            return true;
-        }
-
-        if (property.ValueKind != JsonValueKind.String || !Guid.TryParse(property.GetString(), out var parsed))
-        {
-            return false;
-        }
-
-        value = parsed;
-        return true;
-    }
-
-    private static string? GetString(JsonElement payload, string name) =>
-        payload.ValueKind == JsonValueKind.Object &&
-        payload.TryGetProperty(name, out var property) &&
-        property.ValueKind == JsonValueKind.String
-            ? property.GetString()
-            : null;
 
     private sealed record ResolvedTaskTarget(Guid TaskId, Guid ProjectId, Guid WorkspaceId);
 

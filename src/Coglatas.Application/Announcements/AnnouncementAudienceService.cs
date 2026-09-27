@@ -57,7 +57,7 @@ public sealed class AnnouncementAudienceService(
                 continue;
             }
 
-            if (await CanCreateWorkspaceAnnouncementAsync(userId, workspace.Id, cancellationToken))
+            if (await AnnouncementScopeAuthorization.CanCreateWorkspaceAsync(workspaceAuthorization, userId, workspace.Id, IsTeacherAsync, cancellationToken))
             {
                 options.Add(await CreateOptionAsync(
                     $"workspace:{workspace.Id:D}",
@@ -77,7 +77,7 @@ public sealed class AnnouncementAudienceService(
                     continue;
                 }
 
-                if (await CanCreateGroupAnnouncementAsync(userId, group.Id, cancellationToken))
+                if (await AnnouncementScopeAuthorization.CanCreateGroupAsync(groupAuthorization, userId, group.Id, IsTeacherAsync, cancellationToken))
                 {
                     options.Add(await CreateOptionAsync(
                         $"group:{group.Id:D}",
@@ -205,7 +205,12 @@ public sealed class AnnouncementAudienceService(
                 return Result<bool>.Success(false);
             }
 
-            return Result<bool>.Success(await CanCreateGroupAnnouncementAsync(actorUserId, groupId.Value, cancellationToken));
+            return Result<bool>.Success(await AnnouncementScopeAuthorization.CanCreateGroupAsync(
+                groupAuthorization,
+                actorUserId,
+                groupId.Value,
+                IsTeacherAsync,
+                cancellationToken));
         }
 
         if (workspaceId.HasValue)
@@ -216,7 +221,12 @@ public sealed class AnnouncementAudienceService(
                 return Result<bool>.Success(false);
             }
 
-            return Result<bool>.Success(await CanCreateWorkspaceAnnouncementAsync(actorUserId, workspaceId.Value, cancellationToken));
+            return Result<bool>.Success(await AnnouncementScopeAuthorization.CanCreateWorkspaceAsync(
+                workspaceAuthorization,
+                actorUserId,
+                workspaceId.Value,
+                IsTeacherAsync,
+                cancellationToken));
         }
 
         return Result<bool>.Success(isSystemAdmin);
@@ -294,28 +304,6 @@ public sealed class AnnouncementAudienceService(
                 currentTenant.TenantId,
                 workspaceId,
                 cancellationToken)).Id);
-    }
-
-    private async Task<bool> CanCreateWorkspaceAnnouncementAsync(Guid userId, Guid workspaceId, CancellationToken cancellationToken)
-    {
-        if (await workspaceAuthorization.CanManageWorkspace(userId, workspaceId, cancellationToken))
-        {
-            return true;
-        }
-
-        return await IsTeacherAsync(userId, cancellationToken) &&
-            await workspaceAuthorization.CanViewWorkspace(userId, workspaceId, cancellationToken);
-    }
-
-    private async Task<bool> CanCreateGroupAnnouncementAsync(Guid userId, Guid groupId, CancellationToken cancellationToken)
-    {
-        if (await groupAuthorization.CanManageGroup(userId, groupId, cancellationToken))
-        {
-            return true;
-        }
-
-        return await IsTeacherAsync(userId, cancellationToken) &&
-            await groupAuthorization.CanViewGroup(userId, groupId, cancellationToken);
     }
 
     private async Task<bool> IsSystemAdminAsync(Guid userId, CancellationToken cancellationToken)

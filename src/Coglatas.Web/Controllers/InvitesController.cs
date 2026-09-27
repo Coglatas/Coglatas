@@ -1,8 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
 using Coglatas.Application.Auth;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -35,7 +32,7 @@ public sealed class InvitesController(IAuthService authService) : ControllerBase
             return InviteProblem(result.Error, "Invite acceptance failed.");
         }
 
-        await SignInAsync(result.Value);
+        await AuthenticationCookieSignIn.SignInAsync(HttpContext, result.Value);
         return Ok(result.Value);
     }
 
@@ -45,29 +42,5 @@ public sealed class InvitesController(IAuthService authService) : ControllerBase
             title: title,
             detail: string.IsNullOrWhiteSpace(detail) ? "Invite is invalid." : detail,
             statusCode: StatusCodes.Status404NotFound);
-    }
-
-    private Task SignInAsync(LoginResponse user)
-    {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-            new(ClaimTypes.Name, user.DisplayName),
-            new(ClaimTypes.Email, user.Email),
-            new(ClaimTypes.Role, user.SystemRole.ToString()),
-            new("system_role", user.SystemRole.ToString()),
-            new("session_id", user.SessionId.ToString())
-        };
-        claims.AddRange(user.Capabilities.Select(capability => new Claim("capability", capability)));
-
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var principal = new ClaimsPrincipal(identity);
-        var properties = new AuthenticationProperties
-        {
-            IsPersistent = true,
-            ExpiresUtc = user.ExpiresAt
-        };
-
-        return HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, properties);
     }
 }

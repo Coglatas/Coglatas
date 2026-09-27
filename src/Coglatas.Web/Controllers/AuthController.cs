@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Coglatas.Application.Auth;
 using Coglatas.Web.Configuration;
 using Microsoft.AspNetCore.Authentication;
@@ -25,7 +24,7 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
             return Unauthorized(new { error = result.Error });
         }
 
-        await SignInAsync(result.Value);
+        await AuthenticationCookieSignIn.SignInAsync(HttpContext, result.Value);
         return Ok(result.Value);
     }
 
@@ -55,7 +54,7 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
                 statusCode: StatusCodes.Status404NotFound);
         }
 
-        await SignInAsync(result.Value);
+        await AuthenticationCookieSignIn.SignInAsync(HttpContext, result.Value);
         return Ok(result.Value);
     }
 
@@ -103,29 +102,5 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
         }
 
         return Ok(new { isAuthenticated = true, user = result.Value });
-    }
-
-    private Task SignInAsync(LoginResponse user)
-    {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-            new(ClaimTypes.Name, user.DisplayName),
-            new(ClaimTypes.Email, user.Email),
-            new(ClaimTypes.Role, user.SystemRole.ToString()),
-            new("system_role", user.SystemRole.ToString()),
-            new("session_id", user.SessionId.ToString())
-        };
-        claims.AddRange(user.Capabilities.Select(capability => new Claim("capability", capability)));
-
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var principal = new ClaimsPrincipal(identity);
-        var properties = new AuthenticationProperties
-        {
-            IsPersistent = true,
-            ExpiresUtc = user.ExpiresAt
-        };
-
-        return HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, properties);
     }
 }
