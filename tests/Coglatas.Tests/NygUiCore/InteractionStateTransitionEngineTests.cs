@@ -570,6 +570,82 @@ public sealed class InteractionStateTransitionEngineTests
         Assert.True(read.ActionDecision.IsAllowed);
     }
 
+    [Fact]
+    public void TemporalChange_InvalidatesOldProjectionAndEqualChangeIsIdempotent()
+    {
+        var state = CurrentState();
+        var oldProjection = _engine.CreateProjection(state);
+        var historical = new TemporalContext(TemporalMode.Historical, "v42");
+
+        var changed = _engine.Process(state, new TemporalChanged(historical));
+
+        Assert.Equal(state.ContextGeneration + 1, changed.State.ContextGeneration);
+        Assert.Equal(historical, changed.State.Temporal);
+        Assert.True(changed.RequiresRefetch);
+
+        var staleAction = _engine.Process(
+            changed.State,
+            new ActionRequested(
+                CoreActionContracts.MutateCanonical,
+                oldProjection.Stamp,
+                CurrentAuthority(changed.State)));
+
+        Assert.Equal(ActionDecisionCode.StaleProjection, staleAction.ActionDecision.Code);
+        Assert.False(staleAction.ActionDecision.IsAllowed);
+
+        var same = _engine.Process(changed.State, new TemporalChanged(historical));
+
+        Assert.Equal(changed.State, same.State);
+        Assert.False(same.RequiresRefetch);
+    }
+
+    [Fact]
+    public void PublicContractValues_AreObservableByRendererAdapters()
+    {
+        var query = new QueryDescriptor("status:open");
+        Assert.Equal("status:open", query.Value);
+
+        var entity = new EntityReference("Task", "T-42");
+        Assert.Equal("Task", entity.Kind);
+        Assert.Equal("T-42", entity.Id);
+
+        var safety = new RequiredSafetyContext(
+            TemporalMode.Historical,
+            ConflictKind.Conflict,
+            AuthorityStatus.Denied,
+            RecoveryAction.ResolveConflict);
+        Assert.Equal(TemporalMode.Historical, safety.TemporalMode);
+        Assert.Equal(ConflictKind.Conflict, safety.ConflictKind);
+        Assert.Equal(AuthorityStatus.Denied, safety.AuthorityStatus);
+        Assert.Equal(RecoveryAction.ResolveConflict, safety.RecoveryAction);
+
+        var state = CurrentState();
+        var envelope = new ProjectionEnvelope(
+            new RendererId("Board"),
+            new ProjectionStamp(1, 2, 3),
+            safety,
+            state);
+        Assert.Equal(new RendererId("Board"), envelope.Renderer);
+        Assert.Equal(safety, envelope.RequiredSafety);
+
+        var actionDecision = new ActionDecision(
+            ActionDecisionCode.AuthorityDenied,
+            false,
+            "renderer-visible action reason");
+        Assert.Equal("renderer-visible action reason", actionDecision.Reason);
+
+        var commitDecision = new CommitDecision(
+            CommitDecisionCode.StaleCanonical,
+            false,
+            "renderer-visible commit reason");
+        Assert.Equal("renderer-visible commit reason", commitDecision.Reason);
+
+        Assert.True(CoreActionContracts.TryResolve(
+            CoreActionContracts.RestoreSnapshot,
+            out var restore));
+        Assert.Equal(InteractionActionKind.Restore, restore.Kind);
+    }
+
     private static WorkSurfaceState CurrentState(
         CanonicalDependencyDomain dependencies = CanonicalDependencyDomain.All) =>
         WorkSurfaceState.Create(
