@@ -22,7 +22,7 @@ Last updated: 2026-09-27.
 - Node.js: `24.x` for the SARIF/project-model guard.
 - Qodana action: `JetBrains/qodana-action` v2026.2.1, pinned to commit `10be11607eb323a180e2b76b26c9c5cdceac3e77`.
 - Community linter image: `jetbrains/qodana-cdnet:2026.2-privileged@sha256:21bbbfeac0e61fe8790cc27d5754b87d57b8032c0c32f84ddeb887027f83ec4f`.
-- Reusable Qodana gate: `.github/workflows/qodana_trusted_gate.yml` pinned through main-reachable commit `a83fc584cb9de79fc08410af6d50b647bb541293`.
+- Reusable Qodana gate: `.github/workflows/qodana_trusted_gate.yml` pinned through main-reachable commit `e03555c4be3700aa23f6e0bfe86b740b042dd5fa`.
 
 Qodana Community for .NET is intentionally the .NET lane. Frontend policy is enforced independently by SonarQube Cloud, ESLint/angular-eslint and Stylelint, so the Qodana bootstrap sets `QODANA_SKIP_FRONTEND_BOOTSTRAP=true` in CI instead of spending Community-linter time building an unsupported frontend analysis surface.
 
