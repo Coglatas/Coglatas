@@ -25,15 +25,10 @@ profile:
     # Also catch repeated statement sequences inside C# control-flow branches.
     - inspection: DuplicatedStatements
       enabled: true
-    # These integration tests intentionally bind Kestrel to an ephemeral port and
-    # create clients whose BaseAddress and cookie state belong to that single app.
-    # Sharing HttpClient instances across tests would cross those isolation boundaries.
+    # Keep short-lived HttpClient detection enabled repository-wide. The intentional
+    # per-test Kestrel clients are excluded explicitly below from this inspection only.
     - inspection: ShortLivedHttpClient
-      ignore:
-        - "tests/Coglatas.Tests/Auth/HttpSecurityPolicyTests.cs"
-        - "tests/Coglatas.Tests/Auth/Sec13ProductionHttpTests.cs"
-        - "tests/Coglatas.Tests/Auth/SecurityHeadersMiddlewareTests.cs"
-        - "tests/Coglatas.Tests/Web/AngularSpaFallbackTests.cs"
+      enabled: true
 
 # Prepare the complete .NET project model before inspections start.
 bootstrap: bash scripts/quality/qodana-bootstrap.sh
@@ -44,6 +39,15 @@ dotnet:
   configuration: Release
 
 exclude:
+  # These integration tests intentionally bind Kestrel to an ephemeral port and
+  # create clients whose BaseAddress and cookie state belong to that single app.
+  # Sharing HttpClient instances across tests would cross those isolation boundaries.
+  - name: ShortLivedHttpClient
+    paths:
+      - "tests/Coglatas.Tests/Auth/HttpSecurityPolicyTests.cs"
+      - "tests/Coglatas.Tests/Auth/Sec13ProductionHttpTests.cs"
+      - "tests/Coglatas.Tests/Auth/SecurityHeadersMiddlewareTests.cs"
+      - "tests/Coglatas.Tests/Web/AngularSpaFallbackTests.cs"
   - name: All
     paths:
       - "bin"
