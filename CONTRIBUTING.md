@@ -1,5 +1,10 @@
 # Contribution policy
 
+>[!IMPORTANT]
+>Angular,Javascript,Typescript,Html,CSS related codes are deprecated.
+>These codes will not be maintained and will be deleted in the next major update.
+
+
 ## Unsolicited contributions are not accepted
 
 This repository is publicly visible but is not an open-source project.

@@ -339,7 +339,6 @@ public sealed class AuditClaimsEvidenceServiceTests
         public int AuthorizeCalls { get; private set; }
         public Task<AuditCapabilityResponse> GetCapabilitiesAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new AuditCapabilityResponse(canView, false, false, false, false));
-        public Task<bool> HasCapabilityAsync(string capabilityKey, CancellationToken cancellationToken = default) => Task.FromResult(canView);
         public Task<Result> AuthorizeAsync(string capabilityKey, string operation, CancellationToken cancellationToken = default)
         {
             AuthorizeCalls++;

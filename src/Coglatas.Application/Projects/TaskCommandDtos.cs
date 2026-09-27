@@ -6,6 +6,9 @@ using System.Text.Json.Serialization;
 
 namespace Coglatas.Application.Projects;
 
+// API response properties are consumed by JSON serialization.
+// ReSharper disable NotAccessedPositionalProperty.Global
+
 public sealed record TaskTransitionRequest(Guid WorkflowStageId, long ExpectedVersion, string? Reason = null);
 /// <summary>Ordinary Task-body fields only. Workflow state changes use the transition command.</summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
@@ -64,7 +67,7 @@ public static class TaskBriefText
 {
     public const int MaximumFieldLength = 4_000;
 
-    public static bool ExceedsMaximum(string? value) =>
+    private static bool ExceedsMaximum(string? value) =>
         value?.Trim().Length > MaximumFieldLength;
 
     public static string? Normalize(string? value)
@@ -177,27 +180,25 @@ public sealed record TaskClaimRequest(long ExpectedVersion);
 public sealed record TaskRestoreRequest(long ExpectedVersion);
 public sealed record TaskDeleteRequest(long ExpectedVersion);
 public sealed record TaskWatchStateResponse(bool IsWatching, bool IsExplicitOptOut, string[] AutomaticSources, long Version);
-public sealed record TaskWatchRequest([property: System.ComponentModel.DataAnnotations.Range(typeof(long), "0", "9223372036854775807")] long ExpectedVersion);
+public sealed record TaskWatchRequest([param: System.ComponentModel.DataAnnotations.Range(typeof(long), "0", "9223372036854775807")] long ExpectedVersion);
 
 /// <summary>
 /// Gantt scheduling owns only day-precision planned dates. MilestoneDate is
 /// applicable only to the compatibility Milestone aggregate.
 /// </summary>
-[System.Text.Json.Serialization.JsonUnmappedMemberHandling(
-    System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow)]
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record TaskScheduleUpdateRequest(
-    [property: System.Text.Json.Serialization.JsonRequired] DateOnly? PlannedStartDate,
-    [property: System.Text.Json.Serialization.JsonRequired] DateOnly? PlannedEndDate,
+    [property: JsonRequired] DateOnly? PlannedStartDate,
+    [property: JsonRequired] DateOnly? PlannedEndDate,
     DateOnly? MilestoneDate,
     long ExpectedVersion);
 
-[System.Text.Json.Serialization.JsonUnmappedMemberHandling(
-    System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow)]
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record TaskProgressUpdateRequest(int? ProgressPercent, long ExpectedVersion);
 
 public sealed record GanttEditCommandResponse(
     Guid TaskId,
-    [property: System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))] WorkItemKind Kind,
+    [property: JsonConverter(typeof(JsonStringEnumConverter))] WorkItemKind Kind,
     DateOnly? PlannedStartDate,
     DateOnly? PlannedEndDate,
     DateOnly? MilestoneDate,

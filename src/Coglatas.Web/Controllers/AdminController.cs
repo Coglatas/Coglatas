@@ -1,5 +1,4 @@
 using Coglatas.Application.Admin;
-using Coglatas.Application.Common;
 using Coglatas.Web.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +10,7 @@ namespace Coglatas.Web.Controllers;
 [Authorize(Roles = "PlatformAdmin,SystemAdmin")]
 [EnableRateLimiting(HttpSecurityPolicy.AdminRateLimitPolicy)]
 [Route("api/admin")]
-public sealed class AdminController(IAdminService adminService) : ControllerBase
+public sealed class AdminController(IAdminService adminService) : ApiResultControllerBase
 {
     [HttpGet("users")]
     public async Task<IActionResult> ListUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken cancellationToken = default)
@@ -34,25 +33,25 @@ public sealed class AdminController(IAdminService adminService) : ControllerBase
     [HttpPost("users/{userId:guid}/suspend")]
     public async Task<IActionResult> SuspendUser(Guid userId, CancellationToken cancellationToken)
     {
-        return ToStatusResult(await adminService.SuspendUserAsync(userId, cancellationToken));
+        return OkOrBad(await adminService.SuspendUserAsync(userId, cancellationToken));
     }
 
     [HttpPost("users/{userId:guid}/activate")]
     public async Task<IActionResult> ActivateUser(Guid userId, CancellationToken cancellationToken)
     {
-        return ToStatusResult(await adminService.ActivateUserAsync(userId, cancellationToken));
+        return OkOrBad(await adminService.ActivateUserAsync(userId, cancellationToken));
     }
 
     [HttpPost("users/{userId:guid}/reset-password-invite")]
     public async Task<IActionResult> ResetPasswordInvite(Guid userId, CancellationToken cancellationToken)
     {
-        return ToStatusResult(await adminService.ResetPasswordInviteAsync(userId, cancellationToken));
+        return OkOrBad(await adminService.ResetPasswordInviteAsync(userId, cancellationToken));
     }
 
     [HttpDelete("users/{userId:guid}")]
     public async Task<IActionResult> ArchiveUser(Guid userId, CancellationToken cancellationToken)
     {
-        return ToStatusResult(await adminService.ArchiveUserAsync(userId, cancellationToken));
+        return OkOrBad(await adminService.ArchiveUserAsync(userId, cancellationToken));
     }
 
     [HttpPatch("users/{userId:guid}/system-role")]
@@ -71,23 +70,23 @@ public sealed class AdminController(IAdminService adminService) : ControllerBase
     public async Task<IActionResult> CreateInvite(CreateInviteRequest request, CancellationToken cancellationToken)
     {
         var result = await adminService.CreateInviteAsync(request, cancellationToken);
-        return result.IsSuccess && result.Value is not null
-            ? Ok(ToHttpInviteResponse(result.Value))
+        return result is { IsSuccess: true, Value: { } invite }
+            ? Ok(ToHttpInviteResponse(invite))
             : BadRequest(new { error = result.Error });
     }
 
     [HttpPost("invites/{inviteId:guid}/revoke")]
     public async Task<IActionResult> RevokeInvite(Guid inviteId, CancellationToken cancellationToken)
     {
-        return ToStatusResult(await adminService.RevokeInviteAsync(inviteId, cancellationToken));
+        return OkOrBad(await adminService.RevokeInviteAsync(inviteId, cancellationToken));
     }
 
     [HttpPost("invites/bulk")]
     public async Task<IActionResult> BulkCreateInvites(BulkCreateInviteRequest request, CancellationToken cancellationToken)
     {
         var result = await adminService.BulkCreateInvitesAsync(request, cancellationToken);
-        return result.IsSuccess && result.Value is not null
-            ? Ok(result.Value.Select(ToHttpInviteResponse).ToList())
+        return result is { IsSuccess: true, Value: { } invites }
+            ? Ok(invites.Select(ToHttpInviteResponse).ToList())
             : BadRequest(new { error = result.Error });
     }
 
@@ -112,25 +111,25 @@ public sealed class AdminController(IAdminService adminService) : ControllerBase
     [HttpPost("lifecycle/workspaces/{workspaceId:guid}/archive")]
     public async Task<IActionResult> ArchiveWorkspace(Guid workspaceId, CancellationToken cancellationToken)
     {
-        return ToStatusResult(await adminService.ArchiveWorkspaceAsync(workspaceId, cancellationToken));
+        return OkOrBad(await adminService.ArchiveWorkspaceAsync(workspaceId, cancellationToken));
     }
 
     [HttpPost("lifecycle/groups/{groupId:guid}/archive")]
     public async Task<IActionResult> ArchiveGroup(Guid groupId, CancellationToken cancellationToken)
     {
-        return ToStatusResult(await adminService.ArchiveGroupAsync(groupId, cancellationToken));
+        return OkOrBad(await adminService.ArchiveGroupAsync(groupId, cancellationToken));
     }
 
     [HttpPost("lifecycle/projects/{projectId:guid}/archive")]
     public async Task<IActionResult> ArchiveProject(Guid projectId, CancellationToken cancellationToken)
     {
-        return ToStatusResult(await adminService.ArchiveProjectAsync(projectId, cancellationToken));
+        return OkOrBad(await adminService.ArchiveProjectAsync(projectId, cancellationToken));
     }
 
     [HttpPost("lifecycle/channels/{channelId:guid}/archive")]
     public async Task<IActionResult> ArchiveChannel(Guid channelId, CancellationToken cancellationToken)
     {
-        return ToStatusResult(await adminService.ArchiveChannelAsync(channelId, cancellationToken));
+        return OkOrBad(await adminService.ArchiveChannelAsync(channelId, cancellationToken));
     }
 
     [HttpPost("task-deadline-digests/{jobId:guid}/restart")]
@@ -139,7 +138,7 @@ public sealed class AdminController(IAdminService adminService) : ControllerBase
         RestartTaskDeadlineDigestRequest request,
         CancellationToken cancellationToken)
     {
-        return ToStatusResult(await adminService.RestartTaskDeadlineDigestAsync(jobId, request, cancellationToken));
+        return OkOrBad(await adminService.RestartTaskDeadlineDigestAsync(jobId, request, cancellationToken));
     }
 
     [HttpGet("dashboard")]
@@ -148,33 +147,25 @@ public sealed class AdminController(IAdminService adminService) : ControllerBase
         return ToActionResult(await adminService.GetDashboardAsync(cancellationToken));
     }
 
-    private IActionResult ToActionResult<T>(Result<T> result)
-    {
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
-    }
-
-    private IActionResult ToStatusResult(Result result)
-    {
-        return result.IsSuccess ? Ok(new { status = "OK" }) : BadRequest(new { error = result.Error });
-    }
-
-    private AdminInviteHttpResponse ToHttpInviteResponse(AdminInviteResponse invite)
+    private object ToHttpInviteResponse(AdminInviteResponse invite)
     {
         var inviteUrl = string.IsNullOrWhiteSpace(invite.InviteToken)
             ? null
             : BuildInviteUrl(invite.InviteToken);
 
-        return new AdminInviteHttpResponse(
+        return new
+        {
             invite.Id,
             invite.WorkspaceId,
             invite.Email,
-            invite.Role.ToString(),
+            Role = invite.Role.ToString(),
             invite.ExpiresAt,
             invite.AcceptedAt,
             invite.RevokedAt,
             invite.InvitedByUserId,
             invite.CreatedAt,
-            inviteUrl);
+            InviteUrl = inviteUrl
+        };
     }
 
     private string BuildInviteUrl(string token)
@@ -183,15 +174,4 @@ public sealed class AdminController(IAdminService adminService) : ControllerBase
         return $"{Request.Scheme}://{Request.Host}{pathBase}/app/register/invite?token={Uri.EscapeDataString(token)}";
     }
 
-    private sealed record AdminInviteHttpResponse(
-        Guid Id,
-        Guid WorkspaceId,
-        string Email,
-        string Role,
-        DateTimeOffset ExpiresAt,
-        DateTimeOffset? AcceptedAt,
-        DateTimeOffset? RevokedAt,
-        Guid InvitedByUserId,
-        DateTimeOffset CreatedAt,
-        string? InviteUrl);
 }

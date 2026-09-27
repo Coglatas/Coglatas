@@ -22,6 +22,11 @@ public static class SecurityCiFixtureSeed
     public const string TenantARestrictedEmail = "security-alpha-restricted@example.test";
     public const string TenantBOwnerEmail = "security-beta-owner@example.test";
 
+    public static readonly Guid TenantAOwnerUserId = new("a11fa001-aaaa-4aaa-8aaa-aaaaaaaaa001");
+    public static readonly Guid TenantAMemberUserId = new("a11fa002-aaaa-4aaa-8aaa-aaaaaaaaa002");
+    public static readonly Guid TenantARestrictedUserId = new("a11fa003-aaaa-4aaa-8aaa-aaaaaaaaa003");
+    public static readonly Guid TenantBOwnerUserId = new("be7a0001-bbbb-4bbb-8bbb-bbbbbbbbb001");
+
     public const string TenantAWorkspaceSlug = "sec02-alpha-workspace";
     public const string TenantBWorkspaceSlug = "sec02-beta-workspace";
     public const string TenantAProjectSlug = "sec02-alpha-project";
@@ -29,10 +34,10 @@ public static class SecurityCiFixtureSeed
 
     public const string TenantATaskTitle = "SEC02 ALPHA PRIVATE TASK CANARY";
     public const string TenantBTaskTitle = "SEC02 BETA PRIVATE TASK CANARY";
-    public const string TenantAFileName = "sec02-alpha-private.txt";
-    public const string TenantBFileName = "sec02-beta-private.txt";
-    public const string TenantAConversationTitle = "SEC02 ALPHA PRIVATE CONVERSATION CANARY";
-    public const string TenantBConversationTitle = "SEC02 BETA PRIVATE CONVERSATION CANARY";
+    private const string TenantAFileName = "sec02-alpha-private.txt";
+    private const string TenantBFileName = "sec02-beta-private.txt";
+    private const string TenantAConversationTitle = "SEC02 ALPHA PRIVATE CONVERSATION CANARY";
+    private const string TenantBConversationTitle = "SEC02 BETA PRIVATE CONVERSATION CANARY";
 
     private const string TenantAFileBody = "SEC02_ALPHA_FILE_CANARY_DO_NOT_LEAK\n";
     private const string TenantBFileBody = "SEC02_BETA_FILE_CANARY_DO_NOT_LEAK\n";
@@ -67,6 +72,7 @@ public static class SecurityCiFixtureSeed
         var alphaOwner = await EnsureUserAsync(
             dbContext,
             passwordHasher,
+            TenantAOwnerUserId,
             TenantAOwnerEmail,
             "SEC-02 Alpha Owner",
             password,
@@ -74,6 +80,7 @@ public static class SecurityCiFixtureSeed
         var alphaMember = await EnsureUserAsync(
             dbContext,
             passwordHasher,
+            TenantAMemberUserId,
             TenantAMemberEmail,
             "SEC-02 Alpha Member",
             password,
@@ -81,6 +88,7 @@ public static class SecurityCiFixtureSeed
         var alphaRestricted = await EnsureUserAsync(
             dbContext,
             passwordHasher,
+            TenantARestrictedUserId,
             TenantARestrictedEmail,
             "SEC-02 Alpha Restricted",
             password,
@@ -88,6 +96,7 @@ public static class SecurityCiFixtureSeed
         var betaOwner = await EnsureUserAsync(
             dbContext,
             passwordHasher,
+            TenantBOwnerUserId,
             TenantBOwnerEmail,
             "SEC-02 Beta Owner",
             password,
@@ -182,6 +191,7 @@ public static class SecurityCiFixtureSeed
     private static async Task<User> EnsureUserAsync(
         AppDbContext dbContext,
         IPasswordHasher passwordHasher,
+        Guid expectedUserId,
         string email,
         string displayName,
         string password,
@@ -203,8 +213,15 @@ public static class SecurityCiFixtureSeed
                 SystemRole = SystemRole.User,
                 Status = UserStatus.Active
             };
+            dbContext.Entry(user).Property(candidate => candidate.Id).CurrentValue = expectedUserId;
             await dbContext.Users.AddAsync(user, cancellationToken);
             return user;
+        }
+
+        if (user.Id != expectedUserId)
+        {
+            throw new InvalidOperationException(
+                $"SEC-02 fixture user '{email}' drifted from its deterministic identity.");
         }
 
         user.DisplayName = displayName;

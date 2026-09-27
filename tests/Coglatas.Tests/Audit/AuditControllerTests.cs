@@ -340,11 +340,6 @@ public sealed class AuditControllerTests
         public Task<AuditCapabilityResponse> GetCapabilitiesAsync(
             CancellationToken cancellationToken = default) => Task.FromResult(capabilities);
 
-        public Task<bool> HasCapabilityAsync(
-            string capabilityKey,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(IsGranted(capabilityKey));
-
         public Task<Result> AuthorizeAsync(
             string capabilityKey,
             string operation,

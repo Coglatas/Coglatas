@@ -6,7 +6,7 @@ namespace Coglatas.Web.Controllers;
 
 [ApiController]
 [Authorize]
-public sealed class EventsController(IEventService eventService) : ControllerBase
+public sealed class EventsController(IEventService eventService) : ApiResultControllerBase
 {
     [HttpGet("api/events")]
     public async Task<IActionResult> List([FromQuery] EventListQuery query, CancellationToken cancellationToken) => ToActionResult(await eventService.ListAsync(query, cancellationToken));
@@ -38,6 +38,4 @@ public sealed class EventsController(IEventService eventService) : ControllerBas
     [HttpGet("api/calendar")]
     public async Task<IActionResult> Calendar([FromQuery] CalendarQuery query, CancellationToken cancellationToken) => ToActionResult(await eventService.GetCalendarAsync(query, cancellationToken));
 
-    private IActionResult OkOrBad(Coglatas.Application.Common.Result result) => result.IsSuccess ? Ok(new { status = "OK" }) : BadRequest(new { error = result.Error });
-    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result) => result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
 }

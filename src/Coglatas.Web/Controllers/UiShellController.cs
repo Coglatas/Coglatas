@@ -7,7 +7,7 @@ namespace Coglatas.Web.Controllers;
 
 [ApiController]
 [Authorize]
-public sealed class UiShellController(IUiShellService uiShell) : ControllerBase
+public sealed class UiShellController(IUiShellService uiShell) : ApiResultControllerBase
 {
     [HttpGet("api/ui/modules")]
     public async Task<IActionResult> Modules(CancellationToken cancellationToken) => ToActionResult(await uiShell.ListModulesAsync(cancellationToken));
@@ -45,6 +45,4 @@ public sealed class UiShellController(IUiShellService uiShell) : ControllerBase
         return ToActionResult(await uiShell.GetRadialMenuAsync(contextType, contextId, cancellationToken));
     }
 
-    private IActionResult OkOrBad(Coglatas.Application.Common.Result result) => result.IsSuccess ? Ok(new { status = "OK" }) : BadRequest(new { error = result.Error });
-    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result) => result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
 }

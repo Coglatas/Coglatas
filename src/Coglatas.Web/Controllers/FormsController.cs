@@ -1,4 +1,3 @@
-using Coglatas.Application.Common;
 using Coglatas.Application.Forms;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +6,7 @@ namespace Coglatas.Web.Controllers;
 
 [ApiController]
 [Authorize]
-public sealed class FormsController(IFormService formService) : ControllerBase
+public sealed class FormsController(IFormService formService) : ApiResultControllerBase
 {
     [HttpGet("api/forms")]
     public async Task<IActionResult> List([FromQuery] FormListQuery query, CancellationToken cancellationToken) => ToActionResult(await formService.ListAsync(query, cancellationToken));
@@ -60,6 +59,4 @@ public sealed class FormsController(IFormService formService) : ControllerBase
     [HttpGet("api/forms/{formId:guid}/unanswered-users")]
     public async Task<IActionResult> UnansweredUsers(Guid formId, CancellationToken cancellationToken) => ToActionResult(await formService.ListUnansweredUsersAsync(formId, cancellationToken));
 
-    private IActionResult OkOrBad(Result result) => result.IsSuccess ? Ok(new { status = "OK" }) : BadRequest(new { error = result.Error });
-    private IActionResult ToActionResult<T>(Result<T> result) => result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
 }

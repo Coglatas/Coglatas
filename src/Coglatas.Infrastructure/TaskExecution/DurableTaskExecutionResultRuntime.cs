@@ -1,5 +1,3 @@
-using System.Data;
-using System.Data.Common;
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Files;
 using Coglatas.Application.Projects;
@@ -7,7 +5,6 @@ using Coglatas.Domain.Entities;
 using Coglatas.Domain.Enums;
 using Coglatas.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Coglatas.Infrastructure.TaskExecution;
 
@@ -17,33 +14,15 @@ namespace Coglatas.Infrastructure.TaskExecution;
 /// source materialization is in progress. Materialized bytes remain process-local
 /// until a final locked transaction confirms that the Run is still Running.
 /// </summary>
-public sealed partial class DurableTaskExecutionResultRuntime : ITaskExecutionRuntime
+public sealed partial class DurableTaskExecutionResultRuntime(
+    AppDbContext dbContext,
+    ICurrentTenant currentTenant,
+    IProjectAuthorizationService projectAuthorization,
+    IFileAuthorizationService fileAuthorization,
+    IFileStorageService storage,
+    IClock clock,
+    IAuditLogger audit) : ITaskExecutionRuntime
 {
-    private readonly AppDbContext dbContext;
-    private readonly ICurrentTenant currentTenant;
-    private readonly IProjectAuthorizationService projectAuthorization;
-    private readonly IFileAuthorizationService fileAuthorization;
-    private readonly IFileStorageService storage;
-    private readonly IClock clock;
-    private readonly IAuditLogger audit;
-
-    public DurableTaskExecutionResultRuntime(
-        AppDbContext dbContext,
-        ICurrentTenant currentTenant,
-        IProjectAuthorizationService projectAuthorization,
-        IFileAuthorizationService fileAuthorization,
-        IFileStorageService storage,
-        IClock clock,
-        IAuditLogger audit)
-    {
-        this.dbContext = dbContext;
-        this.currentTenant = currentTenant;
-        this.projectAuthorization = projectAuthorization;
-        this.fileAuthorization = fileAuthorization;
-        this.storage = storage;
-        this.clock = clock;
-        this.audit = audit;
-    }
 
     private const string GenericFailureCode = "TASK_EXECUTION_RESULT_PERSISTENCE_FAILED";
     private const string MissingSourceFailureCode = "TASK_EXECUTION_NO_AUTHORIZED_TEXT_SOURCES";
@@ -165,23 +144,12 @@ public sealed partial class DurableTaskExecutionResultRuntime : ITaskExecutionRu
             return null;
         }
 
-        if (run.Status == TaskExecutionRunStatus.Accepted)
-        {
-            run.Status = TaskExecutionRunStatus.Queued;
-            run.QueuedAtUtc = clock.UtcNow;
-            run.VersionNo++;
-            await AuditLifecycleAsync(run, "TaskExecutionRunQueued", cancellationToken);
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        if (run.Status == TaskExecutionRunStatus.Queued)
-        {
-            run.Status = TaskExecutionRunStatus.Running;
-            run.StartedAtUtc = clock.UtcNow;
-            run.VersionNo++;
-            await AuditLifecycleAsync(run, "TaskExecutionRunStarted", cancellationToken);
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
+        await TaskExecutionRunStateTransitions.AdvanceToRunningAsync(
+            run,
+            dbContext,
+            clock,
+            AuditLifecycleAsync,
+            cancellationToken);
 
         if (run.Status != TaskExecutionRunStatus.Running)
         {
@@ -194,86 +162,84 @@ public sealed partial class DurableTaskExecutionResultRuntime : ITaskExecutionRu
         return run;
     }
 
-    private async Task FinalizeFailureAsync(
+    private Task FinalizeFailureAsync(
         TaskExecutionRuntimeHandle handle,
         string failureCode,
-        CancellationToken cancellationToken)
-    {
-        dbContext.ChangeTracker.Clear();
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-        var run = await LockRunAsync(handle.RunId, cancellationToken);
-        if (!MatchesHandle(run, handle) || run!.Status != TaskExecutionRunStatus.Running)
-        {
-            await transaction.CommitAsync(cancellationToken);
-            return;
-        }
+        CancellationToken cancellationToken) =>
+        FinalizeRunningAsync(
+            handle,
+            (run, token) => FailRunAsync(run, failureCode, token),
+            cancellationToken);
 
-        await FailRunAsync(run, failureCode, cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-    }
-
-    private async Task FinalizeExistingResultAsync(
+    private Task FinalizeExistingResultAsync(
         TaskExecutionRuntimeHandle handle,
         Guid resultId,
-        CancellationToken cancellationToken)
-    {
-        dbContext.ChangeTracker.Clear();
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-        var run = await LockRunAsync(handle.RunId, cancellationToken);
-        if (!MatchesHandle(run, handle) || run!.Status != TaskExecutionRunStatus.Running)
-        {
-            await transaction.CommitAsync(cancellationToken);
-            return;
-        }
+        CancellationToken cancellationToken) =>
+        FinalizeRunningAsync(
+            handle,
+            async (run, token) =>
+            {
+                if (await CountResultSourcesAsync(resultId, token) <= 0)
+                {
+                    await FailRunAsync(run, IncompleteFailureCode, token);
+                }
+                else
+                {
+                    await SucceedRunAsync(run, resultId, null, token);
+                }
+            },
+            cancellationToken);
 
-        if (await CountResultSourcesAsync(resultId, cancellationToken) <= 0)
-        {
-            await FailRunAsync(run, IncompleteFailureCode, cancellationToken);
-        }
-        else
-        {
-            await SucceedRunAsync(run, resultId, null, cancellationToken);
-        }
-
-        await transaction.CommitAsync(cancellationToken);
-    }
-
-    private async Task FinalizeExistingProvenanceAsync(
+    private Task FinalizeExistingProvenanceAsync(
         TaskExecutionRuntimeHandle handle,
         IReadOnlyList<RuntimeSource> sources,
-        CancellationToken cancellationToken)
-    {
-        dbContext.ChangeTracker.Clear();
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-        var run = await LockRunAsync(handle.RunId, cancellationToken);
-        if (!MatchesHandle(run, handle) || run!.Status != TaskExecutionRunStatus.Running)
-        {
-            await transaction.CommitAsync(cancellationToken);
-            return;
-        }
+        CancellationToken cancellationToken) =>
+        FinalizeRunningAsync(
+            handle,
+            async (run, token) =>
+            {
+                if (!await ReauthorizeExistingProvenanceAsync(run, sources, token))
+                {
+                    await FailRunAsync(run, GenericFailureCode, token);
+                    return;
+                }
 
-        if (!await ReauthorizeExistingProvenanceAsync(run, sources, cancellationToken))
-        {
-            await FailRunAsync(run, GenericFailureCode, cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-            return;
-        }
+                var completedAt = clock.UtcNow;
+                var report = FirstPartyProjectFilesReportV1.Build(
+                    sources.Select(item => item.ReportSource).ToArray(),
+                    completedAt);
+                var resultId = await InsertResultAsync(run, report, completedAt, token);
+                await InsertResultLinksAsync(run, resultId, sources, token);
+                await SucceedRunAsync(run, resultId, report, token);
+            },
+            cancellationToken);
 
-        var completedAt = clock.UtcNow;
-        var report = FirstPartyProjectFilesReportV1.Build(
-            sources.Select(item => item.ReportSource).ToArray(),
-            completedAt);
-        var resultId = await InsertResultAsync(run, report, completedAt, cancellationToken);
-        await InsertResultLinksAsync(run, resultId, sources, cancellationToken);
-        await SucceedRunAsync(run, resultId, report, cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-    }
-
-    private async Task FinalizeMaterializedAsync(
+    private Task FinalizeMaterializedAsync(
         TaskExecutionRuntimeHandle handle,
         IReadOnlyList<RuntimeSource> sources,
         TaskExecutionReportDocument document,
         DateTimeOffset completionTime,
+        CancellationToken cancellationToken) =>
+        FinalizeRunningAsync(
+            handle,
+            async (run, token) =>
+            {
+                if (!await ReauthorizeExistingProvenanceAsync(run, sources, token))
+                {
+                    await FailRunAsync(run, GenericFailureCode, token);
+                    return;
+                }
+
+                await InsertProvenanceAsync(run, sources, token);
+                var resultId = await InsertResultAsync(run, document, completionTime, token);
+                await InsertResultLinksAsync(run, resultId, sources, token);
+                await SucceedRunAsync(run, resultId, document, token);
+            },
+            cancellationToken);
+
+    private async Task FinalizeRunningAsync(
+        TaskExecutionRuntimeHandle handle,
+        Func<TaskExecutionRun, CancellationToken, Task> finalize,
         CancellationToken cancellationToken)
     {
         dbContext.ChangeTracker.Clear();
@@ -285,17 +251,7 @@ public sealed partial class DurableTaskExecutionResultRuntime : ITaskExecutionRu
             return;
         }
 
-        if (!await ReauthorizeExistingProvenanceAsync(run, sources, cancellationToken))
-        {
-            await FailRunAsync(run, GenericFailureCode, cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-            return;
-        }
-
-        await InsertProvenanceAsync(run, sources, cancellationToken);
-        var resultId = await InsertResultAsync(run, document, completionTime, cancellationToken);
-        await InsertResultLinksAsync(run, resultId, sources, cancellationToken);
-        await SucceedRunAsync(run, resultId, document, cancellationToken);
+        await finalize(run, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }
 
@@ -303,22 +259,7 @@ public sealed partial class DurableTaskExecutionResultRuntime : ITaskExecutionRu
         TaskExecutionRun run,
         CancellationToken cancellationToken)
     {
-        var candidates = await dbContext.Set<Attachment>()
-            .AsNoTracking()
-            .Include(attachment => attachment.FileObject)
-            .Where(attachment =>
-                attachment.TenantId == run.TenantId &&
-                attachment.WorkspaceId == run.WorkspaceId &&
-                attachment.OwnerType == AttachmentOwnerType.TaskItem &&
-                attachment.OwnerId == run.TaskItemId &&
-                !attachment.DeletedAt.HasValue &&
-                attachment.ScanStatus == FileScanStatus.Clean &&
-                attachment.FileObject != null &&
-                attachment.FileObject.TenantId == run.TenantId &&
-                attachment.FileObject.WorkspaceId == run.WorkspaceId &&
-                attachment.FileObject.ProjectId == run.ProjectId &&
-                !attachment.FileObject.DeletedAt.HasValue &&
-                attachment.FileObject.Status == FileObjectStatus.Active)
+        var candidates = await TaskExecutionSourceMaterialization.CurrentTaskAttachments(dbContext, run)
             .OrderBy(attachment => attachment.CreatedAt)
             .ThenBy(attachment => attachment.Id)
             .Take(FirstPartyProjectFilesMaterializationV1.MaxSourceCount)
@@ -357,28 +298,12 @@ public sealed partial class DurableTaskExecutionResultRuntime : ITaskExecutionRu
                 continue;
             }
 
-            TaskExecutionMaterializedText? materialized;
-            try
-            {
-                await using var stream = await storage.OpenReadAsync(fileObject.StorageKey, cancellationToken);
-                materialized = await FirstPartyProjectFilesMaterializationV1.ReadUtf8Async(
-                    stream,
-                    mediaType,
-                    maximumForSource,
-                    cancellationToken);
-            }
-            catch (IOException)
-            {
-                continue;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                continue;
-            }
-            catch (NotSupportedException)
-            {
-                continue;
-            }
+            var materialized = await TaskExecutionSourceMaterialization.ReadUtf8Async(
+                storage,
+                fileObject,
+                mediaType,
+                maximumForSource,
+                cancellationToken);
 
             if (materialized is null)
             {
@@ -444,24 +369,11 @@ public sealed partial class DurableTaskExecutionResultRuntime : ITaskExecutionRu
         Guid attachmentId,
         TaskExecutionRun run,
         CancellationToken cancellationToken) =>
-        dbContext.Set<Attachment>()
-            .AsNoTracking()
-            .Include(attachment => attachment.FileObject)
-            .SingleOrDefaultAsync(attachment =>
-                attachment.Id == attachmentId &&
-                attachment.TenantId == run.TenantId &&
-                attachment.WorkspaceId == run.WorkspaceId &&
-                attachment.OwnerType == AttachmentOwnerType.TaskItem &&
-                attachment.OwnerId == run.TaskItemId &&
-                !attachment.DeletedAt.HasValue &&
-                attachment.ScanStatus == FileScanStatus.Clean &&
-                attachment.FileObject != null &&
-                attachment.FileObject.TenantId == run.TenantId &&
-                attachment.FileObject.WorkspaceId == run.WorkspaceId &&
-                attachment.FileObject.ProjectId == run.ProjectId &&
-                !attachment.FileObject.DeletedAt.HasValue &&
-                attachment.FileObject.Status == FileObjectStatus.Active,
-                cancellationToken);
+        TaskExecutionSourceMaterialization.CurrentTaskAttachmentAsync(
+            dbContext,
+            attachmentId,
+            run,
+            cancellationToken);
 
     private async Task<bool> IsCurrentRunScopeAuthorizedAsync(
         TaskExecutionRun run,
