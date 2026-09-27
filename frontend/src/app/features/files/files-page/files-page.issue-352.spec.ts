@@ -276,7 +276,7 @@ describe('FilesPageComponent issue #352', () => {
 
   it('uses the server sharing projection for preview and reconciles a revoked external grant in the list and preview', async () => {
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:sharing-preview');
-    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => { /* no-op */ });
     const { fixture, http } = await renderLiveFilesPage([
       backendFile(IMAGE_ID, 'brief.png', 'image/png'),
     ]);
@@ -384,7 +384,7 @@ describe('FilesPageComponent issue #352', () => {
 
   it('does not render the sharing control or request protected sharing data without the server capability', async () => {
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:private-preview');
-    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => { /* no-op */ });
     const { fixture, http } = await renderLiveFilesPage([
       { ...backendFile(IMAGE_ID, 'private.png', 'image/png'), canManageSharing: false },
     ]);
