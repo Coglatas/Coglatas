@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "issue": 766,
+  "sourceBuild": {
+    "project": "src/Coglatas.Web/Coglatas.Web.csproj",
+    "configuration": "Release",
+    "targetFramework": "net10.0"
+  },
+  "openapi": {
+    "requiredVersionPrefix": "3.1.",
+    "requiredSecurityScheme": {
+      "name": "CookieAuth",
+      "type": "apiKey",
+      "in": "cookie",
+      "parameterName": ".Coglatas.Auth"
+    },
+    "allowedAnonymousOperations": [
+      { "method": "get", "path": "/api/ui/runtime-config.js" },
+      { "method": "get", "path": "/health/live" },
+      { "method": "get", "path": "/health/realtime" },
+      { "method": "get", "path": "/health/task-deadline-digests" },
+      { "method": "get", "path": "/health/ready" },
+      { "method": "post", "path": "/api/auth/login" },
+      { "method": "post", "path": "/api/auth/register-by-invite" },
+      { "method": "get", "path": "/api/auth/status" },
+      { "method": "get", "path": "/api/invites/validate" },
+      { "method": "post", "path": "/api/invites/accept" },
+      { "method": "get", "path": "/api/projects/{projectId}/gantt" },
+      { "method": "patch", "path": "/api/tasks/{taskItemId}/schedule" },
+      { "method": "patch", "path": "/api/tasks/{taskItemId}/progress" },
+      { "method": "get", "path": "/api/tasks/{taskItemId}/dependencies" },
+      { "method": "post", "path": "/api/tasks/{taskItemId}/dependencies" },
+      { "method": "delete", "path": "/api/tasks/{taskItemId}/dependencies/{dependencyId}" },
+      { "method": "get", "path": "/api/security/csrf-token" }
+    ]
+  },
+  "requiredOperations": [
+    { "id": "auth.login", "method": "post", "path": "/api/auth/login", "anonymous": true },
+    { "id": "auth.me", "method": "get", "path": "/api/auth/me", "anonymous": false },
+    { "id": "security.csrf", "method": "get", "path": "/api/security/csrf-token", "anonymous": true },
+    { "id": "tenant.current", "method": "get", "path": "/api/tenants/current", "anonymous": false },
+    { "id": "tenant.switch", "method": "post", "path": "/api/tenants/switch", "anonymous": false },
+    { "id": "workspace.list", "method": "get", "path": "/api/workspaces", "anonymous": false },
+    { "id": "workspace.capabilities", "method": "get", "path": "/api/workspaces/capabilities", "anonymous": false },
+    { "id": "workspace.create", "method": "post", "path": "/api/workspaces", "anonymous": false },
+    { "id": "workspace.detail", "method": "get", "path": "/api/workspaces/{workspaceId}", "anonymous": false },
+    { "id": "project.create-options", "method": "get", "path": "/api/workspaces/{workspaceId}/projects/create-options", "anonymous": false },
+    { "id": "project.create", "method": "post", "path": "/api/workspaces/{workspaceId}/projects", "anonymous": false },
+    { "id": "project.detail", "method": "get", "path": "/api/projects/{projectId}", "anonymous": false },
+    { "id": "project.activate", "method": "post", "path": "/api/projects/{projectId}/activate", "anonymous": false },
+    { "id": "task.create-options", "method": "get", "path": "/api/projects/{projectId}/tasks/create-options", "anonymous": false },
+    { "id": "task.create", "method": "post", "path": "/api/projects/{projectId}/tasks/create", "anonymous": false },
+    { "id": "conversation.list", "method": "get", "path": "/api/conversations", "anonymous": false },
+    { "id": "conversation.detail", "method": "get", "path": "/api/conversations/{conversationId}", "anonymous": false },
+    { "id": "conversation.messages", "method": "get", "path": "/api/conversations/{conversationId}/messages", "anonymous": false },
+    { "id": "announcement.list", "method": "get", "path": "/api/announcements", "anonymous": false },
+    { "id": "notification.list", "method": "get", "path": "/api/notifications", "anonymous": false },
+    { "id": "file.list", "method": "get", "path": "/api/files", "anonymous": false },
+    { "id": "file.upload", "method": "post", "path": "/api/files", "anonymous": false },
+    { "id": "file.detail", "method": "get", "path": "/api/files/{fileObjectId}", "anonymous": false },
+    { "id": "file.download-grant", "method": "post", "path": "/api/files/{fileObjectId}/download-grants", "anonymous": false },
+    { "id": "search.global", "method": "get", "path": "/api/search", "anonymous": false }
+  ],
+  "nonOpenApiContracts": {
+    "signalR": {
+      "path": "/hubs/app",
+      "authorization": {
+        "requiredHubAttribute": "Authorize"
+      },
+      "clientMethods": [
+        "SubscribeUser",
+        "SubscribeTenant",
+        "SubscribeWorkspace",
+        "SubscribeConversation",
+        "SubscribeProject",
+        "UnsubscribeWorkspace",
+        "UnsubscribeConversation",
+        "UnsubscribeProject"
+      ],
+      "clientMethodSignatures": [
+        { "name": "SubscribeUser", "returnType": "Task<HubSubscriptionResult>", "parameterTypes": [] },
+        { "name": "SubscribeTenant", "returnType": "Task<HubSubscriptionResult>", "parameterTypes": [] },
+        { "name": "SubscribeWorkspace", "returnType": "Task<HubSubscriptionResult>", "parameterTypes": ["Guid"] },
+        { "name": "SubscribeConversation", "returnType": "Task<HubSubscriptionResult>", "parameterTypes": ["Guid"] },
+        { "name": "SubscribeProject", "returnType": "Task<HubSubscriptionResult>", "parameterTypes": ["Guid"] },
+        { "name": "UnsubscribeWorkspace", "returnType": "Task<HubSubscriptionResult>", "parameterTypes": ["Guid"] },
+        { "name": "UnsubscribeConversation", "returnType": "Task<HubSubscriptionResult>", "parameterTypes": ["Guid"] },
+        { "name": "UnsubscribeProject", "returnType": "Task<HubSubscriptionResult>", "parameterTypes": ["Guid"] }
+      ],
+      "serverEvents": ["DurableEvent", "AuthorizationInvalidated"]
+    },
+    "csrf": {
+      "tokenEndpoint": "/api/security/csrf-token",
+      "headerName": "X-CSRF-Token"
+    }
+  }
+}

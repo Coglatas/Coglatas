@@ -1,0 +1,156 @@
+{
+  "version": 1,
+  "scope": "Independent reviewed set of 25 P0 sentinels; exhaustive API/DTO reconciliation remains open.",
+  "operations": [
+    {
+      "id": "auth.login",
+      "method": "post",
+      "path": "/api/auth/login",
+      "anonymous": true
+    },
+    {
+      "id": "auth.me",
+      "method": "get",
+      "path": "/api/auth/me",
+      "anonymous": false
+    },
+    {
+      "id": "security.csrf",
+      "method": "get",
+      "path": "/api/security/csrf-token",
+      "anonymous": true
+    },
+    {
+      "id": "tenant.current",
+      "method": "get",
+      "path": "/api/tenants/current",
+      "anonymous": false
+    },
+    {
+      "id": "tenant.switch",
+      "method": "post",
+      "path": "/api/tenants/switch",
+      "anonymous": false
+    },
+    {
+      "id": "workspace.list",
+      "method": "get",
+      "path": "/api/workspaces",
+      "anonymous": false
+    },
+    {
+      "id": "workspace.capabilities",
+      "method": "get",
+      "path": "/api/workspaces/capabilities",
+      "anonymous": false
+    },
+    {
+      "id": "workspace.create",
+      "method": "post",
+      "path": "/api/workspaces",
+      "anonymous": false
+    },
+    {
+      "id": "workspace.detail",
+      "method": "get",
+      "path": "/api/workspaces/{workspaceId}",
+      "anonymous": false
+    },
+    {
+      "id": "project.create-options",
+      "method": "get",
+      "path": "/api/workspaces/{workspaceId}/projects/create-options",
+      "anonymous": false
+    },
+    {
+      "id": "project.create",
+      "method": "post",
+      "path": "/api/workspaces/{workspaceId}/projects",
+      "anonymous": false
+    },
+    {
+      "id": "project.detail",
+      "method": "get",
+      "path": "/api/projects/{projectId}",
+      "anonymous": false
+    },
+    {
+      "id": "project.activate",
+      "method": "post",
+      "path": "/api/projects/{projectId}/activate",
+      "anonymous": false
+    },
+    {
+      "id": "task.create-options",
+      "method": "get",
+      "path": "/api/projects/{projectId}/tasks/create-options",
+      "anonymous": false
+    },
+    {
+      "id": "task.create",
+      "method": "post",
+      "path": "/api/projects/{projectId}/tasks/create",
+      "anonymous": false
+    },
+    {
+      "id": "conversation.list",
+      "method": "get",
+      "path": "/api/conversations",
+      "anonymous": false
+    },
+    {
+      "id": "conversation.detail",
+      "method": "get",
+      "path": "/api/conversations/{conversationId}",
+      "anonymous": false
+    },
+    {
+      "id": "conversation.messages",
+      "method": "get",
+      "path": "/api/conversations/{conversationId}/messages",
+      "anonymous": false
+    },
+    {
+      "id": "announcement.list",
+      "method": "get",
+      "path": "/api/announcements",
+      "anonymous": false
+    },
+    {
+      "id": "notification.list",
+      "method": "get",
+      "path": "/api/notifications",
+      "anonymous": false
+    },
+    {
+      "id": "file.list",
+      "method": "get",
+      "path": "/api/files",
+      "anonymous": false
+    },
+    {
+      "id": "file.upload",
+      "method": "post",
+      "path": "/api/files",
+      "anonymous": false
+    },
+    {
+      "id": "file.detail",
+      "method": "get",
+      "path": "/api/files/{fileObjectId}",
+      "anonymous": false
+    },
+    {
+      "id": "file.download-grant",
+      "method": "post",
+      "path": "/api/files/{fileObjectId}/download-grants",
+      "anonymous": false
+    },
+    {
+      "id": "search.global",
+      "method": "get",
+      "path": "/api/search",
+      "anonymous": false
+    }
+  ]
+}

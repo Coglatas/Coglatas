@@ -68,11 +68,11 @@ public sealed class ResearchPlanDiffServiceTests
         Assert.True(saved.IsSuccess, saved.Error);
         Assert.Equal(["C", "B", "D"], saved.Value!.CurrentRevision!.Steps.Select(step => step.Title));
         Assert.Equal(2, await fixture.Db.ResearchPlanRevisions.CountAsync());
-        var audited = Assert.Single(fixture.Audit.Entries.Where(entry =>
+        var audited = Assert.Single(fixture.Audit.Entries, entry =>
             entry.Action == "ResearchPlanRevisionSaved" &&
             entry.Metadata is not null &&
             entry.Metadata.TryGetValue("reviewedDiff", out var reviewed) &&
-            Equals(reviewed, true)));
+            Equals(reviewed, true));
         Assert.Equal(4, audited.Metadata!["changeCount"]);
     }
 
@@ -108,7 +108,7 @@ public sealed class ResearchPlanDiffServiceTests
         Assert.False(rejected.IsSuccess);
         Assert.Equal("RESEARCH_PLAN_PREVIEW_MISMATCH", rejected.ErrorDetail!.Code);
         Assert.Single(await fixture.Db.ResearchPlanRevisions.ToListAsync());
-        Assert.Single(fixture.Audit.Entries.Where(entry => entry.Action == "ResearchPlanRevisionSaved"));
+        Assert.Single(fixture.Audit.Entries, entry => entry.Action == "ResearchPlanRevisionSaved");
     }
 
     [Fact]
