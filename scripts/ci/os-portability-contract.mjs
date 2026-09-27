@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 
 const DEFAULT_CONTRACT = 'scripts/ci/os-portability.contract.json';
 const TRUST_REGISTRY = 'governance/workflow-trust-policy.json';
