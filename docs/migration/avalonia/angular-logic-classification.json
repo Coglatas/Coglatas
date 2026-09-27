@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "issue": 766,
+  "inventoryIssue": 765,
+  "inventoryPr": 808,
+  "angularSnapshot": "4e6a10903a5a472ca89f833aba993a29e1b2cf73",
+  "inventoryMatrixCommit": "05a2a1c6ea1b3c8cfcd36a2320ab02d3097e4b6f",
+  "classificationModel": {
+    "1": "presentation-only",
+    "2": "client orchestration/state/transport coordination",
+    "3": "domain/business rule; backend must be authoritative",
+    "4": "authorization/filtering; backend must be authoritative",
+    "5": "compatibility shim slated for retirement"
+  },
+  "auditRule": "A class-3 or class-4 decision must never be accepted as migration authority merely because Angular enforces or displays it. The backend contract/API projection must remain authoritative and direct API access must fail closed.",
+  "classified": [
+    {
+      "class": 1,
+      "category": "presentation-derived state",
+      "owners": [
+        "AppShellFacade",
+        "RightPanelFacade",
+        "component-local presentation state",
+        "formatters/mappers that only shape server data"
+      ],
+      "disposition": "Reimplement as Avalonia view/view-model presentation. Do not move presentation-only decisions into backend domain code.",
+      "evidence": [
+        "frontend/src/app/layout/app-shell/app-shell.facade.ts",
+        "frontend/src/app/features/projects/projects.mapper.ts"
+      ]
+    },
+    {
+      "class": 2,
+      "category": "session/context/state orchestration",
+      "owners": [
+        "AuthSessionFacade",
+        "ActiveWorkspaceFacade",
+        "WorkspaceSelectionFacade",
+        "WorkspacesFacade",
+        "TenantSwitchFacade",
+        "TenantScopedStateFacade",
+        "RealtimeFacade"
+      ],
+      "disposition": "Replace with Avalonia application/view-model services while preserving backend session/context/realtime contracts. Workspace/tenant selection is context hygiene and cannot confer authorization.",
+      "evidence": [
+        "frontend/src/app/core/auth/auth-session.facade.ts",
+        "frontend/src/app/core/workspace/workspace-selection.facade.ts",
+        "frontend/src/app/core/tenant/tenant-switch.facade.ts"
+      ]
+    },
+    {
+      "class": 2,
+      "category": "feature API/state orchestration",
+      "owners": [
+        "MessagingFacade",
+        "MessageFollowUpFacade",
+        "ProjectsFacade",
+        "ProjectDetailFacade",
+        "ProjectCreateFacade",
+        "TaskCreateFacade",
+        "MyTasksFacade",
+        "FilesFacade",
+        "FileFolderStore",
+        "AnnouncementsFacade",
+        "AccountFacade",
+        "TaskNotificationPreferencesFacade",
+        "AdminFacade",
+        "AuditFindingsFacade",
+        "AuditClaimsEvidenceFacade",
+        "ContinueWorkingFacade"
+      ],
+      "disposition": "Port request ordering, cancellation, paging, stale-result/realtime invalidation and optimistic/presentation state where required. Server DTOs and command/query decisions remain authoritative.",
+      "evidence": [
+        "frontend/src/app/features/projects/projects.facade.ts",
+        "frontend/src/app/features/projects/my-tasks.facade.ts",
+        "frontend/src/app/features/files/files.facade.ts",
+        "frontend/src/app/features/messaging/message-follow-up.facade.ts",
+        "frontend/src/app/features/admin/export-diagnostics-page/export-diagnostics-page.component.ts"
+      ]
+    },
+    {
+      "class": 3,
+      "category": "domain/business authority",
+      "owners": [],
+      "result": "Unproven: representative source review is not an exhaustive class-3 rule audit.",
+      "disposition": "Enumerate every P0 function and link correctness-critical rules to backend authority and direct API tests; an empty owner list is not zero findings.",
+      "evidence": [
+        "Task transition choices are projected by backend uiPermissions/allowedTransitions; frontend/src/app/features/projects/projects.mapper.ts maps them rather than inventing authority.",
+        "Repository task contracts describe authoritative command validation/server refetch; Angular advisory checks are UI guidance only.",
+        "The #765 route/state inventory identifies Signals/RxJS orchestration rather than an NgRx domain store/effect authority."
+      ]
+    },
+    {
+      "class": 4,
+      "category": "navigation guards and capability projection",
+      "owners": [
+        "authSessionGuard",
+        "workspaceContextGuard",
+        "server-provided capability/uiPermission checks used to hide/disable UI"
+      ],
+      "result": "client-side gates exist, but no audited gate is accepted as authorization authority",
+      "disposition": "Retain only as navigation/presentation UX. Backend authentication, tenant/workspace/resource authorization and command validation must reject unauthorized direct requests independently.",
+      "evidence": [
+        "frontend/src/app/app.routes.ts",
+        "frontend/src/app/core/auth/auth-session.guard.ts",
+        "frontend/src/app/core/workspace/workspace-context.guard.ts",
+        "frontend/src/app/features/projects/projects.mapper.ts",
+        "src/Coglatas.Application/Projects/ProjectDtos.cs",
+        "src/Coglatas.Application/Projects/TaskCommandDtos.cs"
+      ]
+    },
+    {
+      "class": 5,
+      "category": "route/contract compatibility",
+      "owners": [
+        "/signin redirect",
+        "/app/projects/.../reports/... aliases",
+        "legacy response/error adapters explicitly documented by #534/#766"
+      ],
+      "disposition": "Keep isolated while Angular and Avalonia coexist; remove only after canonical deep links/contracts are proven and #797 cutover permits deletion.",
+      "evidence": [
+        "frontend/src/app/app.routes.ts",
+        "docs/migration/avalonia/backend-contract-boundary.md"
+      ]
+    }
+  ],
+  "crossChecks": {
+    "allProductionRoutesClassifiedByFreezeMatrix": true,
+    "allScreenRoutesHaveStateOwner": true,
+    "novemberScope": "#798 Wave 2-5 core preview: Login -> Workspace -> Project -> Task; Conversation is Wave 6 and Audit/Admin are Wave 7 unless #798 is amended.",
+    "unclassifiedP0Routes": null,
+    "ngrxProductionImportsAtSnapshot": 0,
+    "class3AngularAuthoritativeRules": null,
+    "class4AngularAuthoritativeRules": null,
+    "legacyErrorNormalizationOwner": 534,
+    "requiredFollowUp": "Complete per-operation, DTO and Angular-function reconciliation before #766 closure."
+  },
+  "closureGate": {
+    "issue766MayCloseWhen": [
+      "#765 inventory is merged/closed or an equivalent immutable inventory snapshot is accepted",
+      "the P0 API/DTO boundary covers every November-required route/surface",
+      "class-3 and class-4 authoritative Angular-only rule counts remain zero",
+      "contract mutation tests and required CI pass on the final #807 head"
+    ]
+  },
+  "auditStatus": "PARTIAL_RECONCILIATION_REQUIRED"
+}
