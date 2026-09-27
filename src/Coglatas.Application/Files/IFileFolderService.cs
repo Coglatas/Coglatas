@@ -2,6 +2,9 @@ using Coglatas.Application.Common;
 
 namespace Coglatas.Application.Files;
 
+// API response properties are consumed by JSON serialization.
+// ReSharper disable NotAccessedPositionalProperty.Global
+
 public sealed record FileFolderResponse(
     Guid Id,
     Guid WorkspaceId,
@@ -28,8 +31,8 @@ public sealed record FileLocationResponse(
 
 public sealed record FileMoveRequest(
     Guid? DestinationFolderId,
-    [property: System.ComponentModel.DataAnnotations.Range(typeof(long), "0", "9223372036854775807")] long ExpectedVersion,
-    [property: System.ComponentModel.DataAnnotations.Range(typeof(long), "0", "9223372036854775807")] long ExpectedDestinationVersion);
+    [param: System.ComponentModel.DataAnnotations.Range(typeof(long), "0", "9223372036854775807")] long ExpectedVersion,
+    [param: System.ComponentModel.DataAnnotations.Range(typeof(long), "0", "9223372036854775807")] long ExpectedDestinationVersion);
 
 public sealed record FileFolderMoveRequest(
     Guid? DestinationParentFolderId,

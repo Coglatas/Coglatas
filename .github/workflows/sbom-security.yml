@@ -46,6 +46,8 @@ jobs:
           python3 scripts/ci/test_audit_sbom_component_inventory.py
 
       - name: Install pinned Syft
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: bash scripts/ci/install-syft.sh
 
       - name: Materialize resolved NuGet lock graphs

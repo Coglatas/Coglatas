@@ -9,14 +9,14 @@ export function validateDurableRealtimeEvent(value: unknown, expectedTenantId: s
     return null;
   }
 
-  const eventType = stringValue(value['eventType']);
-  const eventId = stringValue(value['eventId']);
-  const tenantId = stringValue(value['tenantId']);
-  const aggregateId = stringValue(value['aggregateId']);
-  const aggregateType = stringValue(value['aggregateType']);
-  const occurredAt = stringValue(value['occurredAt']);
-  const schemaVersion = value['payloadSchemaVersion'];
-  const actor = toActor(value['actor']);
+  const actor = toActor(value['actor']),
+    aggregateId = stringValue(value['aggregateId']),
+    aggregateType = stringValue(value['aggregateType']),
+    eventId = stringValue(value['eventId']),
+    eventType = stringValue(value['eventType']),
+    occurredAt = stringValue(value['occurredAt']),
+    schemaVersion = value['payloadSchemaVersion'],
+    tenantId = stringValue(value['tenantId']);
 
   if (
     !eventType ||
@@ -35,7 +35,7 @@ export function validateDurableRealtimeEvent(value: unknown, expectedTenantId: s
     return null;
   }
 
-  const aggregateVersion = value['aggregateVersion'];
+  const { aggregateVersion } = value;
   if (aggregateVersion !== null && aggregateVersion !== undefined &&
     (typeof aggregateVersion !== 'number' || !Number.isInteger(aggregateVersion) || aggregateVersion < 0)) {
     return null;

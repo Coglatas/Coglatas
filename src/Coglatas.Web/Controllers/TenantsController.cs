@@ -14,7 +14,7 @@ namespace Coglatas.Web.Controllers;
 public sealed class TenantsController(
     ITenantService tenantService,
     IOptions<TenancyOptions> tenancyOptions,
-    IOptions<SecurityOptions> securityOptions) : ControllerBase
+    IOptions<SecurityOptions> securityOptions) : ApiResultControllerBase
 {
     [HttpGet("current")]
     public async Task<IActionResult> Current(CancellationToken cancellationToken)
@@ -67,11 +67,6 @@ public sealed class TenantsController(
     public async Task<IActionResult> RemoveCurrentUser(Guid userId, CancellationToken cancellationToken)
     {
         return ToStatusResult(await tenantService.RemoveCurrentTenantUserAsync(userId, cancellationToken));
-    }
-
-    private IActionResult ToActionResult<T>(Result<T> result)
-    {
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
     private IActionResult ToStatusResult(Result result)

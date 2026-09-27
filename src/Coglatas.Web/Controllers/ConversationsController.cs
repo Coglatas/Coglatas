@@ -6,7 +6,7 @@ namespace Coglatas.Web.Controllers;
 
 [ApiController]
 [Authorize]
-public sealed class ConversationsController(IConversationService conversations) : ControllerBase
+public sealed class ConversationsController(IConversationService conversations) : ApiResultControllerBase
 {
     [HttpGet("api/conversations")]
     public async Task<IActionResult> List([FromQuery] ConversationListQuery query, CancellationToken cancellationToken) => ToActionResult(await conversations.ListAsync(query, cancellationToken));
@@ -80,6 +80,4 @@ public sealed class ConversationsController(IConversationService conversations) 
     [HttpPost("api/conversations/{conversationId:guid}/read")]
     public async Task<IActionResult> MarkRead(Guid conversationId, MarkConversationReadRequest request, CancellationToken cancellationToken) => OkOrBad(await conversations.MarkReadAsync(conversationId, request, cancellationToken));
 
-    private IActionResult OkOrBad(Coglatas.Application.Common.Result result) => result.IsSuccess ? Ok(new { status = "OK" }) : BadRequest(new { error = result.Error });
-    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result) => result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
 }

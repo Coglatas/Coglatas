@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
+using Coglatas.Application.Files;
 using Coglatas.Domain.Entities;
 using Coglatas.Domain.Enums;
 
@@ -15,7 +16,8 @@ public sealed class TenantAdministrationService(
     ICurrentUser currentUser,
     IClock clock,
     IAuditLogger auditLogger,
-    IUnitOfWork unitOfWork) : ITenantAdministrationService
+    IUnitOfWork unitOfWork,
+    IFileObjectService fileObjects) : ITenantAdministrationService
 {
     public async Task<Result<PlatformOverviewResponse>> GetPlatformOverviewAsync(CancellationToken cancellationToken = default)
     {
@@ -111,6 +113,17 @@ public sealed class TenantAdministrationService(
         if (!validation.IsSuccess)
         {
             return Result<TenantSettingsResponse>.Failure(validation.Error!);
+        }
+
+        if (request.LogoFileId.HasValue)
+        {
+            var logo = await fileObjects.GetFileObjectAsync(request.LogoFileId.Value, cancellationToken);
+            if (!logo.IsSuccess || logo.Value is null ||
+                logo.Value.Status != nameof(FileObjectStatus.Active) || logo.Value.DeletedAt.HasValue ||
+                logo.Value.WorkspaceId.HasValue || logo.Value.GroupId.HasValue || logo.Value.ProjectId.HasValue)
+            {
+                return Result<TenantSettingsResponse>.Failure("Logo file is not available.");
+            }
         }
 
         var settings = await tenantPlans.GetOrCreateTenantSettingsAsync(currentTenant.TenantId, cancellationToken);
@@ -299,7 +312,7 @@ public sealed class TenantAdministrationService(
 
     private bool IsPlatformAdmin()
     {
-        return currentUser is { IsAuthenticated: true, SystemRole: SystemRole.PlatformAdmin or SystemRole.SystemAdmin };
+        return currentUser is { IsAuthenticated: true, SystemRole: SystemRole.PlatformAdmin };
     }
 
     private static Result ValidateSettings(UpdateTenantSettingsRequest request)
@@ -392,9 +405,14 @@ public sealed class TenantAdministrationService(
 
     private static bool IsValidJson(string? json, JsonValueKind expectedKind)
     {
-        if (string.IsNullOrWhiteSpace(json))
+        if (json is null)
         {
             return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return false;
         }
 
         try

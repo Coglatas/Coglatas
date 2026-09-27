@@ -1,6 +1,6 @@
 # Qodana project model
 
-Last updated: 2026-09-12.
+Last updated: 2026-09-27.
 
 ## Canonical roots
 
@@ -22,7 +22,7 @@ Last updated: 2026-09-12.
 - Node.js: `24.x` for the SARIF/project-model guard.
 - Qodana action: `JetBrains/qodana-action` v2026.2.1, pinned to commit `10be11607eb323a180e2b76b26c9c5cdceac3e77`.
 - Community linter image: `jetbrains/qodana-cdnet:2026.2-privileged@sha256:21bbbfeac0e61fe8790cc27d5754b87d57b8032c0c32f84ddeb887027f83ec4f`.
-- Reusable Qodana gate: `.github/workflows/qodana_trusted_gate.yml` pinned through main-reachable commit `05833d4b0b5a4f9fb468c0db48c76f1bc723a872`.
+- Reusable Qodana gate: `.github/workflows/qodana_trusted_gate.yml` pinned through main-reachable commit `e03555c4be3700aa23f6e0bfe86b740b042dd5fa`.
 
 Qodana Community for .NET is intentionally the .NET lane. Frontend policy is enforced independently by SonarQube Cloud, ESLint/angular-eslint and Stylelint, so the Qodana bootstrap sets `QODANA_SKIP_FRONTEND_BOOTSTRAP=true` in CI instead of spending Community-linter time building an unsupported frontend analysis surface.
 
@@ -35,6 +35,8 @@ Qodana Community for .NET is intentionally the .NET lane. Frontend policy is enf
 - `WEAK WARNING`
 
 This keeps the profile deliberately strict while avoiding the previous unrestricted `ALL` inventory, which also enabled low-value typo/information-only inspections and could add substantial noise and scan cost.
+
+Repository-wide duplication analysis is also enabled explicitly with JetBrains inspection IDs `DuplicatedCode` and `DuplicatedStatements`. Keeping these inspections explicit prevents a future change to the recommended profile or default severity from silently removing duplication coverage. Their SARIF findings flow through the same per-inspection debt ratchet as every other Qodana rule: historical findings may be recorded as a reviewed baseline, while any count above that baseline fails the gate.
 
 Generated output, dependencies, runtime data, test artifacts and the inactive legacy frontend remain excluded. First-party backend source and tests remain in scope.
 
@@ -71,8 +73,10 @@ For PRs:
 
 - `pr-mode: true` supplies Qodana with pull-request comparison context while retaining the inspection inventory used by the repository guard.
 - Before Qodana starts, the workflow writes the exact `base...HEAD` changed-file set to a runner-temporary, NUL-delimited file.
-- After Qodana succeeds, `check-qodana-project-model.mjs` rejects any Qodana finding located in one of those changed files.
-- The native total-problem `--fail-threshold` is not used for the PR gate because, without a stable matching baseline, it also counts historical findings exposed by the strict profile.
+- After Qodana succeeds, `check-qodana-project-model.mjs` compares the current inspection counts with `scripts/quality/qodana-rule-baseline.json`.
+- Existing findings are treated as technical-debt budget, not as a reason to fail merely because their file was touched.
+- A rule fails the gate when its current count exceeds its recorded budget; a previously unseen rule therefore has an implicit budget of zero.
+- The native total-problem `--fail-threshold` is not used because it cannot express this repository's per-inspection ratchet policy.
 - Qodana execution failure is not masked with `continue-on-error`.
 - Repository permissions remain `contents: read`.
 - Qodana comments, annotations and quick-fix pushes are disabled.
@@ -80,7 +84,7 @@ For PRs:
 - Repository-owner PRs may exercise proposed Qodana policy changes directly.
 - For every other PR, `qodana.yaml`, the Qodana bootstrap/guard, and the repository helper scripts executed by this job are restored from the PR base SHA before execution; the guard is restored again after analysis before it consumes SARIF.
 
-This preserves analysis of submitted source while preventing an external PR from replacing the quality-policy scripts that enforce the result. Historical findings in untouched files remain visible without turning unrelated PRs red.
+This preserves analysis of submitted source while preventing an external PR from replacing either the quality-policy scripts or the debt baseline that enforce the result. Historical findings remain visible without making a cleanup PR fail solely because it touched a file that already contained debt.
 
 ## Full-repository quality gate and Qodana Cloud
 
@@ -98,7 +102,7 @@ The Cloud lane fails before Qodana starts if `QODANA_TOKEN` is empty. The token 
 
 Keeping Cloud publication in a workflow with no PR trigger is deliberate: Qodana Cloud credentials never enter the pull-request trust boundary, while the existing immutable PR gate remains unprivileged.
 
-The repository currently has historical non-critical Qodana debt, so an absolute repository-wide `failThreshold: 0` would make the lane permanently red and would not distinguish regressions from existing findings. Instead the SARIF guard enforces hard invariants while preserving the full report:
+The repository currently has historical non-critical Qodana debt. The baseline captured from main commit `c6aedb95c8780a5e8fac42b7b96ecccf80f1ad80` contains 3,479 findings. Instead of accepting unlimited historical debt or requiring an immediate zero-warning migration, the SARIF guard uses a per-inspection ratchet while preserving the full report:
 
 - Critical findings: `0` allowed.
 - Unresolved-symbol findings: `0` allowed.
@@ -107,6 +111,14 @@ The repository currently has historical non-critical Qodana debt, so an absolute
 - Missing or invalid SARIF: hard failure.
 - Qodana process failure: hard failure.
 - Missing `QODANA_TOKEN` on a trusted Cloud run: hard failure.
+- Any inspection count above `scripts/quality/qodana-rule-baseline.json`: hard failure.
+- A newly appearing inspection ID has an implicit baseline of zero and therefore fails until the underlying issue is fixed or an explicitly reviewed baseline increase is approved.
+
+The largest baseline buckets at introduction are `NotAccessedPositionalProperty.Global` (1,173), `PropertyCanBeMadeInitOnly.Global` (595), `InconsistentNaming` (154), `MergeIntoPattern` (150), `UnusedMember.Global` (142), `MemberCanBePrivate.Local` (140), and `AccessToDisposedClosure` (121).
+
+Debt reduction is ordered by risk rather than raw count: fix lifetime/disposal, nullability, short-lived HTTP clients and multiple-enumeration findings first; then apply mechanical cleanup; finally audit DTO/record positional-property and naming findings where serialization, OpenAPI, EF, or other public contracts may make apparently-unused members intentional.
+
+Use `scripts/quality/write-qodana-rule-baseline.mjs` after a successful scan to generate a lower candidate baseline. By default the generator refuses to increase any rule budget; `QODANA_ALLOW_BASELINE_INCREASE=1` is required for an intentional increase so that it is visible in review.
 
 All non-critical findings remain visible in the GitHub Actions inventory artifact, and trusted Cloud runs publish the full-repository result to Qodana Cloud. The existing tokenless full-repository lane remains in place for compatibility with the established immutable gate and repository policy; the Cloud lane adds publication without expanding the PR secret boundary.
 

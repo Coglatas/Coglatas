@@ -45,7 +45,7 @@
       "privilegedAllowed": false
     },
     "github/codeql-action": {
-      "sha": "cdf488f595d80d6e07e03d4674febd5ab45fa938",
+      "sha": "b96794f015dfd88f77b49b1c93e0fa7110f94c63",
       "version": "v4",
       "purpose": "CodeQL initialization and SARIF publication",
       "privilegedAllowed": true
@@ -63,9 +63,9 @@
       "privilegedAllowed": true
     },
     "NYGsatoshi/Coglatas": {
-      "sha": "05833d4b0b5a4f9fb468c0db48c76f1bc723a872",
-      "version": "qodana-gate-v1",
-      "purpose": "Immutable same-repository reusable Qodana gate pinned to the main-reachable #724 snapshot",
+      "sha": "e03555c4be3700aa23f6e0bfe86b740b042dd5fa",
+      "version": "qodana-debt-ratchet-v2",
+      "purpose": "Immutable same-repository reusable Qodana gate with non-increasing inspection debt ratchet",
       "privilegedAllowed": true,
       "path": ".github/workflows/qodana_trusted_gate.yml"
     }

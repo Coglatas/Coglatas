@@ -5,6 +5,12 @@ env:
         - "${COGLATAS_SECURITY_ZAP_TARGET}"
       includePaths:
         - "${COGLATAS_SECURITY_ZAP_TARGET_REGEX}/.*"
+      # OpenAPI import sends generated requests. Exclude session-mutating auth
+      # routes at the context boundary so importing the contract cannot revoke
+      # the SEC-03 session before the authenticated coverage probe/active scan.
+      excludePaths:
+        - "${COGLATAS_SECURITY_ZAP_TARGET_REGEX}/api/auth/logout(?:[/?#].*)?$"
+        - "${COGLATAS_SECURITY_ZAP_TARGET_REGEX}/api/auth/change-password(?:[/?#].*)?$"
   parameters:
     failOnError: true
     failOnWarning: false
@@ -48,7 +54,6 @@ jobs:
       apiFile: /work/artifacts/openapi/coglatas-openapi.json
       context: sec06-api
       targetUrl: "${COGLATAS_SECURITY_ZAP_TARGET}"
-      maxMessages: 0
     tests:
       - name: OpenAPI import produced a non-zero authenticated API surface
         type: stats
@@ -65,6 +70,10 @@ jobs:
       - name: SEC-06 authenticated role coverage probe
         url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/announcements/audiences"
         method: GET
+        headers:
+          - "X-Tenant-Slug:${COGLATAS_SECURITY_ZAP_TENANT}"
+          - "Cookie:${COGLATAS_SECURITY_ZAP_COOKIE}"
+          - "X-CSRF-Token:${COGLATAS_SECURITY_ZAP_CSRF_TOKEN}"
         responseCode: 200
 
   - type: passiveScan-wait
@@ -87,7 +96,7 @@ jobs:
       # repository-reviewed release rules. Beta/OAST/desync classes are not
       # silently activated by a ZAP image refresh.
       defaultStrength: Medium
-      defaultThreshold: Off
+      defaultThreshold: "Off"
       rules:
         - id: 6
           name: Path Traversal
@@ -136,6 +145,10 @@ jobs:
       maxScanDurationInMins: 10
       delayInMs: 0
       handleAntiCSRFTokens: false
+      # Some required API scan rules only receive work when requests expose
+      # scanable parameters. Treat authenticated headers as scan inputs too so
+      # parameter-oriented rules cannot silently remain at started=0.
+      scanHeadersAllRequests: true
     tests:
       - name: Active scan completed without forced stop
         type: stats
