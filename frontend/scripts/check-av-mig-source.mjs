@@ -19,29 +19,69 @@ export class SourceInventory {
   static property(node, name) {
     return node.properties.find((item) => item.name?.getText() === name)?.initializer;
   }
-  static walkRoutes(array, prefix = '') {
+  static componentName(node) {
+    if (!node) {
+      return null;
+    }
+    if (ts.isIdentifier(node)) {
+      return node.text;
+    }
+    const candidates = [];
+    const visit = (current) => {
+      if (ts.isPropertyAccessExpression(current) && current.name.text.endsWith('Component')) {
+        candidates.push(current.name.text);
+      }
+      ts.forEachChild(current, visit);
+    };
+    visit(node);
+    assert.equal(candidates.length, 1, 'Unsupported dynamic route component binding');
+    return candidates[0];
+  }
+  static routeRecords(array, prefix = '') {
     assert.ok(array && ts.isArrayLiteralExpression(array), 'Unsupported dynamic route array');
     return array.elements.flatMap((entry) => {
       assert.ok(ts.isObjectLiteralExpression(entry), 'Unsupported route expression');
       const children = SourceInventory.property(entry, 'children'),
-        fragment = SourceInventory.property(entry, 'path'),
-        joined = [prefix, fragment?.text].filter(Boolean).join('/');
+        fragment = SourceInventory.property(entry, 'path');
       assert.ok(fragment && ts.isStringLiteral(fragment), 'Unsupported dynamic route path');
+      const joined = [prefix, fragment.text].filter(Boolean).join('/');
       if (children) {
-        return SourceInventory.walkRoutes(children, joined);
+        return SourceInventory.routeRecords(children, joined);
       }
-      if (joined === '**') {
-        return ['**'];
+
+      const path = joined === '**' ? '**' : `/${joined}`,
+        redirect = SourceInventory.property(entry, 'redirectTo'),
+        component = SourceInventory.property(entry, 'component'),
+        loadComponent = SourceInventory.property(entry, 'loadComponent');
+
+      if (redirect) {
+        assert.ok(ts.isStringLiteral(redirect), `${path}: unsupported dynamic redirect`);
+        return [{
+          path,
+          kind: 'redirect',
+          redirectTo: redirect.text.startsWith('/') ? redirect.text : `/${redirect.text}`,
+        }];
       }
-      return [`/${joined}`];
+
+      const componentName = SourceInventory.componentName(component ?? loadComponent);
+      if (path === '**') {
+        assert.ok(componentName, '**: fallback must declare a component');
+        return [{ path, kind: 'fallback', component: componentName }];
+      }
+
+      assert.ok(componentName, `${path}: screen must declare component or loadComponent`);
+      return [{ path, kind: 'screen', component: componentName }];
     });
   }
-  static routesFrom(source) {
+  static routeRecordsFrom(source) {
     const declaration = source.statements
       .filter(ts.isVariableStatement)
       .flatMap((statement) => [...statement.declarationList.declarations])
       .find((item) => item.name.getText() === 'routes');
-    return SourceInventory.walkRoutes(declaration?.initializer);
+    return SourceInventory.routeRecords(declaration?.initializer);
+  }
+  static routesFrom(source) {
+    return SourceInventory.routeRecordsFrom(source).map((route) => route.path);
   }
   static classSources() {
     const sources = new Map();
@@ -151,11 +191,13 @@ export class SourceInventory {
     const [inventory, freeze, target] = data,
       freezeByPath = new Map(freeze.routes.map((route) => [route.path, route])),
       owners = new Map(inventory.stateOwners.map((owner) => [owner.name, owner])),
+      declaredRoutes = SourceInventory.routeRecordsFrom(
+        routeSource ??
+          SourceInventory.parse(resolve(SourceInventory.root, freeze.routeDefinition)),
+      ),
+      declaredByPath = new Map(declaredRoutes.map((route) => [route.path, route])),
       paths = SourceInventory.unique(
-        SourceInventory.routesFrom(
-          routeSource ??
-            SourceInventory.parse(resolve(SourceInventory.root, freeze.routeDefinition)),
-        ),
+        declaredRoutes.map((route) => route.path),
         'production routes',
       ),
       sources = SourceInventory.classSources();
@@ -188,6 +230,14 @@ export class SourceInventory {
     }
     for (const route of inventory.routes) {
       SourceInventory.verifyRow(route, freezeByPath.get(route.path), { owners, sources });
+      const declared = declaredByPath.get(route.path);
+      assert.ok(declared, `${route.path}: missing production route declaration`);
+      assert.equal(declared.kind, route.kind, `${route.path}: route kind drift`);
+      if (route.kind === 'redirect') {
+        assert.equal(declared.redirectTo, route.redirectTo, `${route.path}: redirect target drift`);
+      } else {
+        assert.equal(declared.component, route.component, `${route.path}: route component binding drift`);
+      }
     }
     return paths.length;
   }
