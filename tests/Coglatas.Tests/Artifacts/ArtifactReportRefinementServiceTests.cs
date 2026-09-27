@@ -75,10 +75,12 @@ public sealed class ArtifactReportRefinementServiceTests
             .Include(claim => claim.Evidence)
             .Where(claim => claim.ArtifactVersionId == result.Value.ArtifactVersionId)
             .ToListAsync();
-        var oldTarget = Assert.Single(oldClaims.Where(claim => claim.LogicalClaimId == fixture.TargetLogicalClaimId));
-        var newTarget = Assert.Single(newClaims.Where(claim => claim.LogicalClaimId == fixture.TargetLogicalClaimId));
-        var oldUntouched = Assert.Single(oldClaims.Where(claim => claim.LogicalClaimId == fixture.UntouchedLogicalClaimId));
-        var newUntouched = Assert.Single(newClaims.Where(claim => claim.LogicalClaimId == fixture.UntouchedLogicalClaimId));
+        var targetLogicalClaimId = fixture.TargetLogicalClaimId;
+        var untouchedLogicalClaimId = fixture.UntouchedLogicalClaimId;
+        var oldTarget = Assert.Single(oldClaims, claim => claim.LogicalClaimId == targetLogicalClaimId);
+        var newTarget = Assert.Single(newClaims, claim => claim.LogicalClaimId == targetLogicalClaimId);
+        var oldUntouched = Assert.Single(oldClaims, claim => claim.LogicalClaimId == untouchedLogicalClaimId);
+        var newUntouched = Assert.Single(newClaims, claim => claim.LogicalClaimId == untouchedLogicalClaimId);
         Assert.Equal(oldTarget.Text, newTarget.Text);
         Assert.True(newTarget.Evidence.Count > oldTarget.Evidence.Count);
         Assert.Equal(oldUntouched.Text, newUntouched.Text);

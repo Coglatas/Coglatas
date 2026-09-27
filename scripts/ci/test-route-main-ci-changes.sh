@@ -159,6 +159,26 @@ assert_eq false "$(value_of "$output" backend_pr07b)" "ordinary backend test PR0
 assert_eq false "$(value_of "$output" backend_pr07c)" "ordinary backend test PR07-C"
 assert_eq false "$(value_of "$output" backend_pr07d)" "ordinary backend test PR07-D"
 
+# AV-MIG contract verification depends on the effective .NET SDK/build
+# configuration as well as source files. Each of these inputs must route the
+# client-independent contract gate even when it is the only changed file.
+for avmig_input in \
+  global.json \
+  NuGet.config \
+  Directory.Build.props \
+  src/Coglatas.Web/Coglatas.Web.csproj; do
+  slug="${avmig_input//\//-}"
+  repo="$tmp_root/avmig-build-${slug//./-}"
+  init_repo "$repo"
+  printf 'base\n' > "$repo/README.md"
+  base="$(commit_all "$repo" base)"
+  mkdir -p "$(dirname "$repo/$avmig_input")"
+  printf 'changed\n' > "$repo/$avmig_input"
+  head="$(commit_all "$repo" head)"
+  output="$(route_repo "$repo" "$base" "$head")"
+  assert_eq true "$(value_of "$output" avmig_contract)" "AV-MIG build input $avmig_input"
+done
+
 # Cross-cutting Common changes intentionally fail safe to the full backend suite.
 repo="$tmp_root/common"
 init_repo "$repo" Announcements

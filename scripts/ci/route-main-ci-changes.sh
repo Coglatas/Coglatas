@@ -21,6 +21,7 @@ keys=(
   frontend_license_guard
   frontend_storybook
   frontend_playwright
+  avmig_contract
   security
   security_dotnet
   security_compose
@@ -78,6 +79,7 @@ frontend_architecture=false
 frontend_license_guard=false
 frontend_storybook=false
 frontend_playwright=false
+avmig_contract=false
 security=false
 security_dotnet=false
 security_compose=false
@@ -552,6 +554,15 @@ while IFS= read -r path; do
       ;;
   esac
 
+  # AV-MIG contract routing.
+  case "$path" in
+    global.json|NuGet.config|Directory.Build.*|src/*.csproj|docs/migration/avalonia/*|scripts/ci/*av_mig*|scripts/ci/generate-security-openapi-contract.sh|src/Coglatas.Web/*|src/Coglatas.Application/*|tests/Coglatas.Tests/OpenApi/*|tools/AvMig.SourceInspector/*)
+      avmig_contract=true
+      security=true
+      security_dotnet=true
+      ;;
+  esac
+
   # Security routing.
   case "$path" in
     Coglatas.slnx|global.json|NuGet.config|Directory.Build.*|Directory.Packages.*|.config/*|src/*.csproj|tests/Coglatas.Tests/*.csproj)
@@ -632,6 +643,7 @@ if [[ -n "$summary_file" ]]; then
     echo "  - license guard: $frontend_license_guard"
     echo "  - Storybook: $frontend_storybook"
     echo "  - Playwright: $frontend_playwright"
+    echo "- AV-MIG contract: $avmig_contract"
     echo "- security: $security"
     echo "  - .NET dependency scan: $security_dotnet"
     echo "  - Compose validation: $security_compose"

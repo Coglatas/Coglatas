@@ -130,6 +130,28 @@ def require_security_contract(document: dict[str, object]) -> None:
     if not isinstance(dependency_responses, dict) or not {"401", "403", "404"}.issubset(dependency_responses):
         fail("application-authorized path operations must document 401/403/404 responses")
 
+    nul_safe_query_parameters = (
+        ("/api/conversations/recipients", "query"),
+        ("/api/ui/panels", "moduleKey"),
+    )
+    for path_name, parameter_name in nul_safe_query_parameters:
+        path_item = paths.get(path_name) if isinstance(paths, dict) else None
+        operation = path_item.get("get") if isinstance(path_item, dict) else None
+        parameters = operation.get("parameters") if isinstance(operation, dict) else None
+        parameter = next(
+            (
+                candidate
+                for candidate in parameters or []
+                if isinstance(candidate, dict) and candidate.get("name") == parameter_name
+            ),
+            None,
+        )
+        schema = parameter.get("schema") if isinstance(parameter, dict) else None
+        if not isinstance(schema, dict) or schema.get("pattern") != "^[^\\u0000]*$":
+            fail(
+                f"{path_name} {parameter_name} must exclude PostgreSQL-unsupported NUL characters"
+            )
+
     invite_path = paths.get("/api/invites/validate") if isinstance(paths, dict) else None
     invite_operation = invite_path.get("get") if isinstance(invite_path, dict) else None
     invite_parameters = invite_operation.get("parameters") if isinstance(invite_operation, dict) else None

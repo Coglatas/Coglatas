@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.Json.Nodes;
 using Coglatas.Application.Announcements;
 using Coglatas.Application.Events;
+using Coglatas.Application.Integrations;
 using Coglatas.Application.Messaging;
 using Coglatas.Application.Projects;
 using Coglatas.Application.TenantAdministration;
@@ -82,6 +83,17 @@ public sealed class SecurityOpenApiSchemaTransformer : IOpenApiSchemaTransformer
             // constructor-based schema otherwise marks nullable parameters as
             // required, which contradicts the service's merge behavior.
             schema.Required?.Clear();
+            return;
+        }
+
+        if (requestType == typeof(CreateApiTokenRequest))
+        {
+            // Scopes and expiry are optional at runtime. IntegrationService
+            // normalizes an omitted ScopesJson to [] and permits no expiry.
+            // Constructor-based OpenAPI generation otherwise marks nullable
+            // positional-record parameters as required.
+            schema.Required?.Remove("scopesJson");
+            schema.Required?.Remove("expiresAt");
             return;
         }
 

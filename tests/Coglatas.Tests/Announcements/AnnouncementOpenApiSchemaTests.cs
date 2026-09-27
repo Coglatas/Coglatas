@@ -19,13 +19,13 @@ public sealed class AnnouncementOpenApiSchemaTests
 
         var displayNamePattern = schema.Properties["DisplayName"].Pattern;
         Assert.NotNull(displayNamePattern);
-        Assert.False(Regex.IsMatch(" ", displayNamePattern));
+        Assert.DoesNotMatch(displayNamePattern, " ");
         Assert.Equal("email", schema.Properties["Email"].Format);
         Assert.Equal(8, schema.Properties["Password"].MinLength);
 
         var inviteTokenPattern = schema.Properties["InviteToken"].Pattern;
         Assert.NotNull(inviteTokenPattern);
-        Assert.False(Regex.IsMatch("", inviteTokenPattern));
+        Assert.DoesNotMatch(inviteTokenPattern, "");
     }
 
     [Theory]
@@ -43,8 +43,8 @@ public sealed class AnnouncementOpenApiSchemaTests
 
             var pattern = property.Pattern;
             Assert.NotNull(pattern);
-            Assert.False(Regex.IsMatch(" \t\n", pattern));
-            Assert.True(Regex.IsMatch("Announcement", pattern));
+            Assert.DoesNotMatch(pattern, " \t\n");
+            Assert.Matches(pattern, "Announcement");
         }
     }
 
