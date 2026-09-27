@@ -144,6 +144,19 @@ jobs:
             alpine:3.21.7@sha256:f27cad9117495d32d067133afff942cb2dc745dfe9163e949f6bfe8a6a245339 \
             sh -c "chown -R ${uid}:${gid} /workspace"
 
+      # A submitted project build can modify workspace files. Restore every
+      # post-analysis helper before it can parse, transform, or gate Qodana output.
+      - name: Restore trusted Qodana post-analysis helpers
+        if: always() && steps.qodana_scan.outcome == 'success' && github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner
+        env:
+          QODANA_POLICY_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          git restore --source="$QODANA_POLICY_SHA" --staged --worktree -- \
+            scripts/quality/check-qodana-project-model.mjs \
+            scripts/quality/prepare-qodana-sarif-for-github.mjs \
+            scripts/quality/qodana-rule-baseline.json
+
       - name: Set up Node.js for Qodana SARIF and guard
         if: always() && steps.qodana_scan.outcome == 'success'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -171,19 +184,6 @@ jobs:
         with:
           sarif_file: ${{ runner.temp }}/qodana/qodana.github.sarif.json
           category: qodana-dotnet-community
-
-      # A submitted project build can modify workspace files, so restore the
-      # guard again before execution for PRs that do not come from the owner.
-      - name: Restore trusted Qodana guard after analysis
-        if: steps.qodana_scan.outcome == 'success' && github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner
-        env:
-          QODANA_POLICY_SHA: ${{ github.event.pull_request.base.sha }}
-        shell: bash
-        run: |
-          git restore --source="$QODANA_POLICY_SHA" --staged --worktree -- \
-            scripts/quality/check-qodana-project-model.mjs \
-            scripts/quality/prepare-qodana-sarif-for-github.mjs \
-            scripts/quality/qodana-rule-baseline.json
 
       - name: Guard Qodana findings and project model
         if: always() && steps.qodana_scan.outcome == 'success'
