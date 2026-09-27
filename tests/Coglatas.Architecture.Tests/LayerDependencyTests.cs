@@ -9,25 +9,37 @@ namespace Coglatas.Architecture.Tests;
 
 public sealed class LayerDependencyTests
 {
+    private static readonly System.Reflection.Assembly DomainAssembly =
+        System.Reflection.Assembly.Load("Coglatas.Domain");
+
+    private static readonly System.Reflection.Assembly ApplicationAssembly =
+        System.Reflection.Assembly.Load("Coglatas.Application");
+
+    private static readonly System.Reflection.Assembly InfrastructureAssembly =
+        System.Reflection.Assembly.Load("Coglatas.Infrastructure");
+
+    private static readonly System.Reflection.Assembly WebAssembly =
+        System.Reflection.Assembly.Load("Coglatas.Web");
+
     private static readonly ArchUnitNET.Domain.Architecture LoadedArchitecture = new ArchLoader()
         .LoadAssemblies(
-            System.Reflection.Assembly.Load("Coglatas.Domain"),
-            System.Reflection.Assembly.Load("Coglatas.Application"),
-            System.Reflection.Assembly.Load("Coglatas.Infrastructure"),
-            System.Reflection.Assembly.Load("Coglatas.Web"))
+            DomainAssembly,
+            ApplicationAssembly,
+            InfrastructureAssembly,
+            WebAssembly)
         .Build();
 
     private static readonly IObjectProvider<IType> DomainLayer =
-        Types().That().ResideInAssembly("Coglatas.Domain").As("Domain");
+        Types().That().ResideInAssembly(DomainAssembly).As("Domain");
 
     private static readonly IObjectProvider<IType> ApplicationLayer =
-        Types().That().ResideInAssembly("Coglatas.Application").As("Application");
+        Types().That().ResideInAssembly(ApplicationAssembly).As("Application");
 
     private static readonly IObjectProvider<IType> InfrastructureLayer =
-        Types().That().ResideInAssembly("Coglatas.Infrastructure").As("Infrastructure");
+        Types().That().ResideInAssembly(InfrastructureAssembly).As("Infrastructure");
 
     private static readonly IObjectProvider<IType> WebLayer =
-        Types().That().ResideInAssembly("Coglatas.Web").As("Web");
+        Types().That().ResideInAssembly(WebAssembly).As("Web");
 
     [Fact]
     public void Domain_DoesNotDependOnApplication()
