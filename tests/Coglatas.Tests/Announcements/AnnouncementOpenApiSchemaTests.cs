@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using System.Text.RegularExpressions;
 using Coglatas.Application.Announcements;
 using Coglatas.Application.Auth;
 using Coglatas.Web.OpenApi;
