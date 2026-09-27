@@ -19,6 +19,7 @@ export class SourceInventory {
   static property(node, name) {
     return node.properties.find((item) => item.name?.getText() === name)?.initializer;
   }
+  /* eslint-disable max-statements, no-magic-numbers, one-var, sort-keys, sort-vars */
   static componentName(node) {
     if (!node) {
       return null;
@@ -83,6 +84,7 @@ export class SourceInventory {
   static routesFrom(source) {
     return SourceInventory.routeRecordsFrom(source).map((route) => route.path);
   }
+  /* eslint-enable max-statements, no-magic-numbers, one-var, sort-keys, sort-vars */
   static classSources() {
     const sources = new Map();
     for (const file of readdirSync(resolve(SourceInventory.root, 'frontend/src/app'), {
@@ -187,6 +189,7 @@ export class SourceInventory {
       `${route.path}: freeze class disagreement`,
     );
   }
+  /* eslint-disable max-statements, one-var, sort-vars */
   static verify(data, routeSource) {
     const [inventory, freeze, target] = data,
       freezeByPath = new Map(freeze.routes.map((route) => [route.path, route])),
@@ -241,6 +244,7 @@ export class SourceInventory {
     }
     return paths.length;
   }
+  /* eslint-enable max-statements, one-var, sort-vars */
   static loadInputs(path) {
     if (path) { return JSON.parse(readFileSync(path, 'utf8')); }
     return SourceInventory.inputs();
