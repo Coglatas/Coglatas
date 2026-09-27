@@ -34,7 +34,7 @@ release artifact when required by the contest or distribution channel.
 | Documentation/component tooling | Storybook 10.5.5 and @storybook/angular 10.5.5 | Development and documentation tooling. |
 | Build tooling | Angular CLI/build tooling 21.2.19, TypeScript 5.9.3, Prettier 3.9.6 | Development/build tooling. |
 | PostgreSQL image | postgres:18-alpine | Development, test, and selected Compose profiles. |
-| Build/runtime images | node:24, node:24-alpine, mcr.microsoft.com/dotnet/sdk:10.0.400, mcr.microsoft.com/dotnet/aspnet:10.0.11 | Build and host containers. |
+| Build/runtime images | node:24, node:24-alpine, mcr.microsoft.com/dotnet/sdk:10.0.401, mcr.microsoft.com/dotnet/aspnet:10.0.11 | Build and host containers. |
 | Browser-test image | mcr.microsoft.com/playwright:v1.62.0-noble | Linux Playwright test container. |
 
 Exact resolved transitive versions may differ from the concise direct list
