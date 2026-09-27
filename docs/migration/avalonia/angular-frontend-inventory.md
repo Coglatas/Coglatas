@@ -42,13 +42,13 @@ The route set is pinned to `frontend/src/app/app.routes.ts`. It contains 38 redi
 
 `/projects/:projectId` is not just a Project detail page. The pinned implementation imports and drives `TaskTableComponent`, `AipKanbanComponent`, and `AipGanttComponent`.
 
-| Embedded source surface | Target | Execution owner | Supporting owner(s) |
-|---|---|---:|---|
-| Project Task Table/List | PNL-03 + PNL-14 | #782 | #776, #814 |
-| Project Kanban | PNL-03 Board WorkSurface projection | #782 | #776, #814 |
-| Project Gantt/Schedule | PNL-15 Timeline/Gantt | #787 | #777, #782, #814 |
-| AppShell / right panel / continue-working | PNL-00/01 + notification/deep-link integration | #780 | #788, #770, #774, #775 |
-| Realtime transport/subscription lifecycle | cross-cutting | #778 | #773, #793, #794 |
+| Embedded source surface | Target | Freeze class | Execution owner | Supporting owner(s) |
+|---|---|---|---:|---|
+| Project Task Table/List | PNL-03 + PNL-14 | November Required | #782 | #776, #814 |
+| Project Kanban | PNL-03 Board WorkSurface projection | Maintenance Only | #782 | #776, #784, #814 |
+| Project Gantt/Schedule | PNL-15 Timeline/Gantt | Maintenance Only | #787 | #777, #782, #814 |
+| AppShell / right panel / continue-working | PNL-00/01 + notification/deep-link integration | November Required | #780 | #788, #770, #774, #775 |
+| Realtime transport/subscription lifecycle | cross-cutting | November Required | #778 | #773, #793, #794 |
 
 Graph (#816) and Dock (#815) have no canonical Angular route to migrate and are therefore Avalonia-first capabilities rather than hidden Angular routes.
 
@@ -99,6 +99,10 @@ Target canonical owners under #785 remain separate for:
 
 Shared primitives may include timeline/composer/attachments/presence and #778 transport.
 
+## Platform policy boundary
+
+Platform Tier/support classification is owned exclusively by #767. This inventory records source browser/platform dependencies and migration constraints, but it does not infer Avalonia Desktop/Mobile/Browser support tiers from Angular behavior. Until #767 closes, platform classification here is explicitly provisional and downstream cutover evidence must consume #767 as the authority.
+
 ## Dependencies
 
 The pinned source contains Angular 22.1.5, Angular CDK 22.1.5, RxJS 7.8.2, browser SignalR 10.0.11, declared-only NgRx 22.0.0, Syncfusion Angular 34.2.6, AG Grid 36.1.0, Lucide Angular, Storybook, Vitest/jsdom and Playwright/axe.
@@ -146,9 +150,11 @@ and missing entries, and November flags. Message Settings uses its component and
 Session Expired is a stateless presentation component. The freeze owner column
 now follows those source facts.
 
-This checks direct ownership, not exhaustive transitive/embedded behavioral
-classification. Cross-cutting owners retain explicit non-route status. #765 and
-#766 remain open until every P0 API/DTO and class-3/4 rule is reconciled with
-backend authority. The v5.8.1 target map remains authoritative for future owners.
-Angular primary-demo acceptance and Avalonia core technical preview require
-separate scope decisions under #798; no additional November scope is inferred.
+This checks direct ownership plus the explicit embedded/freeze classifications
+required by #765. Cross-cutting owners retain explicit non-route status. Exhaustive
+P0 API/DTO and class-3/4 backend-authority reconciliation remains owned by #766;
+it is not duplicated as an additional #765 completion gate. The v5.8.1 target map
+remains authoritative for future owners. Angular primary-demo acceptance and
+Avalonia core technical preview require separate scope decisions under #798; no
+additional November scope is inferred. Platform Tier/support remains authoritative
+in #767.
