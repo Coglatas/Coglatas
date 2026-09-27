@@ -5,7 +5,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
 
 jobs:
   qodana-dotnet-community:
@@ -14,7 +13,6 @@ jobs:
     timeout-minutes: 120
     permissions:
       contents: read
-      security-events: write
 
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
@@ -74,7 +72,6 @@ jobs:
             qodana.yaml \
             scripts/quality/qodana-bootstrap.sh \
             scripts/quality/check-qodana-project-model.mjs \
-            scripts/quality/prepare-qodana-sarif-for-github.mjs \
             scripts/quality/qodana-rule-baseline.json \
             scripts/ci/configure-persistent-caches.sh \
             scripts/ci/cleanup-qodana-containers.sh; do
@@ -144,49 +141,26 @@ jobs:
             alpine:3.21.7@sha256:f27cad9117495d32d067133afff942cb2dc745dfe9163e949f6bfe8a6a245339 \
             sh -c "chown -R ${uid}:${gid} /workspace"
 
-      # A submitted project build can modify workspace files. Restore every
-      # post-analysis helper before it can parse, transform, or gate Qodana output.
-      - name: Restore trusted Qodana post-analysis helpers
-        if: always() && steps.qodana_scan.outcome == 'success' && github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner
+      - name: Set up Node.js for Qodana guard
+        if: steps.qodana_scan.outcome == 'success'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+
+      # A submitted project build can modify workspace files, so restore the
+      # guard again before execution for PRs that do not come from the owner.
+      - name: Restore trusted Qodana guard after analysis
+        if: steps.qodana_scan.outcome == 'success' && github.event_name == 'pull_request' && github.event.pull_request.user.login != github.repository_owner
         env:
           QODANA_POLICY_SHA: ${{ github.event.pull_request.base.sha }}
         shell: bash
         run: |
           git restore --source="$QODANA_POLICY_SHA" --staged --worktree -- \
             scripts/quality/check-qodana-project-model.mjs \
-            scripts/quality/prepare-qodana-sarif-for-github.mjs \
             scripts/quality/qodana-rule-baseline.json
 
-      - name: Set up Node.js for Qodana SARIF and guard
-        if: always() && steps.qodana_scan.outcome == 'success'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: "24"
-
-      - name: Prepare Qodana SARIF for GitHub Code Scanning
-        if: always() && steps.qodana_scan.outcome == 'success'
-        shell: bash
-        run: |
-          sarif="${RUNNER_TEMP}/qodana/results-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/qodana.sarif.json"
-          github_sarif="${RUNNER_TEMP}/qodana/qodana.github.sarif.json"
-          if [[ ! -f "$sarif" ]]; then
-            echo "::error::Qodana succeeded without producing the required SARIF report."
-            exit 1
-          fi
-          node scripts/quality/prepare-qodana-sarif-for-github.mjs \
-            "$sarif" \
-            "$github_sarif" \
-            qodana-dotnet-community
-
-      - name: Upload Qodana SARIF to GitHub Code Scanning
-        if: always() && steps.qodana_scan.outcome == 'success'
-        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
-        with:
-          sarif_file: ${{ runner.temp }}/qodana/qodana.github.sarif.json
-          category: qodana-dotnet-community
-
       - name: Guard Qodana findings and project model
-        if: always() && steps.qodana_scan.outcome == 'success'
+        if: steps.qodana_scan.outcome == 'success'
         env:
           QODANA_CHANGED_FILES_PATH: ${{ steps.qodana_mode.outputs.changed_files_path }}
           QODANA_PROJECT_MODEL_SUMMARY_PATH: ${{ runner.temp }}/qodana/project-model-summary.json
