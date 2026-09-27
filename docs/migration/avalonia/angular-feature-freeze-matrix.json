@@ -18,44 +18,558 @@
     "deleteGate": "Angular code is deleted only after the assigned Avalonia issue has equivalent real-backend coverage and #797 cutover permits removal."
   },
   "routes": [
-    {"path":"/signin","ownerPath":"frontend/src/app/app.routes.ts","backendContract":"none; compatibility redirect","stateOwner":"Router","november":false,"freeze":"Retire","priority":"P2","avaloniaIssue":780,"deleteCondition":"Remove when /login deep links are canonical and #797 cutover no longer requires the alias.","constraints":["deep-link compatibility"]},
-    {"path":"/login","ownerPath":"frontend/src/app/features/auth/login-page/login-page.component.ts","backendContract":"/api/auth/* + /api/security/csrf-token","stateOwner":"LoginPageComponent + AuthSessionFacade","november":true,"freeze":"November Required","priority":"P0","avaloniaIssue":780,"deleteCondition":"#780 real-backend login/session journey passes and #797 permits Angular removal.","constraints":["server-authoritative session","CSRF","no credential persistence outside approved session transport"]},
-    {"path":"/session-expired","ownerPath":"frontend/src/app/core/session/session-expired-page.component.ts","backendContract":"auth/session expiration contract (#766/#773)","stateOwner":"SessionExpiredPageComponent","november":true,"freeze":"November Required","priority":"P0","avaloniaIssue":780,"deleteCondition":"#780/#773 expiration and re-login flow has equivalent coverage.","constraints":["fail-closed protected-state clearing"]},
-    {"path":"/register/invite","ownerPath":"frontend/src/app/features/auth/invite-registration-page/invite-registration-page.component.ts","backendContract":"/api/invites/* + /api/auth/register-by-invite","stateOwner":"InviteRegistrationPageComponent","november":false,"freeze":"Maintenance Only","priority":"P1","avaloniaIssue":791,"deleteCondition":"Invite/account administration migration in #791 is complete and #797 permits removal.","constraints":["invite validation remains server authoritative"]},
-    {"path":"/permission-denied","ownerPath":"frontend/src/app/shared/permission/app-permission-denied/app-permission-denied.component.ts","backendContract":"authorization/error contract (#766)","stateOwner":"AppPermissionDeniedComponent","november":true,"freeze":"November Required","priority":"P0","avaloniaIssue":780,"deleteCondition":"#780 shell exposes equivalent denied-state UX and #797 permits removal.","constraints":["must not substitute client checks for backend authorization"]},
-    {"path":"/","ownerPath":"frontend/src/app/app.routes.ts","backendContract":"auth/session + workspace entry contracts","stateOwner":"AuthSessionFacade + AppShellFacade","november":true,"freeze":"November Required","priority":"P0","avaloniaIssue":780,"deleteCondition":"#780 shell/navigation is primary and #797 permits removal.","constraints":["authSessionGuard is navigation-only authority"]},
-    {"path":"/messages/saved","ownerPath":"frontend/src/app/features/messaging/message-follow-ups-page/message-follow-ups-page.component.ts","backendContract":"conversation/message follow-up REST + /hubs/app","stateOwner":"MessageFollowUpsPageComponent + MessageFollowUpFacade","november":false,"freeze":"Maintenance Only","priority":"P1","avaloniaIssue":785,"deleteCondition":"#785 saved-message flow passes real-backend/realtime tests and #797 permits removal.","constraints":["server paging","realtime stale-event protection"]},
-    {"path":"/messages/settings","ownerPath":"frontend/src/app/features/messaging/message-settings-page/message-settings-page.component.ts","backendContract":"conversation/message settings REST","stateOwner":"MessageSettingsPageComponent + MessageGlobalSettingsService","november":false,"freeze":"Maintenance Only","priority":"P1","avaloniaIssue":785,"deleteCondition":"#785 settings flow is equivalent and #797 permits removal.","constraints":["server capability projection"]},
-    {"path":"/messages","ownerPath":"frontend/src/app/features/messaging/messages-page/messages-page.component.ts","backendContract":"/api/conversations* + /hubs/app","stateOwner":"MessagesPageComponent + MessagingFacade + MessageGlobalSettingsService","november":false,"freeze":"Maintenance Only","priority":"P1","avaloniaIssue":785,"deleteCondition":"#785 conversation list/message journey passes and #797 permits removal.","constraints":["realtime authorization invalidation","paging/cancellation"]},
-    {"path":"/conversations/:conversationId","ownerPath":"frontend/src/app/features/messaging/channel-messaging-page/channel-messaging-page.component.ts","backendContract":"/api/conversations/{conversationId}* + /hubs/app","stateOwner":"ChannelMessagingPageComponent + MessagingFacade + RealtimeFacade + MessageGlobalSettingsService + ActiveWorkspaceFacade","november":false,"freeze":"Maintenance Only","priority":"P1","avaloniaIssue":785,"deleteCondition":"#785 channel journey passes and #797 permits removal.","constraints":["conversation access is server authoritative"]},
-    {"path":"/workspaces/:workspaceId/channels/:conversationId","ownerPath":"frontend/src/app/features/messaging/channel-messaging-page/channel-messaging-page.component.ts","backendContract":"workspace-scoped conversation REST + /hubs/app","stateOwner":"ChannelMessagingPageComponent + MessagingFacade + RealtimeFacade + MessageGlobalSettingsService + ActiveWorkspaceFacade","november":false,"freeze":"Maintenance Only","priority":"P1","avaloniaIssue":785,"deleteCondition":"#785 workspace-channel deep link passes and #797 permits removal.","constraints":["workspaceContextGuard is context hygiene, not authorization"]},
-    {"path":"/dm/:conversationId","ownerPath":"frontend/src/app/features/messaging/dm-page/dm-page.component.ts","backendContract":"/api/conversations/{conversationId}* + /hubs/app","stateOwner":"DmPageComponent + MessagingFacade + RealtimeFacade","november":false,"freeze":"Maintenance Only","priority":"P1","avaloniaIssue":785,"deleteCondition":"#785 DM journey passes and #797 permits removal.","constraints":["conversation access is server authoritative"]},
-    {"path":"/workspaces/:workspaceId/research/new","ownerPath":"frontend/src/app/features/workspaces/workspace-research-quick-create-page/workspace-research-quick-create-page.component.ts","backendContract":"workspace research/create REST consumer at pinned Angular snapshot","stateOwner":"WorkspaceResearchQuickCreatePageComponent + WorkspacesFacade","november":false,"freeze":"Maintenance Only","priority":"P2","avaloniaIssue":781,"deleteCondition":"#781 provides equivalent workspace research/create entry or explicitly retires it; #797 permits removal.","constraints":["workspace context must be validated by server"]},
-    {"path":"/workspaces/:workspaceId/projects","ownerPath":"frontend/src/app/features/projects/projects-overview-page/projects-overview-page.component.ts","backendContract":"/api/workspaces/{workspaceId}/projects* + /hubs/app","stateOwner":"ProjectsOverviewPageComponent + ProjectsFacade + ActiveWorkspaceFacade + WorkspacesFacade + ProjectCreateFacade","november":true,"freeze":"November Required","priority":"P0","avaloniaIssue":782,"deleteCondition":"#782 project list journey passes and #797 permits removal.","constraints":["server capability/status projections","workspace epoch isolation"]},
-    {"path":"/workspaces/:workspaceId/files","ownerPath":"frontend/src/app/features/files/files-page/files-page.component.ts","backendContract":"/api/files* + /api/search + /hubs/app + server-issued download grants","stateOwner":"FilesPageComponent + FilesFacade + FileFolderStore + ActiveWorkspaceFacade + AuthSessionFacade + RealtimeFacade","november":false,"freeze":"Maintenance Only","priority":"P1","avaloniaIssue":786,"deleteCondition":"#786/#779 native file journey passes and #797 permits removal.","constraints":["download grants","upload cancellation","stale-response protection"]},
-    {"path":"/workspaces/:workspaceId/members","ownerPath":"frontend/src/app/features/workspaces/workspace-members-page/workspace-members-page.component.ts","backendContract":"/api/workspaces/{workspaceId}/members* + /hubs/app","stateOwner":"WorkspaceMembersPageComponent + ActiveWorkspaceFacade","november":false,"freeze":"Maintenance Only","priority":"P1","avaloniaIssue":781,"deleteCondition":"#781 member/group management equivalence passes and #797 permits removal.","constraints":["membership mutation authorization is server authoritative"]},
-    {"path":"/workspaces","ownerPath":"frontend/src/app/features/workspaces/workspace-dashboard-page/workspace-dashboard-page.component.ts","backendContract":"/api/workspaces* + /api/workspaces/capabilities + /hubs/app","stateOwner":"WorkspaceDashboardPageComponent + WorkspacesFacade","november":true,"freeze":"November Required","priority":"P0","avaloniaIssue":781,"deleteCondition":"#781 workspace entry journey passes and #797 permits removal.","constraints":["workspace selection cannot grant access","authorization invalidation clears scoped state"]},
-    {"path":"/announcements","ownerPath":"frontend/src/app/features/announcements/announcements-page/announcements-page.component.ts","backendContract":"/api/announcements*","stateOwner":"AnnouncementsPageComponent + AnnouncementsFacade","november":false,"freeze":"Maintenance Only","priority":"P2","avaloniaIssue":792,"deleteCondition":"#792 list/create/review/publish scope is complete and #797 permits removal.","constraints":["audience/capability projection from server"]},
-    {"path":"/announcements/:announcementId","ownerPath":"frontend/src/app/features/announcements/announcements-page/announcements-page.component.ts","backendContract":"/api/announcements/{announcementId}*","stateOwner":"AnnouncementsPageComponent + AnnouncementsFacade","november":false,"freeze":"Maintenance Only","priority":"P2","avaloniaIssue":792,"deleteCondition":"#792 detail/deep-link scope is complete and #797 permits removal.","constraints":["audience/capability projection from server"]},
-    {"path":"/app/projects/:projectId/tasks/:taskId/reports/:artifactVersionId","ownerPath":"frontend/src/app/features/artifacts/report-reader-page/report-reader-page.component.ts","backendContract":"report/artifact read contract","stateOwner":"ReportReaderPageComponent","november":false,"freeze":"Retire","priority":"P2","avaloniaIssue":788,"deleteCondition":"Canonical non-/app deep link is accepted everywhere and #797 permits alias removal.","constraints":["deep-link compatibility","artifact access server authoritative"]},
-    {"path":"/app/projects/:projectId/reports/:artifactVersionId","ownerPath":"frontend/src/app/features/artifacts/report-reader-page/report-reader-page.component.ts","backendContract":"report/artifact read contract","stateOwner":"ReportReaderPageComponent","november":false,"freeze":"Retire","priority":"P2","avaloniaIssue":788,"deleteCondition":"Canonical non-/app deep link is accepted everywhere and #797 permits alias removal.","constraints":["deep-link compatibility","artifact access server authoritative"]},
-    {"path":"/projects/:projectId/tasks/:taskId/reports/:artifactVersionId","ownerPath":"frontend/src/app/features/artifacts/report-reader-page/report-reader-page.component.ts","backendContract":"report/artifact read contract","stateOwner":"ReportReaderPageComponent","november":false,"freeze":"Maintenance Only","priority":"P2","avaloniaIssue":788,"deleteCondition":"#788 canonical report deep-link/reader path is equivalent and #797 permits removal.","constraints":["artifact access server authoritative"]},
-    {"path":"/projects/:projectId/reports/:artifactVersionId","ownerPath":"frontend/src/app/features/artifacts/report-reader-page/report-reader-page.component.ts","backendContract":"report/artifact read contract","stateOwner":"ReportReaderPageComponent","november":false,"freeze":"Maintenance Only","priority":"P2","avaloniaIssue":788,"deleteCondition":"#788 canonical report deep-link/reader path is equivalent and #797 permits removal.","constraints":["artifact access server authoritative"]},
-    {"path":"/projects/:projectId/tasks/new","ownerPath":"frontend/src/app/features/projects/task-create-page/task-create-page.component.ts","backendContract":"GET /api/projects/{projectId}/tasks/create-options; POST /api/projects/{projectId}/tasks/create + /hubs/app","stateOwner":"TaskCreatePageComponent + TaskCreateFacade","november":true,"freeze":"November Required","priority":"P0","avaloniaIssue":783,"deleteCondition":"#783 task-create journey passes real-backend tests and #797 permits removal.","constraints":["create-options/capabilities are server authoritative","idempotency/error contract"]},
-    {"path":"/projects/:projectId/tasks/:taskId","ownerPath":"frontend/src/app/features/projects/task-detail-page/task-detail-page.component.ts","backendContract":"task detail/checklist/subtask/files REST + /hubs/app","stateOwner":"TaskDetailPageComponent + ProjectsFacade + FilesFacade","november":true,"freeze":"November Required","priority":"P0","avaloniaIssue":783,"deleteCondition":"#783 task-detail representative journey passes and #797 permits removal.","constraints":["permissions from backend","realtime refresh","file grants"]},
-    {"path":"/projects/:projectId","ownerPath":"frontend/src/app/features/projects/project-detail-page/project-detail-page.component.ts","backendContract":"GET /api/projects/{projectId}; activation/task/project REST + /hubs/app","stateOwner":"ProjectDetailPageComponent + ProjectDetailFacade","november":true,"freeze":"November Required","priority":"P0","avaloniaIssue":782,"deleteCondition":"#782 project detail journey passes and #797 permits removal.","constraints":["status transitions and UI permissions are server projections"]},
-    {"path":"/tasks","ownerPath":"frontend/src/app/features/projects/my-tasks-page/my-tasks-page.component.ts","backendContract":"MyTasks REST paging/filter + /hubs/app","stateOwner":"MyTasksPageComponent + MyTasksFacade","november":false,"freeze":"Maintenance Only","priority":"P1","avaloniaIssue":784,"deleteCondition":"#784 MyTasks/Work View is equivalent and #797 permits removal.","constraints":["server paging/filter semantics","virtualization/performance"]},
-    {"path":"/projects","ownerPath":"frontend/src/app/features/projects/projects-overview-page/projects-overview-page.component.ts","backendContract":"project collection REST + /hubs/app","stateOwner":"ProjectsOverviewPageComponent + ProjectsFacade + ActiveWorkspaceFacade + WorkspacesFacade + ProjectCreateFacade","november":true,"freeze":"November Required","priority":"P0","avaloniaIssue":782,"deleteCondition":"#782 project list journey passes and #797 permits removal.","constraints":["server capability/status projections"]},
-    {"path":"/artifacts/:artifactId","ownerPath":"frontend/src/app/features/artifacts/artifact-detail-page/artifact-detail-page.component.ts","backendContract":"artifact detail/read contract","stateOwner":"ArtifactDetailPageComponent","november":false,"freeze":"Maintenance Only","priority":"P2","avaloniaIssue":788,"deleteCondition":"#788 artifact/deep-link handling is equivalent and #797 permits removal.","constraints":["artifact access server authoritative"]},
-    {"path":"/files","ownerPath":"frontend/src/app/features/files/files-page/files-page.component.ts","backendContract":"/api/files* + /api/search + /hubs/app + server-issued download grants","stateOwner":"FilesPageComponent + FilesFacade + FileFolderStore + ActiveWorkspaceFacade + AuthSessionFacade + RealtimeFacade","november":false,"freeze":"Maintenance Only","priority":"P1","avaloniaIssue":786,"deleteCondition":"#786/#779 file journey passes and #797 permits removal.","constraints":["download grants","upload cancellation","stale-response protection"]},
-    {"path":"/account","ownerPath":"frontend/src/app/features/account/account-page/account-page.component.ts","backendContract":"account/session/preferences REST","stateOwner":"AccountPageComponent + AccountFacade","november":false,"freeze":"Maintenance Only","priority":"P2","avaloniaIssue":791,"deleteCondition":"#791 account scope is equivalent and #797 permits removal.","constraints":["server-owned account/capability state"]},
-    {"path":"/admin/audit/findings","ownerPath":"frontend/src/app/features/admin/audit-findings-page/audit-findings-page.component.ts","backendContract":"audit findings REST","stateOwner":"AuditFindingsPageComponent + AuditFindingsFacade","november":false,"freeze":"Maintenance Only","priority":"P2","avaloniaIssue":790,"deleteCondition":"#790 findings triage equivalence passes and #797 permits removal.","constraints":["canUpdate/canView server projections","dense-grid accessibility/performance"]},
-    {"path":"/admin/audit/claims-evidence","ownerPath":"frontend/src/app/features/admin/audit-claims-evidence-page/audit-claims-evidence-page.component.ts","backendContract":"audit claims/evidence REST","stateOwner":"AuditClaimsEvidencePageComponent + AuditClaimsEvidenceFacade","november":false,"freeze":"Maintenance Only","priority":"P2","avaloniaIssue":790,"deleteCondition":"#790 claims/evidence equivalence passes and #797 permits removal.","constraints":["canUpdate/canView server projections","evidence access control"]},
-    {"path":"/admin/audit/package-export","ownerPath":"frontend/src/app/features/admin/audit-package-export-page/audit-package-export-page.component.ts","backendContract":"audit package export + file download contract","stateOwner":"AuditPackageExportPageComponent","november":false,"freeze":"Maintenance Only","priority":"P2","avaloniaIssue":790,"deleteCondition":"#790 export journey and native file handoff pass and #797 permits removal.","constraints":["export authorization","native file I/O"]},
-    {"path":"/admin/audit","ownerPath":"frontend/src/app/features/admin/audit-log-page/audit-log-page.component.ts","backendContract":"audit log REST + /hubs/app","stateOwner":"AuditLogPageComponent + AdminFacade","november":false,"freeze":"Maintenance Only","priority":"P2","avaloniaIssue":790,"deleteCondition":"#790 audit log equivalence passes and #797 permits removal.","constraints":["admin authorization is server authoritative","large-list performance"]},
-    {"path":"/admin/invites","ownerPath":"frontend/src/app/features/admin/invite-admin-page/invite-admin-page.component.ts","backendContract":"admin invite REST","stateOwner":"InviteAdminPageComponent","november":false,"freeze":"Maintenance Only","priority":"P2","avaloniaIssue":791,"deleteCondition":"#791 invite administration equivalence passes and #797 permits removal.","constraints":["admin authorization is server authoritative"]},
-    {"path":"/admin/export-diagnostics","ownerPath":"frontend/src/app/features/admin/export-diagnostics-page/export-diagnostics-page.component.ts","backendContract":"export diagnostics REST","stateOwner":"ExportDiagnosticsPageComponent + AdminFacade","november":false,"freeze":"Maintenance Only","priority":"P2","avaloniaIssue":791,"deleteCondition":"#791 diagnostics/export management scope is equivalent and #797 permits removal.","constraints":["sensitive diagnostics must remain access controlled"]},
-    {"path":"**","ownerPath":"frontend/src/app/core/routing/page-placeholder.component.ts","backendContract":"none","stateOwner":"Router","november":false,"freeze":"Retire","priority":"P3","avaloniaIssue":780,"deleteCondition":"Avalonia navigation has explicit not-found behavior and #797 permits Angular wildcard removal.","constraints":["must not mask missing migration routes"]}
+    {
+      "path": "/signin",
+      "ownerPath": "frontend/src/app/app.routes.ts",
+      "backendContract": "none; compatibility redirect",
+      "stateOwner": "Router",
+      "november": false,
+      "freeze": "Retire",
+      "priority": "P2",
+      "avaloniaIssue": 780,
+      "deleteCondition": "Remove when /login deep links are canonical and #797 cutover no longer requires the alias.",
+      "constraints": [
+        "deep-link compatibility"
+      ]
+    },
+    {
+      "path": "/login",
+      "ownerPath": "frontend/src/app/features/auth/login-page/login-page.component.ts",
+      "backendContract": "/api/auth/* + /api/security/csrf-token",
+      "stateOwner": "LoginPageComponent + AuthSessionFacade",
+      "november": true,
+      "freeze": "November Required",
+      "priority": "P0",
+      "avaloniaIssue": 780,
+      "deleteCondition": "#780 real-backend login/session journey passes and #797 permits Angular removal.",
+      "constraints": [
+        "server-authoritative session",
+        "CSRF",
+        "no credential persistence outside approved session transport"
+      ]
+    },
+    {
+      "path": "/session-expired",
+      "ownerPath": "frontend/src/app/core/session/session-expired-page.component.ts",
+      "backendContract": "auth/session expiration contract (#766/#773)",
+      "stateOwner": "SessionExpiredPageComponent",
+      "november": true,
+      "freeze": "November Required",
+      "priority": "P0",
+      "avaloniaIssue": 780,
+      "deleteCondition": "#780/#773 expiration and re-login flow has equivalent coverage.",
+      "constraints": [
+        "fail-closed protected-state clearing"
+      ]
+    },
+    {
+      "path": "/register/invite",
+      "ownerPath": "frontend/src/app/features/auth/invite-registration-page/invite-registration-page.component.ts",
+      "backendContract": "/api/invites/* + /api/auth/register-by-invite",
+      "stateOwner": "InviteRegistrationPageComponent",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P1",
+      "avaloniaIssue": 791,
+      "deleteCondition": "Invite/account administration migration in #791 is complete and #797 permits removal.",
+      "constraints": [
+        "invite validation remains server authoritative"
+      ]
+    },
+    {
+      "path": "/permission-denied",
+      "ownerPath": "frontend/src/app/shared/permission/app-permission-denied/app-permission-denied.component.ts",
+      "backendContract": "authorization/error contract (#766)",
+      "stateOwner": "AppPermissionDeniedComponent",
+      "november": true,
+      "freeze": "November Required",
+      "priority": "P0",
+      "avaloniaIssue": 780,
+      "deleteCondition": "#780 shell exposes equivalent denied-state UX and #797 permits removal.",
+      "constraints": [
+        "must not substitute client checks for backend authorization"
+      ]
+    },
+    {
+      "path": "/",
+      "ownerPath": "frontend/src/app/app.routes.ts",
+      "backendContract": "auth/session + workspace entry contracts",
+      "stateOwner": "AuthSessionFacade + AppShellFacade",
+      "november": true,
+      "freeze": "November Required",
+      "priority": "P0",
+      "avaloniaIssue": 780,
+      "deleteCondition": "#780 shell/navigation is primary and #797 permits removal.",
+      "constraints": [
+        "authSessionGuard is navigation-only authority"
+      ]
+    },
+    {
+      "path": "/messages/saved",
+      "ownerPath": "frontend/src/app/features/messaging/message-follow-ups-page/message-follow-ups-page.component.ts",
+      "backendContract": "conversation/message follow-up REST + /hubs/app",
+      "stateOwner": "MessageFollowUpsPageComponent + MessageFollowUpFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P1",
+      "avaloniaIssue": 785,
+      "deleteCondition": "#785 saved-message flow passes real-backend/realtime tests and #797 permits removal.",
+      "constraints": [
+        "server paging",
+        "realtime stale-event protection"
+      ]
+    },
+    {
+      "path": "/messages/settings",
+      "ownerPath": "frontend/src/app/features/messaging/message-settings-page/message-settings-page.component.ts",
+      "backendContract": "conversation/message settings REST",
+      "stateOwner": "MessageSettingsPageComponent + MessageGlobalSettingsService",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P1",
+      "avaloniaIssue": 785,
+      "deleteCondition": "#785 settings flow is equivalent and #797 permits removal.",
+      "constraints": [
+        "server capability projection"
+      ]
+    },
+    {
+      "path": "/messages",
+      "ownerPath": "frontend/src/app/features/messaging/messages-page/messages-page.component.ts",
+      "backendContract": "/api/conversations* + /hubs/app",
+      "stateOwner": "MessagesPageComponent + MessagingFacade + MessageGlobalSettingsService",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P1",
+      "avaloniaIssue": 785,
+      "deleteCondition": "#785 conversation list/message journey passes and #797 permits removal.",
+      "constraints": [
+        "realtime authorization invalidation",
+        "paging/cancellation"
+      ]
+    },
+    {
+      "path": "/conversations/:conversationId",
+      "ownerPath": "frontend/src/app/features/messaging/channel-messaging-page/channel-messaging-page.component.ts",
+      "backendContract": "/api/conversations/{conversationId}* + /hubs/app",
+      "stateOwner": "ChannelMessagingPageComponent + MessagingFacade + RealtimeFacade + MessageGlobalSettingsService + ActiveWorkspaceFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P1",
+      "avaloniaIssue": 785,
+      "deleteCondition": "#785 channel journey passes and #797 permits removal.",
+      "constraints": [
+        "conversation access is server authoritative"
+      ]
+    },
+    {
+      "path": "/workspaces/:workspaceId/channels/:conversationId",
+      "ownerPath": "frontend/src/app/features/messaging/channel-messaging-page/channel-messaging-page.component.ts",
+      "backendContract": "workspace-scoped conversation REST + /hubs/app",
+      "stateOwner": "ChannelMessagingPageComponent + MessagingFacade + RealtimeFacade + MessageGlobalSettingsService + ActiveWorkspaceFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P1",
+      "avaloniaIssue": 785,
+      "deleteCondition": "#785 workspace-channel deep link passes and #797 permits removal.",
+      "constraints": [
+        "workspaceContextGuard is context hygiene, not authorization"
+      ]
+    },
+    {
+      "path": "/dm/:conversationId",
+      "ownerPath": "frontend/src/app/features/messaging/dm-page/dm-page.component.ts",
+      "backendContract": "/api/conversations/{conversationId}* + /hubs/app",
+      "stateOwner": "DmPageComponent + MessagingFacade + RealtimeFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P1",
+      "avaloniaIssue": 785,
+      "deleteCondition": "#785 DM journey passes and #797 permits removal.",
+      "constraints": [
+        "conversation access is server authoritative"
+      ]
+    },
+    {
+      "path": "/workspaces/:workspaceId/research/new",
+      "ownerPath": "frontend/src/app/features/workspaces/workspace-research-quick-create-page/workspace-research-quick-create-page.component.ts",
+      "backendContract": "workspace research/create REST consumer at pinned Angular snapshot",
+      "stateOwner": "WorkspaceResearchQuickCreatePageComponent + WorkspacesFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P2",
+      "avaloniaIssue": 781,
+      "deleteCondition": "#781 provides equivalent workspace research/create entry or explicitly retires it; #797 permits removal.",
+      "constraints": [
+        "workspace context must be validated by server"
+      ]
+    },
+    {
+      "path": "/workspaces/:workspaceId/projects",
+      "ownerPath": "frontend/src/app/features/projects/projects-overview-page/projects-overview-page.component.ts",
+      "backendContract": "/api/workspaces/{workspaceId}/projects* + /hubs/app",
+      "stateOwner": "ProjectsOverviewPageComponent + ProjectsFacade + ActiveWorkspaceFacade + WorkspacesFacade + ProjectCreateFacade",
+      "november": true,
+      "freeze": "November Required",
+      "priority": "P0",
+      "avaloniaIssue": 782,
+      "deleteCondition": "#782 project list journey passes and #797 permits removal.",
+      "constraints": [
+        "server capability/status projections",
+        "workspace epoch isolation"
+      ]
+    },
+    {
+      "path": "/workspaces/:workspaceId/files",
+      "ownerPath": "frontend/src/app/features/files/files-page/files-page.component.ts",
+      "backendContract": "/api/files* + /api/search + /hubs/app + server-issued download grants",
+      "stateOwner": "FilesPageComponent + FilesFacade + FileFolderStore + ActiveWorkspaceFacade + AuthSessionFacade + RealtimeFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P1",
+      "avaloniaIssue": 786,
+      "deleteCondition": "#786/#779 native file journey passes and #797 permits removal.",
+      "constraints": [
+        "download grants",
+        "upload cancellation",
+        "stale-response protection"
+      ]
+    },
+    {
+      "path": "/workspaces/:workspaceId/members",
+      "ownerPath": "frontend/src/app/features/workspaces/workspace-members-page/workspace-members-page.component.ts",
+      "backendContract": "/api/workspaces/{workspaceId}/members* + /hubs/app",
+      "stateOwner": "WorkspaceMembersPageComponent + ActiveWorkspaceFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P1",
+      "avaloniaIssue": 781,
+      "deleteCondition": "#781 member/group management equivalence passes and #797 permits removal.",
+      "constraints": [
+        "membership mutation authorization is server authoritative"
+      ]
+    },
+    {
+      "path": "/workspaces",
+      "ownerPath": "frontend/src/app/features/workspaces/workspace-dashboard-page/workspace-dashboard-page.component.ts",
+      "backendContract": "/api/workspaces* + /api/workspaces/capabilities + /hubs/app",
+      "stateOwner": "WorkspaceDashboardPageComponent + WorkspacesFacade",
+      "november": true,
+      "freeze": "November Required",
+      "priority": "P0",
+      "avaloniaIssue": 781,
+      "deleteCondition": "#781 workspace entry journey passes and #797 permits removal.",
+      "constraints": [
+        "workspace selection cannot grant access",
+        "authorization invalidation clears scoped state"
+      ]
+    },
+    {
+      "path": "/announcements",
+      "ownerPath": "frontend/src/app/features/announcements/announcements-page/announcements-page.component.ts",
+      "backendContract": "/api/announcements*",
+      "stateOwner": "AnnouncementsPageComponent + AnnouncementsFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P2",
+      "avaloniaIssue": 792,
+      "deleteCondition": "#792 list/create/review/publish scope is complete and #797 permits removal.",
+      "constraints": [
+        "audience/capability projection from server"
+      ]
+    },
+    {
+      "path": "/announcements/:announcementId",
+      "ownerPath": "frontend/src/app/features/announcements/announcements-page/announcements-page.component.ts",
+      "backendContract": "/api/announcements/{announcementId}*",
+      "stateOwner": "AnnouncementsPageComponent + AnnouncementsFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P2",
+      "avaloniaIssue": 792,
+      "deleteCondition": "#792 detail/deep-link scope is complete and #797 permits removal.",
+      "constraints": [
+        "audience/capability projection from server"
+      ]
+    },
+    {
+      "path": "/app/projects/:projectId/tasks/:taskId/reports/:artifactVersionId",
+      "ownerPath": "frontend/src/app/features/artifacts/report-reader-page/report-reader-page.component.ts",
+      "backendContract": "report/artifact read contract",
+      "stateOwner": "ReportReaderPageComponent",
+      "november": false,
+      "freeze": "Retire",
+      "priority": "P2",
+      "avaloniaIssue": 788,
+      "deleteCondition": "Canonical non-/app deep link is accepted everywhere and #797 permits alias removal.",
+      "constraints": [
+        "deep-link compatibility",
+        "artifact access server authoritative"
+      ]
+    },
+    {
+      "path": "/app/projects/:projectId/reports/:artifactVersionId",
+      "ownerPath": "frontend/src/app/features/artifacts/report-reader-page/report-reader-page.component.ts",
+      "backendContract": "report/artifact read contract",
+      "stateOwner": "ReportReaderPageComponent",
+      "november": false,
+      "freeze": "Retire",
+      "priority": "P2",
+      "avaloniaIssue": 788,
+      "deleteCondition": "Canonical non-/app deep link is accepted everywhere and #797 permits alias removal.",
+      "constraints": [
+        "deep-link compatibility",
+        "artifact access server authoritative"
+      ]
+    },
+    {
+      "path": "/projects/:projectId/tasks/:taskId/reports/:artifactVersionId",
+      "ownerPath": "frontend/src/app/features/artifacts/report-reader-page/report-reader-page.component.ts",
+      "backendContract": "report/artifact read contract",
+      "stateOwner": "ReportReaderPageComponent",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P2",
+      "avaloniaIssue": 788,
+      "deleteCondition": "#788 canonical report deep-link/reader path is equivalent and #797 permits removal.",
+      "constraints": [
+        "artifact access server authoritative"
+      ]
+    },
+    {
+      "path": "/projects/:projectId/reports/:artifactVersionId",
+      "ownerPath": "frontend/src/app/features/artifacts/report-reader-page/report-reader-page.component.ts",
+      "backendContract": "report/artifact read contract",
+      "stateOwner": "ReportReaderPageComponent",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P2",
+      "avaloniaIssue": 788,
+      "deleteCondition": "#788 canonical report deep-link/reader path is equivalent and #797 permits removal.",
+      "constraints": [
+        "artifact access server authoritative"
+      ]
+    },
+    {
+      "path": "/projects/:projectId/tasks/new",
+      "ownerPath": "frontend/src/app/features/projects/task-create-page/task-create-page.component.ts",
+      "backendContract": "GET /api/projects/{projectId}/tasks/create-options; POST /api/projects/{projectId}/tasks/create + /hubs/app",
+      "stateOwner": "TaskCreatePageComponent + TaskCreateFacade",
+      "november": true,
+      "freeze": "November Required",
+      "priority": "P0",
+      "avaloniaIssue": 783,
+      "deleteCondition": "#783 task-create journey passes real-backend tests and #797 permits removal.",
+      "constraints": [
+        "create-options/capabilities are server authoritative",
+        "idempotency/error contract"
+      ]
+    },
+    {
+      "path": "/projects/:projectId/tasks/:taskId",
+      "ownerPath": "frontend/src/app/features/projects/task-detail-page/task-detail-page.component.ts",
+      "backendContract": "task detail/checklist/subtask/files REST + /hubs/app",
+      "stateOwner": "TaskDetailPageComponent + ProjectsFacade + FilesFacade",
+      "november": true,
+      "freeze": "November Required",
+      "priority": "P0",
+      "avaloniaIssue": 783,
+      "deleteCondition": "#783 task-detail representative journey passes and #797 permits removal.",
+      "constraints": [
+        "permissions from backend",
+        "realtime refresh",
+        "file grants"
+      ]
+    },
+    {
+      "path": "/projects/:projectId",
+      "ownerPath": "frontend/src/app/features/projects/project-detail-page/project-detail-page.component.ts",
+      "backendContract": "GET /api/projects/{projectId}; activation/task/project REST + /hubs/app",
+      "stateOwner": "ProjectDetailPageComponent + ProjectDetailFacade",
+      "november": true,
+      "freeze": "November Required",
+      "priority": "P0",
+      "avaloniaIssue": 782,
+      "deleteCondition": "#782 project detail journey passes and #797 permits removal.",
+      "constraints": [
+        "status transitions and UI permissions are server projections"
+      ]
+    },
+    {
+      "path": "/tasks",
+      "ownerPath": "frontend/src/app/features/projects/my-tasks-page/my-tasks-page.component.ts",
+      "backendContract": "MyTasks REST paging/filter + /hubs/app",
+      "stateOwner": "MyTasksPageComponent + MyTasksFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P1",
+      "avaloniaIssue": 784,
+      "deleteCondition": "#784 MyTasks/Work View is equivalent and #797 permits removal.",
+      "constraints": [
+        "server paging/filter semantics",
+        "virtualization/performance"
+      ]
+    },
+    {
+      "path": "/projects",
+      "ownerPath": "frontend/src/app/features/projects/projects-overview-page/projects-overview-page.component.ts",
+      "backendContract": "project collection REST + /hubs/app",
+      "stateOwner": "ProjectsOverviewPageComponent + ProjectsFacade + ActiveWorkspaceFacade + WorkspacesFacade + ProjectCreateFacade",
+      "november": true,
+      "freeze": "November Required",
+      "priority": "P0",
+      "avaloniaIssue": 782,
+      "deleteCondition": "#782 project list journey passes and #797 permits removal.",
+      "constraints": [
+        "server capability/status projections"
+      ]
+    },
+    {
+      "path": "/artifacts/:artifactId",
+      "ownerPath": "frontend/src/app/features/artifacts/artifact-detail-page/artifact-detail-page.component.ts",
+      "backendContract": "artifact detail/read contract",
+      "stateOwner": "ArtifactDetailPageComponent",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P2",
+      "avaloniaIssue": 788,
+      "deleteCondition": "#788 artifact/deep-link handling is equivalent and #797 permits removal.",
+      "constraints": [
+        "artifact access server authoritative"
+      ]
+    },
+    {
+      "path": "/files",
+      "ownerPath": "frontend/src/app/features/files/files-page/files-page.component.ts",
+      "backendContract": "/api/files* + /api/search + /hubs/app + server-issued download grants",
+      "stateOwner": "FilesPageComponent + FilesFacade + FileFolderStore + ActiveWorkspaceFacade + AuthSessionFacade + RealtimeFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P1",
+      "avaloniaIssue": 786,
+      "deleteCondition": "#786/#779 file journey passes and #797 permits removal.",
+      "constraints": [
+        "download grants",
+        "upload cancellation",
+        "stale-response protection"
+      ]
+    },
+    {
+      "path": "/account",
+      "ownerPath": "frontend/src/app/features/account/account-page/account-page.component.ts",
+      "backendContract": "account/session/preferences REST",
+      "stateOwner": "AccountPageComponent + AccountFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P2",
+      "avaloniaIssue": 791,
+      "deleteCondition": "#791 account scope is equivalent and #797 permits removal.",
+      "constraints": [
+        "server-owned account/capability state"
+      ]
+    },
+    {
+      "path": "/admin/audit/findings",
+      "ownerPath": "frontend/src/app/features/admin/audit-findings-page/audit-findings-page.component.ts",
+      "backendContract": "audit findings REST",
+      "stateOwner": "AuditFindingsPageComponent + AuditFindingsFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P2",
+      "avaloniaIssue": 790,
+      "deleteCondition": "#790 findings triage equivalence passes and #797 permits removal.",
+      "constraints": [
+        "canUpdate/canView server projections",
+        "dense-grid accessibility/performance"
+      ]
+    },
+    {
+      "path": "/admin/audit/claims-evidence",
+      "ownerPath": "frontend/src/app/features/admin/audit-claims-evidence-page/audit-claims-evidence-page.component.ts",
+      "backendContract": "audit claims/evidence REST",
+      "stateOwner": "AuditClaimsEvidencePageComponent + AuditClaimsEvidenceFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P2",
+      "avaloniaIssue": 790,
+      "deleteCondition": "#790 claims/evidence equivalence passes and #797 permits removal.",
+      "constraints": [
+        "canUpdate/canView server projections",
+        "evidence access control"
+      ]
+    },
+    {
+      "path": "/admin/audit/package-export",
+      "ownerPath": "frontend/src/app/features/admin/audit-package-export-page/audit-package-export-page.component.ts",
+      "backendContract": "audit package export + file download contract",
+      "stateOwner": "AuditPackageExportPageComponent",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P2",
+      "avaloniaIssue": 790,
+      "deleteCondition": "#790 export journey and native file handoff pass and #797 permits removal.",
+      "constraints": [
+        "export authorization",
+        "native file I/O"
+      ]
+    },
+    {
+      "path": "/admin/audit",
+      "ownerPath": "frontend/src/app/features/admin/audit-log-page/audit-log-page.component.ts",
+      "backendContract": "audit log REST + /hubs/app",
+      "stateOwner": "AuditLogPageComponent + AdminFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P2",
+      "avaloniaIssue": 790,
+      "deleteCondition": "#790 audit log equivalence passes and #797 permits removal.",
+      "constraints": [
+        "admin authorization is server authoritative",
+        "large-list performance"
+      ]
+    },
+    {
+      "path": "/admin/invites",
+      "ownerPath": "frontend/src/app/features/admin/invite-admin-page/invite-admin-page.component.ts",
+      "backendContract": "admin invite REST",
+      "stateOwner": "InviteAdminPageComponent",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P2",
+      "avaloniaIssue": 791,
+      "deleteCondition": "#791 invite administration equivalence passes and #797 permits removal.",
+      "constraints": [
+        "admin authorization is server authoritative"
+      ]
+    },
+    {
+      "path": "/admin/export-diagnostics",
+      "ownerPath": "frontend/src/app/features/admin/export-diagnostics-page/export-diagnostics-page.component.ts",
+      "backendContract": "export diagnostics REST",
+      "stateOwner": "ExportDiagnosticsPageComponent + AdminFacade",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P2",
+      "avaloniaIssue": 791,
+      "deleteCondition": "#791 diagnostics/export management scope is equivalent and #797 permits removal.",
+      "constraints": [
+        "sensitive diagnostics must remain access controlled"
+      ]
+    },
+    {
+      "path": "**",
+      "ownerPath": "frontend/src/app/core/routing/page-placeholder.component.ts",
+      "backendContract": "none",
+      "stateOwner": "Router",
+      "november": false,
+      "freeze": "Retire",
+      "priority": "P3",
+      "avaloniaIssue": 780,
+      "deleteCondition": "Avalonia navigation has explicit not-found behavior and #797 permits Angular wildcard removal.",
+      "constraints": [
+        "must not mask missing migration routes"
+      ]
+    }
   ],
   "nonRouteSurfaces": [
     {
@@ -121,13 +635,13 @@
     {
       "surface": "Graph surface requested by #798 but absent from Angular routes",
       "ownerPath": "no production Angular route at pinned snapshot",
-      "backendContract": "to be defined by owning Avalonia issue",
+      "backendContract": "RelationGraph semantics owned by #814; layout/render integration owned by #816.",
       "stateOwner": "none identified",
       "november": false,
       "freeze": "Avalonia First",
       "priority": "P1",
-      "avaloniaIssue": 784,
-      "deleteCondition": "No Angular implementation to delete; do not add one unless #798 is amended.",
+      "avaloniaIssue": 816,
+      "deleteCondition": "No Angular implementation to delete; keep Avalonia-first under #816 unless #798 is amended.",
       "constraints": [
         "new implementation belongs to Avalonia by default"
       ]
@@ -171,5 +685,53 @@
     "ngrxProductionImportsAtSnapshot": 0,
     "ngrxOwnerMapping": "No production @ngrx/* imports/effects/reducers/store implementations at the pinned snapshot; actual application state owners are Signals/RxJS facades/services listed in angular-frontend-inventory.json.",
     "sourceOfTruth": "This file plus angular-frontend-inventory.json; #766 consumes these for logic-class reconciliation."
-  }
+  },
+  "platformPolicy": {
+    "authorityIssue": 767,
+    "status": "ProvisionalUntilIssueCloses",
+    "rule": "Platform Tier/support classification is owned exclusively by #767. This inventory records source platform dependencies and migration constraints but does not invent Desktop/Browser/Mobile support tiers before #767 evidence is complete."
+  },
+  "embeddedSurfaces": [
+    {
+      "surface": "Project Task Table/List",
+      "ownerPath": "frontend/src/app/features/projects/project-detail-page/* + embedded task-table",
+      "november": true,
+      "freeze": "November Required",
+      "priority": "P0",
+      "avaloniaIssue": 782,
+      "supportingIssues": [
+        776,
+        814
+      ],
+      "deleteCondition": "#782 Task-list/Project core journey and #797 cutover evidence permit Angular removal."
+    },
+    {
+      "surface": "Project Kanban",
+      "ownerPath": "frontend/src/app/features/projects/project-detail-page/* + embedded kanban",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P1",
+      "avaloniaIssue": 782,
+      "supportingIssues": [
+        776,
+        784,
+        814
+      ],
+      "deleteCondition": "#782/#784 board journey passes and #797 cutover evidence permits Angular removal."
+    },
+    {
+      "surface": "Project Gantt/Schedule",
+      "ownerPath": "frontend/src/app/features/projects/project-detail-page/* + embedded gantt",
+      "november": false,
+      "freeze": "Maintenance Only",
+      "priority": "P1",
+      "avaloniaIssue": 787,
+      "supportingIssues": [
+        777,
+        782,
+        814
+      ],
+      "deleteCondition": "#787 Gantt integration passes and #797 cutover evidence permits Angular removal."
+    }
+  ]
 }
