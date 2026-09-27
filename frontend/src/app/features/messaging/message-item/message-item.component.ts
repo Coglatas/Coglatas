@@ -5,7 +5,7 @@ import {
   LucideFlag,
   LucideMessageSquare,
   LucidePencil,
-  LucideTrash2
+  LucideTrash
 } from '@lucide/angular';
 
 import { CoglatasDialogComponent } from '../../../shared/ui/coglatas-dialog/coglatas-dialog.component';
@@ -15,7 +15,7 @@ import { MessagingMessageActionState, MessagingMessageViewModel } from '../messa
   changeDetection: ChangeDetectionStrategy.Eager,
   selector: 'app-message-item',
   standalone: true,
-  imports: [CoglatasDialogComponent, LucideBookmarkPlus, LucideEllipsis, LucideFlag, LucideMessageSquare, LucidePencil, LucideTrash2],
+  imports: [CoglatasDialogComponent, LucideBookmarkPlus, LucideEllipsis, LucideFlag, LucideMessageSquare, LucidePencil, LucideTrash],
   template: `
     <article
       #messageArticle
@@ -130,7 +130,7 @@ import { MessagingMessageActionState, MessagingMessageViewModel } from '../messa
                         [attr.aria-label]="'Delete message from ' + message.authorLabel"
                         (click)="openDelete()"
                       >
-                        <svg lucideTrash2 aria-hidden="true"></svg>
+                        <svg lucideTrash aria-hidden="true"></svg>
                         <span>Delete</span>
                       </button>
                     }
