@@ -279,7 +279,7 @@ Generated code rules:
 OpenAPI 3.1 artifact
   -> exact-pinned Kiota generation
   -> generated transport client/models
-  -> AIPsite client application adapters/services
+  -> Coglatas client application adapters/services
   -> Avalonia ViewModels
   -> Views
 ```
