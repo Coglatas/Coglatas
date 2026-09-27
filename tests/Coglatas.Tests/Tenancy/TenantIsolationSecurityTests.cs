@@ -931,19 +931,6 @@ public async Task WorkspaceAdminCannotReadAuditLogsForTheirWorkspace()
         public Task<AuditCapabilityResponse> GetCapabilitiesAsync(
             CancellationToken cancellationToken = default) => Task.FromResult(capabilities);
 
-        public Task<bool> HasCapabilityAsync(
-            string capabilityKey,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(capabilityKey switch
-            {
-                CapabilityKeys.AuditView => capabilities.CanView,
-                CapabilityKeys.AuditReview => capabilities.CanReview,
-                CapabilityKeys.AuditApprove => capabilities.CanApprove,
-                CapabilityKeys.AuditExport => capabilities.CanExport,
-                CapabilityKeys.AuditSensitiveMetadataView => capabilities.CanViewSensitiveMetadata,
-                _ => false,
-            });
-
         public Task<Result> AuthorizeAsync(
             string capabilityKey,
             string operation,
