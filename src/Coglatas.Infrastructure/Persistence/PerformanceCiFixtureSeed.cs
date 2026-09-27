@@ -53,6 +53,7 @@ public static class PerformanceCiFixtureSeed
         var connection = dbContext.Database.GetDbConnection();
         var configuredHost = new NpgsqlConnectionStringBuilder(connection.ConnectionString).Host;
         if (!string.Equals(connection.Database, DatabaseName, StringComparison.Ordinal) ||
+            string.IsNullOrWhiteSpace(configuredHost) ||
             !AllowedDatabaseDataSources.Contains(configuredHost))
         {
             throw new InvalidOperationException(

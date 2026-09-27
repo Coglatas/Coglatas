@@ -109,14 +109,14 @@ public sealed class ForwardedHeadersHttpTests
             app.MapGet("/scheme", (HttpContext context) =>
                 Results.Json(new ProbeResponse(
                     context.Request.Scheme,
-                    context.Request.Host.Value,
+                    context.Request.Host.Value ?? string.Empty,
                     null)));
             app.MapGet("/csrf", (HttpContext context, IAntiforgery antiforgery) =>
             {
                 var tokens = antiforgery.GetAndStoreTokens(context);
                 return Results.Json(new ProbeResponse(
                     context.Request.Scheme,
-                    context.Request.Host.Value,
+                    context.Request.Host.Value ?? string.Empty,
                     tokens.RequestToken));
             });
 

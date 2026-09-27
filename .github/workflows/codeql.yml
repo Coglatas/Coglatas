@@ -17,6 +17,22 @@ on:
   # SARIF upload for pull_request-triggered analyses.
   pull_request:
     branches: [ "main" ]
+    paths:
+      - ".github/workflows/**"
+      - "**/*.cs"
+      - "**/*.csproj"
+      - "**/*.js"
+      - "**/*.mjs"
+      - "**/*.cjs"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.py"
+      - "Coglatas.slnx"
+      - "Directory.Build.*"
+      - "Directory.Packages.*"
+      - "global.json"
+      - "package.json"
+      - "package-lock.json"
   push:
     branches: [ "main" ]
   # Scheduled trigger temporarily disabled on 2026-09-19 to reduce CI consumption.

@@ -351,8 +351,9 @@ public sealed class Wpc02CCanonicalProjectCreatePostgreSqlTests
                 second.Service.CreateAsync(graph.WorkspaceId, request, "wpc02c-concurrent-create"));
 
             Assert.All(results, result => Assert.True(result.IsSuccess, result.Error));
-            Assert.Equal(results[0].Value!.Id, results[1].Value!.Id);
-            var projectId = results[0].Value.Id;
+            var firstProject = results[0].Value!;
+            Assert.Equal(firstProject.Id, results[1].Value!.Id);
+            var projectId = firstProject.Id;
 
             await using var verification = CreateTenantContext(database, graph);
             Assert.Equal(1, await verification.Projects.CountAsync());
