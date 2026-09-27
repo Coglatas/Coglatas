@@ -57,7 +57,7 @@
       "freeze": "November Required",
       "priority": "P0",
       "avaloniaIssue": 780,
-      "deleteCondition": "#780/#773 expiration and re-login flow has equivalent coverage.",
+      "deleteCondition": "#780/#773 expiration and re-login flow has equivalent coverage and #797 permits Angular removal.",
       "constraints": [
         "fail-closed protected-state clearing"
       ]
