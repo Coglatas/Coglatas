@@ -17,6 +17,22 @@ on:
   # SARIF upload for pull_request-triggered analyses.
   pull_request:
     branches: [ "main" ]
+    paths:
+      - ".github/workflows/**"
+      - "**/*.cs"
+      - "**/*.csproj"
+      - "**/*.js"
+      - "**/*.mjs"
+      - "**/*.cjs"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.py"
+      - "Coglatas.slnx"
+      - "Directory.Build.*"
+      - "Directory.Packages.*"
+      - "global.json"
+      - "package.json"
+      - "package-lock.json"
   push:
     branches: [ "main" ]
   # Scheduled trigger temporarily disabled on 2026-09-19 to reduce CI consumption.
@@ -82,7 +98,7 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+      uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
       with:
         languages: ${{ matrix.language }}
         build-mode: ${{ matrix.build-mode }}
@@ -111,6 +127,6 @@ jobs:
         exit 1
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4
+      uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
       with:
         category: "/language:${{matrix.language}}"

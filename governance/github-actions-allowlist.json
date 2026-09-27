@@ -45,7 +45,7 @@
       "privilegedAllowed": false
     },
     "github/codeql-action": {
-      "sha": "cdf488f595d80d6e07e03d4674febd5ab45fa938",
+      "sha": "b96794f015dfd88f77b49b1c93e0fa7110f94c63",
       "version": "v4",
       "purpose": "CodeQL initialization and SARIF publication",
       "privilegedAllowed": true
