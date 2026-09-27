@@ -63,7 +63,7 @@ public sealed class Wpc02DProjectActivationContractTests
         Assert.True(fallbackResult.IsSuccess, fallbackResult.Error);
         Assert.Equal(ProjectTaskWorkflowResolver.CanonicalFallbackIdentity, fallbackResult.Value!.SourceIdentity);
         Assert.Equal(6, fallbackResult.Value.Stages.Count);
-        Assert.Single(fallbackResult.Value.Stages.Where(stage => stage.IsInitialStage));
+        Assert.Single(fallbackResult.Value.Stages, stage => stage.IsInitialStage);
         Assert.Equal(2, fallbackResult.Value.Stages.Count(stage => stage.IsTerminalStage));
     }
 

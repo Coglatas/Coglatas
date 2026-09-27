@@ -47,8 +47,8 @@ public sealed class NotificationPersistenceLimitTests
         Assert.Equal(id, notification.Id);
         Assert.Equal(Notification.TitleMaximumLength, notification.Title.EnumerateRunes().Count());
         Assert.Equal(Notification.BodyMaximumLength, notification.Body!.EnumerateRunes().Count());
-        Assert.True(notification.Title.EndsWith("🙂", StringComparison.Ordinal));
-        Assert.True(notification.Body.EndsWith("界", StringComparison.Ordinal));
+        Assert.EndsWith("🙂", notification.Title, StringComparison.Ordinal);
+        Assert.EndsWith("界", notification.Body, StringComparison.Ordinal);
 
         await db.SaveChangesAsync();
     }

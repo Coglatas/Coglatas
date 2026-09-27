@@ -75,7 +75,7 @@ public sealed class Wpc02CCanonicalProjectCreateContractTests
 
         var parameters = create.GetParameters();
         Assert.Contains(parameters, parameter => parameter.Name == "workspaceId" && parameter.ParameterType == typeof(Guid));
-        var idempotencyParameter = Assert.Single(parameters.Where(parameter => parameter.Name == "idempotencyKey"));
+        var idempotencyParameter = Assert.Single(parameters, parameter => parameter.Name == "idempotencyKey");
         var fromHeader = Assert.Single(idempotencyParameter.GetCustomAttributes<FromHeaderAttribute>());
         Assert.Equal("Idempotency-Key", fromHeader.Name);
 

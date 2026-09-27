@@ -52,6 +52,16 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
                 [new OpenApiSecuritySchemeReference(CookieSchemeName, document)] = []
             });
         }
+        else
+        {
+            // An operation with no effective authorization requirement is public,
+            // whether it is explicitly [AllowAnonymous] or simply has no
+            // [Authorize] metadata (for example POST /api/auth/login). Emit an
+            // explicit operation-level override so a future document-level
+            // security requirement cannot silently make the public contract
+            // authenticated through OpenAPI inheritance.
+            operation.Security = [];
+        }
 
         if (hasAuthorizationBoundary)
         {

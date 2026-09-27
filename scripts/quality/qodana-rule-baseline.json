@@ -88,9 +88,9 @@
     "VariableHidesOuterVariable": 1,
     "WithExpressionInsteadOfInitializer": 2,
     "WithExpressionModifiesAllMembers": 1,
-    "xUnit2008": 4,
-    "xUnit2009": 2,
-    "xUnit2029": 1,
-    "xUnit2031": 16
+    "xUnit2008": 0,
+    "xUnit2009": 0,
+    "xUnit2029": 0,
+    "xUnit2031": 0
   }
 }

@@ -9,7 +9,6 @@ using Coglatas.Web;
 using Coglatas.Web.Configuration;
 using Coglatas.Web.Extensions;
 using Coglatas.Web.Middleware;
-using Coglatas.Web.Models;
 using Coglatas.Web.Security;
 using Coglatas.Web.Realtime;
 using Coglatas.Web.Notifications;
@@ -17,12 +16,16 @@ using Coglatas.Application.Notifications;
 using Coglatas.Web.Testing;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+var avMigInspection = builder.Configuration.GetValue<bool>("AvMigContractVerify");
+if (avMigInspection && !builder.Environment.IsEnvironment("Test"))
+{
+    throw new InvalidOperationException("AV-MIG contract inspection is Test-only.");
+}
 var browserSmokeSeedEnabled = BrowserSmokeTestBoundary.IsEnabled(
     builder.Environment.EnvironmentName,
     builder.Configuration.GetValue<bool>("BrowserSmokeSeed:Enabled") ||
@@ -79,7 +82,7 @@ builder.Services.AddScoped<IRealtimeDispatchAuthorizer, RealtimeDispatchAuthoriz
 builder.Services.AddHostedService<OutboxDispatcher>();
 builder.Services.AddHostedService<TaskDeadlineDigestWorker>();
 builder.Services.AddHostedService<AnnouncementPublisherWorker>();
-builder.Services.AddRateLimiter(options => HttpSecurityPolicy.ConfigureRateLimiting(options));
+builder.Services.AddRateLimiter(HttpSecurityPolicy.ConfigureRateLimiting);
 
 if (ForwardedHeadersConfiguration.ShouldTrustForwardedHeaders(builder.Configuration))
 {
@@ -235,7 +238,9 @@ if (securityOptions.RequireHttps)
         branch => branch.UseHttpsRedirection());
 }
 
-var webRootPath = app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+var webRootPath = string.IsNullOrEmpty(app.Environment.WebRootPath)
+    ? Path.Combine(app.Environment.ContentRootPath, "wwwroot")
+    : app.Environment.WebRootPath;
 
 app.Use(async (context, next) =>
 {
@@ -394,13 +399,13 @@ app.MapGet("/health/task-deadline-digests", async (
     });
 });
 
-app.MapGet("/favicon.ico", () => Results.NoContent())
+app.MapGet("/favicon.ico", Results.NoContent)
     .ExcludeFromDescription();
 
 app.MapGet("/health/ready", async (
     AppDbContext dbContext,
     IOptions<FileStorageOptions> fileStorageOptions,
-    TenancyOptions tenancyOptions,
+    TenancyOptions healthTenancyOptions,
     IConfiguration configuration,
     CancellationToken cancellationToken) =>
 {
@@ -408,7 +413,7 @@ app.MapGet("/health/ready", async (
     var migrationsOk = databaseOk && await AreMigrationsReadyAsync(dbContext, cancellationToken);
     var storageOk = await IsFileStorageReadyAsync(fileStorageOptions.Value, cancellationToken);
     var dataProtectionOk = IsDataProtectionReady(configuration);
-    var defaultTenantOk = databaseOk && await IsDefaultTenantReadyAsync(dbContext, tenancyOptions, cancellationToken);
+    var defaultTenantOk = databaseOk && await IsDefaultTenantReadyAsync(dbContext, healthTenancyOptions, cancellationToken);
     var ready = databaseOk && migrationsOk && storageOk && dataProtectionOk && defaultTenantOk;
 
     return ready
@@ -417,6 +422,14 @@ app.MapGet("/health/ready", async (
 });
 
 AngularSpaFallback.MapEndpointFallback(app, webRootPath);
+
+if (avMigInspection)
+{
+    await AvMigRuntimeContract.VerifyAsync(app,
+        builder.Configuration["AvMigContractPolicy"] ?? throw new InvalidOperationException("AvMigContractPolicy is required."));
+    await app.DisposeAsync();
+    return;
+}
 
 app.Run();
 
@@ -535,8 +548,7 @@ static async Task<IResult> StageBrowserSmokeTaskNotificationAsync(
         cancellationToken);
     var notification = dbContext.Notifications.Local.SingleOrDefault(item => item.Id == notificationId);
     var eventItem = dbContext.OutboxEvents.Local.SingleOrDefault(item =>
-        item.EventType == "Notifications.NotificationCreated.v1" &&
-        item.AggregateType == "Notification" &&
+        item is { EventType: "Notifications.NotificationCreated.v1", AggregateType: "Notification" } &&
         item.AggregateId == notificationId);
     if (notification is null || eventItem is null)
     {
@@ -660,7 +672,6 @@ static async Task<bool> IsFileStorageReadyAsync(FileStorageOptions options, Canc
         return options.Provider switch
         {
             "LocalFileSystem" => await IsLocalFileStorageReadyAsync(options.RootPath, cancellationToken),
-            "ObjectStorage" or "S3Compatible" or "OCIObjectStorage" => false,
             _ => false
         };
     }
