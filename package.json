@@ -28,15 +28,12 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
-    "@playwright/test": "^1.62.1",
-    "@types/node": "^26.4.1",
-    "js-yaml": "5.4.1"
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.2",
+    "js-yaml": "5.4.2"
   },
   "dependencies": {
     "rg": "^0.0.2"
-  },
-  "allowScripts": {
-    "fsevents@2.3.2": true
   },
   "license": "UNLICENSED"
 }
