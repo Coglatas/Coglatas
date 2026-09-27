@@ -209,6 +209,20 @@ test('Graph/Dock are owned Avalonia-first capabilities and Calendar remains prom
   assert.match(calendar?.promotionRule ?? '', /dedicated implementation Issue/);
 });
 
+test('architecture-only deferred PNLs stay explicit and out of active production routes', async () => {
+  const targetMap = await readJson(targetMapPath);
+  assert.deepEqual(
+    targetMap.deferredPnls,
+    ['PNL-21', 'PNL-22', 'PNL-23', 'PNL-24', 'PNL-36', 'PNL-37', 'PNL-45-deep-RTC'],
+  );
+
+  const deferredPrefixes = ['PNL-21', 'PNL-22', 'PNL-23', 'PNL-24', 'PNL-36', 'PNL-37', 'PNL-45'];
+  const promoted = targetMap.routes.filter((route) =>
+    deferredPrefixes.some((pnl) => route.targetPnlMode.includes(pnl)),
+  );
+  assert.deepEqual(promoted, [], 'deferred architecture-only PNLs must not be silently promoted by a production route');
+});
+
 test('platform support remains provisional and delegated to #767', async () => {
   const targetMap = await readJson(targetMapPath);
   assert.equal(targetMap.platformPolicy?.sourceOfTruthIssue, 767);
