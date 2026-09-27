@@ -64,7 +64,7 @@
     "RedundantUsingDirective": 89,
     "ReplaceWithFieldKeyword": 3,
     "ReturnTypeCanBeNotNullable": 59,
-    "ShortLivedHttpClient": 7,
+    "ShortLivedHttpClient": 0,
     "SimplifyConditionalTernaryExpression": 2,
     "SimplifyLinqExpressionUseAll": 8,
     "TooWideLocalVariableScope": 1,
