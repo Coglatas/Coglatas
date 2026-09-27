@@ -83,6 +83,7 @@ const values = { failure: 1, loginIndex: 1, ownerIndex: 0, success: 0 };
   }
 }
 
+/* eslint-disable one-var, sort-vars */
 {
   const routeSourcePath = fileURLToPath(new URL('../src/app/app.routes.ts', import.meta.url)),
     script = fileURLToPath(new URL('./check-av-mig-source.mjs', import.meta.url)),
@@ -120,3 +121,4 @@ const values = { failure: 1, loginIndex: 1, ownerIndex: 0, success: 0 };
     });
   }
 }
+/* eslint-enable one-var, sort-vars */
