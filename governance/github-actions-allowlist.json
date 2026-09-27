@@ -63,9 +63,9 @@
       "privilegedAllowed": true
     },
     "NYGsatoshi/Coglatas": {
-      "sha": "e03555c4be3700aa23f6e0bfe86b740b042dd5fa",
-      "version": "qodana-debt-ratchet-v2",
-      "purpose": "Immutable same-repository reusable Qodana gate with non-increasing inspection debt ratchet",
+      "sha": "f63c8f0cdcf340ed768074c4961890aba8dc701b",
+      "version": "qodana-code-scanning-v1",
+      "purpose": "Immutable same-repository reusable Qodana gate with debt ratchet and canonical GitHub Code Scanning SARIF publication",
       "privilegedAllowed": true,
       "path": ".github/workflows/qodana_trusted_gate.yml"
     }
