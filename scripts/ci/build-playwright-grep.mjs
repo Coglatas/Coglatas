@@ -46,17 +46,6 @@ export async function buildPlaywrightGrep(manifestPath, options = {}) {
   return `(?:^|\\s)(?:${escapedTitles.join('|')})$`;
 }
 
-if (isMainModule()) {
-  try {
-    const { manifestPath, verifyPath } = parseArguments(process.argv.slice(2));
-    const grepPattern = await buildPlaywrightGrep(manifestPath, { verifyPath });
-    process.stdout.write(grepPattern);
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : error);
-    process.exitCode = 1;
-  }
-}
-
 function parseArguments(args) {
   const remaining = [...args];
   const manifestPath = remaining.shift();
@@ -83,4 +72,15 @@ function parseArguments(args) {
 function isMainModule() {
   const entryPoint = process.argv[1];
   return Boolean(entryPoint) && import.meta.url === pathToFileURL(entryPoint).href;
+}
+
+if (isMainModule()) {
+  try {
+    const { manifestPath, verifyPath } = parseArguments(process.argv.slice(2));
+    const grepPattern = await buildPlaywrightGrep(manifestPath, { verifyPath });
+    process.stdout.write(grepPattern);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  }
 }

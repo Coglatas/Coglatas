@@ -288,12 +288,6 @@ public sealed class AuditFindingDecisionServiceTests
         public Task<AuditCapabilityResponse> GetCapabilitiesAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new AuditCapabilityResponse(true, canReview, false, false, false));
 
-        public Task<bool> HasCapabilityAsync(
-            string capabilityKey,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(capabilityKey == Coglatas.Application.Tenancy.CapabilityKeys.AuditView ||
-                            (capabilityKey == Coglatas.Application.Tenancy.CapabilityKeys.AuditReview && canReview));
-
         public Task<Result> AuthorizeAsync(
             string capabilityKey,
             string operation,
