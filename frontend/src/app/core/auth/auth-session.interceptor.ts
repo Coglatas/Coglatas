@@ -7,7 +7,7 @@ import {
   HttpRequest,
 } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, map, Observable, of, switchMap, throwError } from 'rxjs';
+import { catchError, map, Observable, switchMap, throwError } from 'rxjs';
 
 import { normalizeApiError } from '../api/api-error.adapter';
 import { HTTP_REQUEST_DISPATCH_SIGNAL } from '../api/http-request-dispatch.context';

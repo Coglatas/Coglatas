@@ -11,7 +11,7 @@ namespace Coglatas.Web.Controllers;
 [Authorize(Roles = "PlatformAdmin,SystemAdmin")]
 [EnableRateLimiting(HttpSecurityPolicy.AdminRateLimitPolicy)]
 [Route("api/platform/tenants")]
-public sealed class PlatformTenantsController(ITenantService tenantService) : ControllerBase
+public sealed class PlatformTenantsController(ITenantService tenantService) : ApiResultControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken cancellationToken)
@@ -53,11 +53,6 @@ public sealed class PlatformTenantsController(ITenantService tenantService) : Co
     public async Task<IActionResult> Archive(Guid tenantId, CancellationToken cancellationToken)
     {
         return ToStatusResult(await tenantService.ArchiveTenantAsync(tenantId, cancellationToken));
-    }
-
-    private IActionResult ToActionResult<T>(Result<T> result)
-    {
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
     }
 
     private IActionResult ToStatusResult(Result result)

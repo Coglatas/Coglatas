@@ -3,6 +3,9 @@ using Coglatas.Application.Common;
 
 namespace Coglatas.Application.Artifacts;
 
+// API response properties are consumed by JSON serialization.
+// ReSharper disable NotAccessedPositionalProperty.Global
+
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ArtifactReportRefinementTargetKind
 {
@@ -15,7 +18,7 @@ public sealed record RefineArtifactReportRequest(
     ArtifactReportRefinementTargetKind TargetKind,
     Guid TargetLogicalId,
     string? Feedback,
-    [property: System.ComponentModel.DataAnnotations.Range(typeof(long), "1", "9223372036854775807")] long ConfirmedProjectScopeVersion,
+    [param: System.ComponentModel.DataAnnotations.Range(typeof(long), "1", "9223372036854775807")] long ConfirmedProjectScopeVersion,
     long? ConfirmedTaskOverrideVersion,
     Guid? ConfirmedResearchPlanRevisionId,
     long? ConfirmedResearchPlanRevisionNo) : System.ComponentModel.DataAnnotations.IValidatableObject

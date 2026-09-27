@@ -23,6 +23,8 @@ public sealed class ResearchPlanService(
     IBusinessInvalidationPublisher invalidations,
     ITaskCommandUnitOfWork unitOfWork) : IResearchPlanService
 {
+    private readonly ProjectAuthorizationLookup _authorizationLookup = new(projects, projectAuthorization, currentUser);
+
     private const int MaximumSteps = 100;
     private const int MaximumTitleLength = 240;
     private const int MaximumObjectiveLength = 4_000;
@@ -32,12 +34,12 @@ public sealed class ResearchPlanService(
         Guid taskItemId,
         CancellationToken cancellationToken = default)
     {
-        var task = await VisibleTaskAsync(taskItemId, cancellationToken);
+        var task = await _authorizationLookup.VisibleTaskAsync(taskItemId, cancellationToken);
         if (task is null)
             return NotFound<ResearchPlanResponse>();
 
         var plan = await researchPlans.GetForTaskAsync(task.Id, cancellationToken);
-        var canManage = await CanManageAsync(task.ProjectId, cancellationToken);
+        var canManage = await _authorizationLookup.CanManageAsync(task.ProjectId, cancellationToken);
         return Result<ResearchPlanResponse>.Success(
             await BuildResponseAsync(plan, canManage, cancellationToken));
     }
@@ -47,7 +49,7 @@ public sealed class ResearchPlanService(
         PreviewResearchPlanRequest request,
         CancellationToken cancellationToken = default)
     {
-        var task = await ManagedTaskAsync(taskItemId, cancellationToken);
+        var task = await _authorizationLookup.ManagedTaskAsync(taskItemId, cancellationToken);
         if (task is null)
             return NotFound<ResearchPlanPreviewResponse>();
 
@@ -71,7 +73,7 @@ public sealed class ResearchPlanService(
         ReplaceResearchPlanRequest request,
         CancellationToken cancellationToken = default)
     {
-        var task = await ManagedTaskAsync(taskItemId, cancellationToken);
+        var task = await _authorizationLookup.ManagedTaskAsync(taskItemId, cancellationToken);
         if (task is null)
             return NotFound<ResearchPlanResponse>();
 
@@ -105,7 +107,7 @@ public sealed class ResearchPlanService(
             }
         }
 
-        var actor = Actor();
+        var actor = _authorizationLookup.Actor();
         if (plan is null)
         {
             plan = new ResearchPlan
@@ -403,41 +405,6 @@ public sealed class ResearchPlanService(
             deliverableAlignmentReviewRequired,
             items);
     }
-
-    private async Task<TaskItem?> VisibleTaskAsync(Guid taskItemId, CancellationToken cancellationToken)
-    {
-        if (!TryActor(out var actor) || taskItemId == Guid.Empty)
-            return null;
-
-        var task = await projects.GetTaskAsync(taskItemId, cancellationToken);
-        return task is { DeletedAt: null } &&
-               await projectAuthorization.CanViewProject(actor, task.ProjectId, cancellationToken)
-            ? task
-            : null;
-    }
-
-    private async Task<TaskItem?> ManagedTaskAsync(Guid taskItemId, CancellationToken cancellationToken)
-    {
-        if (!TryActor(out var actor) || taskItemId == Guid.Empty)
-            return null;
-
-        var task = await projects.GetTaskAsync(taskItemId, cancellationToken);
-        return task is { DeletedAt: null } &&
-               await projectAuthorization.CanManageProject(actor, task.ProjectId, cancellationToken)
-            ? task
-            : null;
-    }
-
-    private async Task<bool> CanManageAsync(Guid projectId, CancellationToken cancellationToken) =>
-        TryActor(out var actor) && await projectAuthorization.CanManageProject(actor, projectId, cancellationToken);
-
-    private bool TryActor(out Guid actor)
-    {
-        actor = currentUser.UserId ?? Guid.Empty;
-        return currentUser.IsAuthenticated && actor != Guid.Empty;
-    }
-
-    private Guid Actor() => currentUser.UserId ?? Guid.Empty;
 
     private static bool TryNormalizeSteps(
         IReadOnlyList<ResearchPlanStepRequest>? source,

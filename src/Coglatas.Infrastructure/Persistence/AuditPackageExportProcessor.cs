@@ -27,7 +27,9 @@ public sealed class AuditPackageExportProcessor(
     IUnitOfWork unitOfWork,
     IClock clock) : IAuditPackageExportProcessor
 {
-    private const int MaxEvidencePerClaim = 20;
+    private readonly AuditClaimsEvidenceProjectionBuilder _claimsEvidenceProjection =
+        new(dbContext, artifacts, evidenceRepository, artifactAuthorization, files, fileAuthorization);
+
     private const int MaxPackageBytes = 25 * 1024 * 1024;
 
     public async Task<IReadOnlyList<Guid>> ListQueuedTenantIdsAsync(
@@ -136,7 +138,7 @@ public sealed class AuditPackageExportProcessor(
                 return;
             }
 
-            var projection = await BuildAuthorizedProjectionAsync(
+            var projection = await _claimsEvidenceProjection.BuildAsync(
                 job.RequestedByUserId,
                 artifactVersionId,
                 cancellationToken);
@@ -151,7 +153,7 @@ public sealed class AuditPackageExportProcessor(
                 ? Array.Empty<ArtifactFinding>()
                 : await dbContext.Set<ArtifactFinding>()
                     .AsNoTracking()
-                    .Where(finding => claimIds.Contains(finding.ArtifactClaimId))
+                    .Where(finding => Enumerable.Contains(claimIds, finding.ArtifactClaimId))
                     .OrderBy(finding => finding.CreatedAt)
                     .ThenBy(finding => finding.Id)
                     .ToListAsync(cancellationToken);
@@ -161,7 +163,7 @@ public sealed class AuditPackageExportProcessor(
                 ? Array.Empty<AuditFindingDecision>()
                 : await dbContext.Set<AuditFindingDecision>()
                     .AsNoTracking()
-                    .Where(decision => findingIds.Contains(decision.ArtifactFindingId))
+                    .Where(decision => Enumerable.Contains(findingIds, decision.ArtifactFindingId))
                     .OrderBy(decision => decision.CreatedAt)
                     .ThenBy(decision => decision.Id)
                     .ToListAsync(cancellationToken);
@@ -284,141 +286,6 @@ public sealed class AuditPackageExportProcessor(
             tenantId,
             cancellationToken);
         return (canView && canExport, sensitive);
-    }
-
-    private async Task<AuditClaimsEvidenceResponse?> BuildAuthorizedProjectionAsync(
-        Guid actorUserId,
-        Guid artifactVersionId,
-        CancellationToken cancellationToken)
-    {
-        var version = await artifacts.GetVersionAsync(artifactVersionId, cancellationToken);
-        if (version?.Artifact is null ||
-            version.DeletedAt.HasValue ||
-            version.Artifact.DeletedAt.HasValue ||
-            !await artifactAuthorization.CanViewArtifact(actorUserId, version.ArtifactId, cancellationToken))
-        {
-            return null;
-        }
-
-        var claims = await evidenceRepository.ListClaimsAsync(version.Id, cancellationToken);
-        var sourceAuthorization = new Dictionary<(ArtifactEvidenceSourceKind Kind, string Reference), bool>();
-        var authorizedByClaim = new Dictionary<Guid, List<ArtifactEvidence>>();
-        var candidateEventIds = new HashSet<Guid>();
-
-        foreach (var claim in claims)
-        {
-            var authorized = new List<ArtifactEvidence>();
-            foreach (var evidence in claim.Evidence.OrderBy(item => item.Ordinal).Take(MaxEvidencePerClaim))
-            {
-                var key = (evidence.SourceKind, evidence.SourceReference);
-                if (!sourceAuthorization.TryGetValue(key, out var allowed))
-                {
-                    allowed = await CanViewSourceAsync(
-                        actorUserId,
-                        evidence.SourceKind,
-                        evidence.SourceReference,
-                        cancellationToken);
-                    sourceAuthorization[key] = allowed;
-                }
-
-                if (!allowed)
-                {
-                    continue;
-                }
-
-                authorized.Add(evidence);
-                if (evidence.SourceEventAuditId.HasValue)
-                {
-                    candidateEventIds.Add(evidence.SourceEventAuditId.Value);
-                }
-            }
-
-            authorizedByClaim[claim.Id] = authorized;
-        }
-
-        var authorizedEventIds = candidateEventIds.Count == 0
-            ? new HashSet<Guid>()
-            : (await dbContext.AuditLogs
-                .AsNoTracking()
-                .Where(log =>
-                    log.TenantId == version.TenantId &&
-                    candidateEventIds.Contains(log.Id))
-                .Select(log => log.Id)
-                .ToListAsync(cancellationToken))
-                .ToHashSet();
-
-        var projectedClaims = claims
-            .OrderBy(claim => claim.Ordinal)
-            .Select(claim => new AuditClaimEvidenceResponse(
-                claim.Id,
-                claim.Ordinal,
-                claim.Text,
-                claim.CitationPresent,
-                claim.SupportStatus.ToString(),
-                claim.ReviewStatus.ToString(),
-                authorizedByClaim[claim.Id]
-                    .Select(evidence => new AuditEvidenceResponse(
-                        evidence.Id,
-                        evidence.Ordinal,
-                        evidence.SourceKind.ToString(),
-                        evidence.SourceReference,
-                        evidence.SourceTitleSnapshot,
-                        evidence.PassageSnapshot,
-                        evidence.LocationSnapshot,
-                        evidence.SourceEventAuditId.HasValue &&
-                        authorizedEventIds.Contains(evidence.SourceEventAuditId.Value)
-                            ? evidence.SourceEventAuditId
-                            : null,
-                        AuditSourceIdentity.Create(evidence.SourceKind, evidence.SourceReference),
-                        evidence.SourcePublisherSnapshot,
-                        evidence.SourceTypeSnapshot,
-                        evidence.SourceClassification.ToString(),
-                        evidence.PublishedAtSnapshot,
-                        evidence.RetrievedAtSnapshot,
-                        evidence.ContentHashSnapshot,
-                        evidence.SourceVersionSnapshot,
-                        evidence.VerificationStatus.ToString()))
-                    .ToList()))
-            .ToList();
-
-        return new AuditClaimsEvidenceResponse(
-            version.Artifact.Id,
-            version.Id,
-            version.VersionNumber,
-            version.Artifact.Name,
-            projectedClaims);
-    }
-
-    private async Task<bool> CanViewSourceAsync(
-        Guid userId,
-        ArtifactEvidenceSourceKind sourceKind,
-        string sourceReference,
-        CancellationToken cancellationToken)
-    {
-        if (sourceKind == ArtifactEvidenceSourceKind.WebSnapshot)
-        {
-            return true;
-        }
-
-        if (!Guid.TryParse(sourceReference, out var sourceId) || sourceId == Guid.Empty)
-        {
-            return false;
-        }
-
-        if (sourceKind == ArtifactEvidenceSourceKind.ArtifactVersion)
-        {
-            return await artifactAuthorization.CanDownloadArtifactVersion(userId, sourceId, cancellationToken);
-        }
-
-        if (sourceKind != ArtifactEvidenceSourceKind.FileAttachment)
-        {
-            return false;
-        }
-
-        var attachment = await files.GetAttachmentAsync(sourceId, cancellationToken);
-        return attachment is not null &&
-               !attachment.DeletedAt.HasValue &&
-               await fileAuthorization.CanViewAttachment(userId, attachment, cancellationToken);
     }
 
     private static byte[] BuildPackage(
