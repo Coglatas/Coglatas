@@ -13,7 +13,7 @@
     "test": "ng test --watch=false",
     "test:watch": "ng test --watch",
     "check:architecture": "node scripts/check-architecture.mjs",
-    "test:architecture": "node --test scripts/check-architecture.node-test.mjs scripts/sanitize-syncfusion-theme-css.node-test.mjs scripts/angular22-third-party-compatibility.node-test.mjs",
+    "test:architecture": "node --test scripts/check-architecture.node-test.mjs scripts/sanitize-syncfusion-theme-css.node-test.mjs scripts/angular22-third-party-compatibility.node-test.mjs scripts/av-mig-inventory.node-test.mjs scripts/av-mig-source.node-test.mjs",
     "test:syncfusion-license": "node --test scripts/require-syncfusion-license.node-test.mjs",
     "analyze:bundle": "node scripts/check-syncfusion-bundle.mjs",
     "storybook": "ng run frontend:storybook",
