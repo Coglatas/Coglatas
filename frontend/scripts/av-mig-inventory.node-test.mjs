@@ -226,6 +226,11 @@ test('active target inventory has no owner-TBD and does not invent NgRx migratio
   const angularDependencies = new Map(inventory.dependencies.map((dependency) => [dependency.name, dependency]));
   assert.equal(angularDependencies.get('NgRx packages')?.purpose, 'declared dependencies; no production imports found');
 
+  const graphSourceGap = inventory.unresolvedSurfaces.find((surface) => surface.name === 'graph');
+  assert.equal(graphSourceGap?.historicalSnapshot, true);
+  assert.equal(graphSourceGap?.status, 'historical-source-gap-resolved');
+  assert.equal(graphSourceGap?.targetOwnerIssue, 816);
+
   const activeUnknownOwners = targetMap.routes.filter((route) => !Number.isInteger(route.owner));
   assert.deepEqual(activeUnknownOwners, []);
 });
