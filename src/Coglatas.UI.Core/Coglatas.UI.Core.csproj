@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>Nyg.Ui.Core</RootNamespace>
+    <RootNamespace>Coglatas.Ui.Core</RootNamespace>
   </PropertyGroup>
 
 </Project>

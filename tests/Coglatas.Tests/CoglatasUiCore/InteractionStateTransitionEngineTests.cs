@@ -1,6 +1,6 @@
-using Nyg.Ui.Core.Interaction;
+using Coglatas.Ui.Core.Interaction;
 
-namespace Coglatas.Tests.NygUiCore;
+namespace Coglatas.Tests.CoglatasUiCore;
 
 public sealed class InteractionStateTransitionEngineTests
 {

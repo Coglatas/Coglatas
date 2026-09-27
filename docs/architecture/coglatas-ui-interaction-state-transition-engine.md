@@ -1,4 +1,4 @@
-# NYG.UI Interaction State Transition Engine
+# Coglatas.UI Interaction State Transition Engine
 
 Status: implementation/architecture contract for AV-MIG-42 / #814  
 Scope: renderer-independent Pure C# interaction semantics
@@ -347,12 +347,12 @@ adapter now implements the commit-time contract.
 
 Current implementation:
 
-- `src/NYG.UI.Core/Interaction/InteractionModel.cs`
-- `src/NYG.UI.Core/Interaction/InteractionStateTransitionEngine.cs`
-- `src/Coglatas.Infrastructure/Persistence/NygUiCanonicalChangeJournalCoordinator.cs`
-- `src/Coglatas.Infrastructure/Persistence/Migrations/20260924133000_AddNygUiCanonicalChangeJournal.cs`
-- `tests/Coglatas.Tests/NygUiCore/InteractionStateTransitionEngineTests.cs`
-- `tests/Coglatas.Tests/PostgreSql/NygUiCanonicalChangeJournalPostgreSqlTests.cs`
+- `src/Coglatas.UI.Core/Interaction/InteractionModel.cs`
+- `src/Coglatas.UI.Core/Interaction/InteractionStateTransitionEngine.cs`
+- `src/Coglatas.Infrastructure/Persistence/CoglatasUiCanonicalChangeJournalCoordinator.cs`
+- `src/Coglatas.Infrastructure/Persistence/Migrations/20260924133000_AddCoglatasUiCanonicalChangeJournal.cs`
+- `tests/Coglatas.Tests/CoglatasUiCore/InteractionStateTransitionEngineTests.cs`
+- `tests/Coglatas.Tests/PostgreSql/CoglatasUiCanonicalChangeJournalPostgreSqlTests.cs`
 
 The adapter stores one locked revision-head row per interaction scope and an
 ordered append-only journal:

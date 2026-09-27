@@ -10,7 +10,7 @@
     <Project Path="src/Coglatas.Domain/Coglatas.Domain.csproj" />
     <Project Path="src/Coglatas.Infrastructure/Coglatas.Infrastructure.csproj" />
     <Project Path="src/Coglatas.Web/Coglatas.Web.csproj" />
-    <Project Path="src/NYG.UI.Core/NYG.UI.Core.csproj" />
+    <Project Path="src/Coglatas.UI.Core/Coglatas.UI.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Coglatas.Architecture.Tests/Coglatas.Architecture.Tests.csproj" />

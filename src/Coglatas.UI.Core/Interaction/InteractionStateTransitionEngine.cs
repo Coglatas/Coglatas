@@ -1,4 +1,4 @@
-namespace Nyg.Ui.Core.Interaction;
+namespace Coglatas.Ui.Core.Interaction;
 
 /// <summary>
 /// Renderer-independent transition engine for WorkSurface interaction state.

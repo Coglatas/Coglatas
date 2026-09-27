@@ -4,11 +4,11 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Nyg.Ui.Core.Interaction;
+using Coglatas.Ui.Core.Interaction;
 
 namespace Coglatas.Infrastructure.Persistence;
 
-public sealed record NygUiCanonicalJournalCommitResult(
+public sealed record CoglatasUiCanonicalJournalCommitResult(
     CommitDecision Decision,
     long? CommittedRevision)
 {
@@ -28,10 +28,10 @@ public sealed record NygUiCanonicalJournalCommitResult(
 /// this coordinator's transaction-bound AppDbContext so they can lock/read/write
 /// through the same database transaction.
 /// </summary>
-public sealed class NygUiCanonicalChangeJournalCoordinator(AppDbContext dbContext)
+public sealed class CoglatasUiCanonicalChangeJournalCoordinator(AppDbContext dbContext)
 {
-    private const string HeadTable = "nyg_ui_canonical_revision_heads";
-    private const string JournalTable = "nyg_ui_canonical_change_journal";
+    private const string HeadTable = "coglatas_ui_canonical_revision_heads";
+    private const string JournalTable = "coglatas_ui_canonical_change_journal";
 
     public async Task<long> ExecuteAuthoritativeMutationAsync(
         ContextScope scope,
@@ -80,7 +80,7 @@ public sealed class NygUiCanonicalChangeJournalCoordinator(AppDbContext dbContex
         }
     }
 
-    public async Task<NygUiCanonicalJournalCommitResult> ExecutePermittedMutationAsync(
+    public async Task<CoglatasUiCanonicalJournalCommitResult> ExecutePermittedMutationAsync(
         ExecutionPrecondition precondition,
         Func<AppDbContext, CancellationToken, Task<AuthoritySnapshot>> loadAndLockCurrentAuthority,
         CanonicalDependencyDomain changedDomains,
@@ -124,7 +124,7 @@ public sealed class NygUiCanonicalChangeJournalCoordinator(AppDbContext dbContex
             {
                 await transaction.RollbackAsync(CancellationToken.None);
                 dbContext.ChangeTracker.Clear();
-                return new NygUiCanonicalJournalCommitResult(descriptorDecision, null);
+                return new CoglatasUiCanonicalJournalCommitResult(descriptorDecision, null);
             }
 
             var decision = AtomicCommitPreconditionEvaluator.Evaluate(
@@ -140,7 +140,7 @@ public sealed class NygUiCanonicalChangeJournalCoordinator(AppDbContext dbContex
             {
                 await transaction.RollbackAsync(CancellationToken.None);
                 dbContext.ChangeTracker.Clear();
-                return new NygUiCanonicalJournalCommitResult(decision, null);
+                return new CoglatasUiCanonicalJournalCommitResult(decision, null);
             }
 
             var nextRevision = checked(currentRevision + 1);
@@ -158,7 +158,7 @@ public sealed class NygUiCanonicalChangeJournalCoordinator(AppDbContext dbContex
             await dbContext.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            return new NygUiCanonicalJournalCommitResult(
+            return new CoglatasUiCanonicalJournalCommitResult(
                 CommitDecision.Allow(),
                 nextRevision);
         }

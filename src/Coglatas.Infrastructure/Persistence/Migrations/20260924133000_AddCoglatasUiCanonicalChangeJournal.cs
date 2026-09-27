@@ -7,13 +7,13 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Coglatas.Infrastructure.Persistence.Migrations;
 
 [DbContext(typeof(AppDbContext))]
-[Migration("20260924133000_AddNygUiCanonicalChangeJournal")]
-public sealed class AddNygUiCanonicalChangeJournal : Migration
+[Migration("20260924133000_AddCoglatasUiCanonicalChangeJournal")]
+public sealed class AddCoglatasUiCanonicalChangeJournal : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.CreateTable(
-            name: "nyg_ui_canonical_revision_heads",
+            name: "coglatas_ui_canonical_revision_heads",
             columns: table => new
             {
                 ScopeKey = table.Column<string>(
@@ -40,15 +40,15 @@ public sealed class AddNygUiCanonicalChangeJournal : Migration
             constraints: table =>
             {
                 table.PrimaryKey(
-                    "PK_nyg_ui_canonical_revision_heads",
+                    "PK_coglatas_ui_canonical_revision_heads",
                     item => item.ScopeKey);
                 table.CheckConstraint(
-                    "CK_nyg_ui_canonical_revision_heads_Revision",
+                    "CK_coglatas_ui_canonical_revision_heads_Revision",
                     "\"Revision\" >= 0");
             });
 
         migrationBuilder.CreateTable(
-            name: "nyg_ui_canonical_change_journal",
+            name: "coglatas_ui_canonical_change_journal",
             columns: table => new
             {
                 ScopeKey = table.Column<string>(
@@ -69,37 +69,37 @@ public sealed class AddNygUiCanonicalChangeJournal : Migration
             constraints: table =>
             {
                 table.PrimaryKey(
-                    "PK_nyg_ui_canonical_change_journal",
+                    "PK_coglatas_ui_canonical_change_journal",
                     item => new { item.ScopeKey, item.Revision });
                 table.ForeignKey(
-                    name: "FK_nyg_ui_canonical_change_journal_revision_heads_ScopeKey",
+                    name: "FK_coglatas_ui_canonical_change_journal_revision_heads_ScopeKey",
                     column: item => item.ScopeKey,
-                    principalTable: "nyg_ui_canonical_revision_heads",
+                    principalTable: "coglatas_ui_canonical_revision_heads",
                     principalColumn: "ScopeKey",
                     onDelete: ReferentialAction.Cascade);
                 table.CheckConstraint(
-                    "CK_nyg_ui_canonical_change_journal_Revision",
+                    "CK_coglatas_ui_canonical_change_journal_Revision",
                     "\"Revision\" > 0");
                 table.CheckConstraint(
-                    "CK_nyg_ui_canonical_change_journal_ChangedDomains",
+                    "CK_coglatas_ui_canonical_change_journal_ChangedDomains",
                     "\"ChangedDomains\" > 0 AND \"ChangedDomains\" <= 31");
             });
 
         migrationBuilder.CreateIndex(
-            name: "IX_nyg_ui_canonical_revision_heads_TenantId_WorkspaceId_ProjectId",
-            table: "nyg_ui_canonical_revision_heads",
+            name: "IX_coglatas_ui_canonical_revision_heads_TenantId_WorkspaceId_ProjectId",
+            table: "coglatas_ui_canonical_revision_heads",
             columns: new[] { "TenantId", "WorkspaceId", "ProjectId" });
 
         migrationBuilder.Sql(
             """
-            CREATE OR REPLACE FUNCTION nyg_ui_validate_revision_head_insert()
+            CREATE OR REPLACE FUNCTION coglatas_ui_validate_revision_head_insert()
             RETURNS trigger
             LANGUAGE plpgsql
             AS $$
             BEGIN
                 IF NEW."Revision" <> 0 THEN
                     RAISE EXCEPTION
-                        'NYG UI canonical revision head must be created at revision zero: new=%',
+                        'Coglatas UI canonical revision head must be created at revision zero: new=%',
                         NEW."Revision"
                         USING ERRCODE = '23514';
                 END IF;
@@ -108,13 +108,13 @@ public sealed class AddNygUiCanonicalChangeJournal : Migration
             END;
             $$;
 
-            CREATE TRIGGER trg_nyg_ui_revision_head_insert
+            CREATE TRIGGER trg_coglatas_ui_revision_head_insert
             BEFORE INSERT
-            ON nyg_ui_canonical_revision_heads
+            ON coglatas_ui_canonical_revision_heads
             FOR EACH ROW
-            EXECUTE FUNCTION nyg_ui_validate_revision_head_insert();
+            EXECUTE FUNCTION coglatas_ui_validate_revision_head_insert();
 
-            CREATE OR REPLACE FUNCTION nyg_ui_enforce_revision_head_step()
+            CREATE OR REPLACE FUNCTION coglatas_ui_enforce_revision_head_step()
             RETURNS trigger
             LANGUAGE plpgsql
             AS $$
@@ -124,13 +124,13 @@ public sealed class AddNygUiCanonicalChangeJournal : Migration
                    OR NEW."WorkspaceId" IS DISTINCT FROM OLD."WorkspaceId"
                    OR NEW."ProjectId" IS DISTINCT FROM OLD."ProjectId" THEN
                     RAISE EXCEPTION
-                        'NYG UI canonical revision-head scope identity is immutable'
+                        'Coglatas UI canonical revision-head scope identity is immutable'
                         USING ERRCODE = '23514';
                 END IF;
 
                 IF NEW."Revision" <> OLD."Revision" + 1 THEN
                     RAISE EXCEPTION
-                        'NYG UI canonical revision head must advance by exactly one: old=%, new=%',
+                        'Coglatas UI canonical revision head must advance by exactly one: old=%, new=%',
                         OLD."Revision",
                         NEW."Revision"
                         USING ERRCODE = '23514';
@@ -140,13 +140,13 @@ public sealed class AddNygUiCanonicalChangeJournal : Migration
             END;
             $$;
 
-            CREATE TRIGGER trg_nyg_ui_revision_head_step
+            CREATE TRIGGER trg_coglatas_ui_revision_head_step
             BEFORE UPDATE
-            ON nyg_ui_canonical_revision_heads
+            ON coglatas_ui_canonical_revision_heads
             FOR EACH ROW
-            EXECUTE FUNCTION nyg_ui_enforce_revision_head_step();
+            EXECUTE FUNCTION coglatas_ui_enforce_revision_head_step();
 
-            CREATE OR REPLACE FUNCTION nyg_ui_validate_journal_insert()
+            CREATE OR REPLACE FUNCTION coglatas_ui_validate_journal_insert()
             RETURNS trigger
             LANGUAGE plpgsql
             AS $$
@@ -155,12 +155,12 @@ public sealed class AddNygUiCanonicalChangeJournal : Migration
             BEGIN
                 SELECT "Revision"
                 INTO head_revision
-                FROM nyg_ui_canonical_revision_heads
+                FROM coglatas_ui_canonical_revision_heads
                 WHERE "ScopeKey" = NEW."ScopeKey";
 
                 IF head_revision IS NULL OR NEW."Revision" <> head_revision THEN
                     RAISE EXCEPTION
-                        'NYG UI canonical journal revision must equal the locked revision head: head=%, journal=%',
+                        'Coglatas UI canonical journal revision must equal the locked revision head: head=%, journal=%',
                         head_revision,
                         NEW."Revision"
                         USING ERRCODE = '23514';
@@ -170,42 +170,42 @@ public sealed class AddNygUiCanonicalChangeJournal : Migration
             END;
             $$;
 
-            CREATE TRIGGER trg_nyg_ui_journal_insert_matches_head
+            CREATE TRIGGER trg_coglatas_ui_journal_insert_matches_head
             BEFORE INSERT
-            ON nyg_ui_canonical_change_journal
+            ON coglatas_ui_canonical_change_journal
             FOR EACH ROW
-            EXECUTE FUNCTION nyg_ui_validate_journal_insert();
+            EXECUTE FUNCTION coglatas_ui_validate_journal_insert();
 
-            CREATE OR REPLACE FUNCTION nyg_ui_reject_journal_rewrite()
+            CREATE OR REPLACE FUNCTION coglatas_ui_reject_journal_rewrite()
             RETURNS trigger
             LANGUAGE plpgsql
             AS $$
             BEGIN
                 RAISE EXCEPTION
-                    'NYG UI canonical change journal is append-only'
+                    'Coglatas UI canonical change journal is append-only'
                     USING ERRCODE = '23514';
             END;
             $$;
 
-            CREATE TRIGGER trg_nyg_ui_journal_append_only
+            CREATE TRIGGER trg_coglatas_ui_journal_append_only
             BEFORE UPDATE OR DELETE
-            ON nyg_ui_canonical_change_journal
+            ON coglatas_ui_canonical_change_journal
             FOR EACH ROW
-            EXECUTE FUNCTION nyg_ui_reject_journal_rewrite();
+            EXECUTE FUNCTION coglatas_ui_reject_journal_rewrite();
             """);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(name: "nyg_ui_canonical_change_journal");
-        migrationBuilder.DropTable(name: "nyg_ui_canonical_revision_heads");
+        migrationBuilder.DropTable(name: "coglatas_ui_canonical_change_journal");
+        migrationBuilder.DropTable(name: "coglatas_ui_canonical_revision_heads");
 
         migrationBuilder.Sql(
             """
-            DROP FUNCTION IF EXISTS nyg_ui_reject_journal_rewrite();
-            DROP FUNCTION IF EXISTS nyg_ui_validate_journal_insert();
-            DROP FUNCTION IF EXISTS nyg_ui_enforce_revision_head_step();
-            DROP FUNCTION IF EXISTS nyg_ui_validate_revision_head_insert();
+            DROP FUNCTION IF EXISTS coglatas_ui_reject_journal_rewrite();
+            DROP FUNCTION IF EXISTS coglatas_ui_validate_journal_insert();
+            DROP FUNCTION IF EXISTS coglatas_ui_enforce_revision_head_step();
+            DROP FUNCTION IF EXISTS coglatas_ui_validate_revision_head_insert();
             """);
     }
 }

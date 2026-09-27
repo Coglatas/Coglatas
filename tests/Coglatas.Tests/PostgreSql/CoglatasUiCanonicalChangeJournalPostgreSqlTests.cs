@@ -1,15 +1,15 @@
 using Coglatas.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using Nyg.Ui.Core.Interaction;
+using Coglatas.Ui.Core.Interaction;
 
 namespace Coglatas.Tests.PostgreSql;
 
-public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
+public sealed class CoglatasUiCanonicalChangeJournalPostgreSqlTests
 {
     [PostgreSqlFact]
     [Trait("Category", "PostgreSQLIntegration")]
-    [Trait("Scope", "NygUiCanonicalJournal")]
+    [Trait("Scope", "CoglatasUiCanonicalJournal")]
     public async Task JournalAllowsIrrelevantRaceButRejectsRelevantRace()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
@@ -23,7 +23,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                 var scope = NewScope();
                 await using var context =
                     PostgreSqlMigrationTestDatabase.CreatePlatformContext(database);
-                var coordinator = new NygUiCanonicalChangeJournalCoordinator(context);
+                var coordinator = new CoglatasUiCanonicalChangeJournalCoordinator(context);
 
                 var first = await coordinator.ExecuteAuthoritativeMutationAsync(
                     scope,
@@ -81,19 +81,19 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                     database,
                     """
                     SELECT "Revision"
-                    FROM nyg_ui_canonical_revision_heads
+                    FROM coglatas_ui_canonical_revision_heads
                     WHERE "ScopeKey" = @scopeKey
                     """,
-                    ("scopeKey", NygUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
+                    ("scopeKey", CoglatasUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
 
                 var journalCount = await PostgreSqlMigrationTestDatabase.ScalarAsync<long>(
                     database,
                     """
                     SELECT COUNT(*)
-                    FROM nyg_ui_canonical_change_journal
+                    FROM coglatas_ui_canonical_change_journal
                     WHERE "ScopeKey" = @scopeKey
                     """,
-                    ("scopeKey", NygUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
+                    ("scopeKey", CoglatasUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
 
                 Assert.Equal(3, head);
                 Assert.Equal(3, journalCount);
@@ -102,7 +102,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
 
     [PostgreSqlFact]
     [Trait("Category", "PostgreSQLIntegration")]
-    [Trait("Scope", "NygUiCanonicalJournal")]
+    [Trait("Scope", "CoglatasUiCanonicalJournal")]
     public async Task JournalRollsBackHeadAndHistoryWhenMutationFails()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
@@ -116,7 +116,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                 await PostgreSqlMigrationTestDatabase.ExecuteAsync(
                     database,
                     """
-                    CREATE TABLE nyg_ui_atomic_payload_probe (
+                    CREATE TABLE coglatas_ui_atomic_payload_probe (
                         "Id" integer PRIMARY KEY,
                         "Revision" bigint NOT NULL
                     )
@@ -125,7 +125,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                 var scope = NewScope();
                 await using var context =
                     PostgreSqlMigrationTestDatabase.CreatePlatformContext(database);
-                var coordinator = new NygUiCanonicalChangeJournalCoordinator(context);
+                var coordinator = new CoglatasUiCanonicalChangeJournalCoordinator(context);
 
                 await Assert.ThrowsAsync<InvalidOperationException>(() =>
                     coordinator.ExecuteAuthoritativeMutationAsync(
@@ -134,7 +134,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                         async (transactionContext, revision, cancellationToken) =>
                         {
                             await transactionContext.Database.ExecuteSqlInterpolatedAsync(
-                                $"INSERT INTO nyg_ui_atomic_payload_probe (\"Id\", \"Revision\") VALUES ({1}, {revision})",
+                                $"INSERT INTO coglatas_ui_atomic_payload_probe (\"Id\", \"Revision\") VALUES ({1}, {revision})",
                                 cancellationToken);
                             throw new InvalidOperationException("synthetic failure after staged database mutation");
                         }));
@@ -143,26 +143,26 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                     database,
                     """
                     SELECT COUNT(*)
-                    FROM nyg_ui_atomic_payload_probe
+                    FROM coglatas_ui_atomic_payload_probe
                     """);
 
                 var headCount = await PostgreSqlMigrationTestDatabase.ScalarAsync<long>(
                     database,
                     """
                     SELECT COUNT(*)
-                    FROM nyg_ui_canonical_revision_heads
+                    FROM coglatas_ui_canonical_revision_heads
                     WHERE "ScopeKey" = @scopeKey
                     """,
-                    ("scopeKey", NygUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
+                    ("scopeKey", CoglatasUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
 
                 var journalCount = await PostgreSqlMigrationTestDatabase.ScalarAsync<long>(
                     database,
                     """
                     SELECT COUNT(*)
-                    FROM nyg_ui_canonical_change_journal
+                    FROM coglatas_ui_canonical_change_journal
                     WHERE "ScopeKey" = @scopeKey
                     """,
-                    ("scopeKey", NygUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
+                    ("scopeKey", CoglatasUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
 
                 Assert.Equal(0, payloadCount);
                 Assert.Equal(0, headCount);
@@ -172,7 +172,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
 
     [PostgreSqlFact]
     [Trait("Category", "PostgreSQLIntegration")]
-    [Trait("Scope", "NygUiCanonicalJournal")]
+    [Trait("Scope", "CoglatasUiCanonicalJournal")]
     public async Task JournalRejectsAuthorityRaceWithoutAdvancingRevisionOrStagingMutation()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
@@ -186,7 +186,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                 var scope = NewScope();
                 await using var context =
                     PostgreSqlMigrationTestDatabase.CreatePlatformContext(database);
-                var coordinator = new NygUiCanonicalChangeJournalCoordinator(context);
+                var coordinator = new CoglatasUiCanonicalChangeJournalCoordinator(context);
 
                 var initialRevision = await coordinator.ExecuteAuthoritativeMutationAsync(
                     scope,
@@ -243,19 +243,19 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                     database,
                     """
                     SELECT "Revision"
-                    FROM nyg_ui_canonical_revision_heads
+                    FROM coglatas_ui_canonical_revision_heads
                     WHERE "ScopeKey" = @scopeKey
                     """,
-                    ("scopeKey", NygUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
+                    ("scopeKey", CoglatasUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
 
                 var journalCount = await PostgreSqlMigrationTestDatabase.ScalarAsync<long>(
                     database,
                     """
                     SELECT COUNT(*)
-                    FROM nyg_ui_canonical_change_journal
+                    FROM coglatas_ui_canonical_change_journal
                     WHERE "ScopeKey" = @scopeKey
                     """,
-                    ("scopeKey", NygUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
+                    ("scopeKey", CoglatasUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
 
                 Assert.Equal(1, head);
                 Assert.Equal(1, journalCount);
@@ -264,7 +264,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
 
     [PostgreSqlFact]
     [Trait("Category", "PostgreSQLIntegration")]
-    [Trait("Scope", "NygUiCanonicalJournal")]
+    [Trait("Scope", "CoglatasUiCanonicalJournal")]
     public async Task ConcurrentWritersReceiveDistinctContiguousRevisions()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
@@ -281,7 +281,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                     await using var context =
                         PostgreSqlMigrationTestDatabase.CreatePlatformContext(database);
                     var coordinator =
-                        new NygUiCanonicalChangeJournalCoordinator(context);
+                        new CoglatasUiCanonicalChangeJournalCoordinator(context);
                     return await coordinator.ExecuteAuthoritativeMutationAsync(
                         scope,
                         domain,
@@ -298,14 +298,14 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                     database,
                     """
                     SELECT "Revision", "ChangedDomains"
-                    FROM nyg_ui_canonical_change_journal
+                    FROM coglatas_ui_canonical_change_journal
                     WHERE "ScopeKey" = @scopeKey
                     ORDER BY "Revision"
                     """,
                     reader => (
                         Revision: reader.GetInt64(0),
                         Domains: reader.GetInt32(1)),
-                    ("scopeKey", NygUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
+                    ("scopeKey", CoglatasUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope)));
 
                 Assert.Equal(2, rows.Count);
                 Assert.Equal(1, rows[0].Revision);
@@ -315,7 +315,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
 
     [PostgreSqlFact]
     [Trait("Category", "PostgreSQLIntegration")]
-    [Trait("Scope", "NygUiCanonicalJournal")]
+    [Trait("Scope", "CoglatasUiCanonicalJournal")]
     public async Task DatabaseGuardsContiguousHeadAndAppendOnlyJournal()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
@@ -329,23 +329,23 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                 var scope = NewScope();
                 await using var context =
                     PostgreSqlMigrationTestDatabase.CreatePlatformContext(database);
-                var coordinator = new NygUiCanonicalChangeJournalCoordinator(context);
+                var coordinator = new CoglatasUiCanonicalChangeJournalCoordinator(context);
                 var revision = await coordinator.ExecuteAuthoritativeMutationAsync(
                     scope,
                     CanonicalDependencyDomain.SelectedEntity,
                     static (_, _, _) => Task.CompletedTask);
                 Assert.Equal(1, revision);
 
-                var scopeKey = NygUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope);
+                var scopeKey = CoglatasUiCanonicalChangeJournalCoordinator.CreateScopeKey(scope);
 
                 var invalidScope = NewScope();
                 var invalidScopeKey =
-                    NygUiCanonicalChangeJournalCoordinator.CreateScopeKey(invalidScope);
+                    CoglatasUiCanonicalChangeJournalCoordinator.CreateScopeKey(invalidScope);
                 var invalidInitialHead = await Assert.ThrowsAsync<PostgresException>(() =>
                     PostgreSqlMigrationTestDatabase.ExecuteAsync(
                         database,
                         """
-                        INSERT INTO nyg_ui_canonical_revision_heads
+                        INSERT INTO coglatas_ui_canonical_revision_heads
                             ("ScopeKey", "TenantId", "WorkspaceId", "ProjectId", "Revision", "UpdatedAtUtc")
                         VALUES
                             (@scopeKey, @tenantId, @workspaceId, @projectId, 4, CURRENT_TIMESTAMP)
@@ -360,7 +360,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                     PostgreSqlMigrationTestDatabase.ExecuteAsync(
                         database,
                         """
-                        UPDATE nyg_ui_canonical_revision_heads
+                        UPDATE coglatas_ui_canonical_revision_heads
                         SET "TenantId" = 'tampered-tenant',
                             "Revision" = 2
                         WHERE "ScopeKey" = @scopeKey
@@ -372,7 +372,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                     PostgreSqlMigrationTestDatabase.ExecuteAsync(
                         database,
                         """
-                        UPDATE nyg_ui_canonical_revision_heads
+                        UPDATE coglatas_ui_canonical_revision_heads
                         SET "Revision" = 3
                         WHERE "ScopeKey" = @scopeKey
                         """,
@@ -383,7 +383,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                     PostgreSqlMigrationTestDatabase.ExecuteAsync(
                         database,
                         """
-                        INSERT INTO nyg_ui_canonical_change_journal
+                        INSERT INTO coglatas_ui_canonical_change_journal
                             ("ScopeKey", "Revision", "ChangedDomains", "OccurredAtUtc")
                         VALUES
                             (@scopeKey, 2, 2, CURRENT_TIMESTAMP)
@@ -395,7 +395,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                     PostgreSqlMigrationTestDatabase.ExecuteAsync(
                         database,
                         """
-                        UPDATE nyg_ui_canonical_change_journal
+                        UPDATE coglatas_ui_canonical_change_journal
                         SET "ChangedDomains" = 8
                         WHERE "ScopeKey" = @scopeKey
                           AND "Revision" = 1
@@ -407,7 +407,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                     PostgreSqlMigrationTestDatabase.ExecuteAsync(
                         database,
                         """
-                        DELETE FROM nyg_ui_canonical_change_journal
+                        DELETE FROM coglatas_ui_canonical_change_journal
                         WHERE "ScopeKey" = @scopeKey
                           AND "Revision" = 1
                         """,
@@ -418,7 +418,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                     database,
                     """
                     SELECT "Revision"
-                    FROM nyg_ui_canonical_revision_heads
+                    FROM coglatas_ui_canonical_revision_heads
                     WHERE "ScopeKey" = @scopeKey
                     """,
                     ("scopeKey", scopeKey));
@@ -427,7 +427,7 @@ public sealed class NygUiCanonicalChangeJournalPostgreSqlTests
                     database,
                     """
                     SELECT COUNT(*)
-                    FROM nyg_ui_canonical_change_journal
+                    FROM coglatas_ui_canonical_change_journal
                     WHERE "ScopeKey" = @scopeKey
                     """,
                     ("scopeKey", scopeKey));

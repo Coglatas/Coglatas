@@ -1,4 +1,4 @@
-namespace Nyg.Ui.Core.Interaction;
+namespace Coglatas.Ui.Core.Interaction;
 
 public sealed record ContextScope(
     string TenantId,
