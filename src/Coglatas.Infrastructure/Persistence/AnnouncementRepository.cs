@@ -23,8 +23,14 @@ public sealed class AnnouncementRepository(
             .ThenByDescending(announcement => announcement.PublishedAt);
 
         var total = await source.CountAsync(cancellationToken);
+        var offset = (query.Page - 1L) * query.PageSize;
+        if (offset > int.MaxValue)
+        {
+            return new PagedResponse<Announcement>([], query.Page, query.PageSize, total);
+        }
+
         var items = await source
-            .Skip((query.Page - 1) * query.PageSize)
+            .Skip((int)Math.Max(0L, offset))
             .Take(query.PageSize)
             .ToListAsync(cancellationToken);
 
@@ -58,9 +64,12 @@ public sealed class AnnouncementRepository(
 
             announcement.TenantId = currentTenant.TenantId;
         }
-        else if (currentTenant.IsAvailable && !currentTenant.IsPlatformScope && announcement.TenantId != currentTenant.TenantId)
+        else if (currentTenant is { IsAvailable: true, IsPlatformScope: false })
         {
-            throw new InvalidOperationException("Announcement TenantId does not match the current tenant context.");
+            if (announcement.TenantId != currentTenant.TenantId)
+            {
+                throw new InvalidOperationException("Announcement TenantId does not match the current tenant context.");
+            }
         }
 
         await dbContext.Announcements.AddAsync(announcement, cancellationToken);

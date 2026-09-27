@@ -10,15 +10,22 @@ public sealed record AuditCapabilityResponse(
     bool CanReview,
     bool CanApprove,
     bool CanExport,
-    bool CanViewSensitiveMetadata);
+    bool CanViewSensitiveMetadata)
+{
+    public bool HasCapability(string capabilityKey) => capabilityKey switch
+    {
+        CapabilityKeys.AuditView => CanView,
+        CapabilityKeys.AuditReview => CanReview,
+        CapabilityKeys.AuditApprove => CanApprove,
+        CapabilityKeys.AuditExport => CanExport,
+        CapabilityKeys.AuditSensitiveMetadataView => CanViewSensitiveMetadata,
+        _ => false
+    };
+}
 
 public interface IAuditAuthorizationService
 {
     Task<AuditCapabilityResponse> GetCapabilitiesAsync(CancellationToken cancellationToken = default);
-
-    Task<bool> HasCapabilityAsync(
-        string capabilityKey,
-        CancellationToken cancellationToken = default);
 
     Task<Result> AuthorizeAsync(
         string capabilityKey,
@@ -48,7 +55,7 @@ public sealed class AuditAuthorizationService(
             return None();
         }
 
-        if (currentUser.SystemRole is SystemRole.PlatformAdmin or SystemRole.SystemAdmin)
+        if (currentUser.SystemRole == SystemRole.PlatformAdmin)
         {
             return All();
         }
@@ -104,28 +111,13 @@ public sealed class AuditAuthorizationService(
             canViewSensitiveMetadata);
     }
 
-    public async Task<bool> HasCapabilityAsync(
-        string capabilityKey,
-        CancellationToken cancellationToken = default)
-    {
-        var capabilities = await GetCapabilitiesAsync(cancellationToken);
-        return capabilityKey switch
-        {
-            CapabilityKeys.AuditView => capabilities.CanView,
-            CapabilityKeys.AuditReview => capabilities.CanReview,
-            CapabilityKeys.AuditApprove => capabilities.CanApprove,
-            CapabilityKeys.AuditExport => capabilities.CanExport,
-            CapabilityKeys.AuditSensitiveMetadataView => capabilities.CanViewSensitiveMetadata,
-            _ => false
-        };
-    }
-
     public async Task<Result> AuthorizeAsync(
         string capabilityKey,
         string operation,
         CancellationToken cancellationToken = default)
     {
-        if (await HasCapabilityAsync(capabilityKey, cancellationToken))
+        var capabilities = await GetCapabilitiesAsync(cancellationToken);
+        if (capabilities.HasCapability(capabilityKey))
         {
             return Result.Success();
         }
