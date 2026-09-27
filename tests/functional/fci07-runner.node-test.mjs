@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 
 const composeRunnerPath = 'scripts/ci/run-fci07-functional-security.sh';
 const ownerRunnerPath = 'scripts/ci/run-fci07-playwright-owners.sh';
