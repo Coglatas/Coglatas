@@ -129,7 +129,7 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
         var content = operation.RequestBody?.Content;
         if (content is null ||
             !content.TryGetValue("multipart/form-data", out var multipart) ||
-            multipart?.Schema is not OpenApiSchema formSchema)
+            multipart.Schema is not OpenApiSchema formSchema)
         {
             return;
         }
