@@ -11,7 +11,7 @@ on:
       - "scripts/performance/**"
       - "scripts/ci/*performance*"
       - "tests/ci/test_performance*"
-      - "governance/**performance**"
+      - "governance/**"
 
 concurrency:
   group: performance-contract-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
