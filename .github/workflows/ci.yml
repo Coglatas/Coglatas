@@ -156,7 +156,7 @@ jobs:
           retention-days: 7
 
       - name: Restore .NET tools
-        if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true' || steps.route.outputs.backend_tests == 'true'
         run: dotnet tool restore
 
       - name: Apply PostgreSQL migrations
