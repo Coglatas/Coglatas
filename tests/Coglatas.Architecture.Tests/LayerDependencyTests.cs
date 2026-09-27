@@ -10,7 +10,7 @@ namespace Coglatas.Architecture.Tests;
 
 public sealed class LayerDependencyTests
 {
-    private static readonly Architecture Architecture = new ArchLoader()
+    private static readonly ArchUnitNET.Domain.Architecture LoadedArchitecture = new ArchLoader()
         .LoadAssemblies(
             Assembly.Load("Coglatas.Domain"),
             Assembly.Load("Coglatas.Application"),
@@ -81,6 +81,6 @@ public sealed class LayerDependencyTests
             .NotDependOnAny(forbidden)
             .Because(reason);
 
-        rule.Check(Architecture);
+        rule.Check(LoadedArchitecture);
     }
 }
