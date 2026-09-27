@@ -5,6 +5,13 @@ on:
   push:
     branches: ["main"]
   pull_request:
+    paths:
+      - ".github/workflows/performance-contract.yml"
+      - ".github/workflows/performance-environment.yml"
+      - "scripts/performance/**"
+      - "scripts/ci/*performance*"
+      - "tests/ci/test_performance*"
+      - "governance/**performance**"
 
 concurrency:
   group: performance-contract-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
