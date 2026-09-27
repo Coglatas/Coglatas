@@ -6,6 +6,21 @@ name: Qodana Deep Analysis
 on:
   workflow_dispatch:
   pull_request:
+    paths:
+      - ".github/workflows/qodana_code_quality.yml"
+      - ".github/workflows/qodana_trusted_gate.yml"
+      - ".editorconfig"
+      - "qodana.yaml"
+      - "global.json"
+      - "Coglatas.slnx"
+      - "Directory.Build.*"
+      - "Directory.Packages.*"
+      - "NuGet.config"
+      - "src/**"
+      - "tests/Coglatas.Tests/**"
+      - "scripts/quality/**"
+      - "scripts/ci/configure-persistent-caches.sh"
+      - "scripts/ci/cleanup-qodana-containers.sh"
   push:
     branches:
       - main
