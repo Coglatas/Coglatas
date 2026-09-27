@@ -30,6 +30,7 @@ jobs:
     timeout-minutes: 120
     permissions:
       contents: read
+      security-events: write
 
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
@@ -114,6 +115,28 @@ jobs:
             -v "$GITHUB_WORKSPACE:/workspace" \
             alpine:3.21.7@sha256:f27cad9117495d32d067133afff942cb2dc745dfe9163e949f6bfe8a6a245339 \
             sh -c "chown -R ${uid}:${gid} /workspace"
+
+      - name: Prepare Qodana SARIF for GitHub Code Scanning
+        if: always() && steps.qodana_scan.outcome == 'success'
+        shell: bash
+        run: |
+          sarif="${RUNNER_TEMP}/qodana/results-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/qodana.sarif.json"
+          github_sarif="${RUNNER_TEMP}/qodana/qodana.github.sarif.json"
+          if [[ ! -f "$sarif" ]]; then
+            echo "::error::Qodana succeeded without producing the required SARIF report."
+            exit 1
+          fi
+          python3 scripts/quality/prepare-qodana-sarif-for-github.py \
+            "$sarif" \
+            "$github_sarif" \
+            qodana-dotnet-community
+
+      - name: Upload Qodana SARIF to GitHub Code Scanning
+        if: always() && steps.qodana_scan.outcome == 'success'
+        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          sarif_file: ${{ runner.temp }}/qodana/qodana.github.sarif.json
+          category: qodana-dotnet-community
 
       - name: Set up Node.js for Qodana guard
         if: steps.qodana_scan.outcome == 'success'

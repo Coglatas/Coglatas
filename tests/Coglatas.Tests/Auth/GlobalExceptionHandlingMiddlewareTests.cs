@@ -102,12 +102,13 @@ public sealed class GlobalExceptionHandlingMiddlewareTests
     {
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
+        var cancellationToken = cancellation.Token;
         var middleware = new GlobalExceptionHandlingMiddleware(
-            _ => throw new OperationCanceledException(cancellation.Token),
+            _ => throw new OperationCanceledException(cancellationToken),
             NullLogger<GlobalExceptionHandlingMiddleware>.Instance);
         var context = new DefaultHttpContext
         {
-            RequestAborted = cancellation.Token,
+            RequestAborted = cancellationToken,
             Response = { Body = new MemoryStream() }
         };
 
