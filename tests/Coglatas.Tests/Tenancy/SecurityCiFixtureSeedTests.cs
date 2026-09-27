@@ -52,6 +52,14 @@ public sealed class SecurityCiFixtureSeedTests
             var alphaRestricted = await dbContext.Users.SingleAsync(user => user.Email == SecurityCiFixtureSeed.TenantARestrictedEmail);
             var betaOwner = await dbContext.Users.SingleAsync(user => user.Email == SecurityCiFixtureSeed.TenantBOwnerEmail);
 
+            Assert.Equal(SecurityCiFixtureSeed.TenantAOwnerUserId, alphaOwner.Id);
+            Assert.Equal(SecurityCiFixtureSeed.TenantAMemberUserId, alphaMember.Id);
+            Assert.Equal(SecurityCiFixtureSeed.TenantARestrictedUserId, alphaRestricted.Id);
+            Assert.Equal(SecurityCiFixtureSeed.TenantBOwnerUserId, betaOwner.Id);
+            Assert.All(
+                [alphaOwner.Id, alphaMember.Id, alphaRestricted.Id, betaOwner.Id],
+                userId => Assert.DoesNotMatch(@"\d{12,}", userId.ToString("D")));
+
             Assert.Equal(TenantUserRole.Owner, (await dbContext.TenantUsers.SingleAsync(item => item.TenantId == alpha.Id && item.UserId == alphaOwner.Id)).Role);
             Assert.Equal(TenantUserRole.Member, (await dbContext.TenantUsers.SingleAsync(item => item.TenantId == alpha.Id && item.UserId == alphaMember.Id)).Role);
             Assert.Equal(TenantUserRole.Guest, (await dbContext.TenantUsers.SingleAsync(item => item.TenantId == alpha.Id && item.UserId == alphaRestricted.Id)).Role);

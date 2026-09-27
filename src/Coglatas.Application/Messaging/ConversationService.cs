@@ -36,7 +36,7 @@ public sealed class ConversationService(
 
     public async Task<Result<ConversationInboxResponse>> ListAsync(ConversationListQuery query, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result<ConversationInboxResponse>.Failure("Authentication is required.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result<ConversationInboxResponse>.Failure("Authentication is required.");
         if (!Enum.IsDefined(query.View)) return Result<ConversationInboxResponse>.Failure("Inbox view is invalid.");
         var inbox = await messaging.ListInboxForUserAsync(
             userId,
@@ -102,7 +102,7 @@ public sealed class ConversationService(
 
     public async Task<Result<IReadOnlyList<ConversationRecipientResponse>>> ListRecipientsAsync(string? query, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<IReadOnlyList<ConversationRecipientResponse>>.Failure("Authentication is required.");
         }
@@ -116,7 +116,7 @@ public sealed class ConversationService(
 
     public async Task<Result<ConversationDetailResponse>> CreateDirectAsync(CreateDirectConversationRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<ConversationDetailResponse>.Failure("Authentication is required.");
         }
@@ -156,7 +156,7 @@ public sealed class ConversationService(
 
     public async Task<Result<ConversationDetailResponse>> CreateAsync(CreateConversationRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result<ConversationDetailResponse>.Failure("Authentication is required.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result<ConversationDetailResponse>.Failure("Authentication is required.");
 
         if (!IsSupportedMvpType(request.Type))
         {
@@ -276,7 +276,7 @@ public sealed class ConversationService(
 
     public async Task<Result<ConversationDetailResponse>> GetAsync(Guid conversationId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result<ConversationDetailResponse>.Failure("Conversation not found.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result<ConversationDetailResponse>.Failure("Conversation not found.");
         if (!await authorization.CanViewConversation(userId, conversationId, cancellationToken))
         {
             return await DenyAsync<ConversationDetailResponse>(userId, "ConversationAccessDenied", "Conversation", conversationId, "Conversation not found.", cancellationToken);
@@ -288,7 +288,7 @@ public sealed class ConversationService(
 
     public async Task<Result<ConversationDetailResponse>> UpdateAsync(Guid conversationId, UpdateConversationRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result<ConversationDetailResponse>.Failure("You are not allowed to manage this conversation.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result<ConversationDetailResponse>.Failure("You are not allowed to manage this conversation.");
         if (!await authorization.CanManageConversation(userId, conversationId, cancellationToken))
         {
             return await DenyAsync<ConversationDetailResponse>(userId, "ConversationManageDenied", "Conversation", conversationId, "You are not allowed to manage this conversation.", cancellationToken);
@@ -303,7 +303,7 @@ public sealed class ConversationService(
 
     public async Task<Result> LeaveAsync(Guid conversationId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result.Failure("Authentication is required.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result.Failure("Authentication is required.");
         var member = await messaging.GetMemberAsync(conversationId, userId, cancellationToken);
         if (member is null) return Result.Failure("Conversation not found.");
         member.LeftAt = clock.UtcNow;
@@ -314,7 +314,7 @@ public sealed class ConversationService(
 
     public async Task<Result<IReadOnlyList<ConversationMemberResponse>>> ListMembersAsync(Guid conversationId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result<IReadOnlyList<ConversationMemberResponse>>.Failure("Conversation not found.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result<IReadOnlyList<ConversationMemberResponse>>.Failure("Conversation not found.");
         if (!await authorization.CanViewConversation(userId, conversationId, cancellationToken))
         {
             return await DenyAsync<IReadOnlyList<ConversationMemberResponse>>(userId, "ConversationAccessDenied", "Conversation", conversationId, "Conversation not found.", cancellationToken);
@@ -326,7 +326,7 @@ public sealed class ConversationService(
 
     public async Task<Result<ConversationMemberResponse>> AddMemberAsync(Guid conversationId, AddConversationMemberRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result<ConversationMemberResponse>.Failure("You are not allowed to manage this conversation.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result<ConversationMemberResponse>.Failure("You are not allowed to manage this conversation.");
         if (!await authorization.CanManageConversation(userId, conversationId, cancellationToken))
         {
             return await DenyAsync<ConversationMemberResponse>(userId, "ConversationManageDenied", "Conversation", conversationId, "You are not allowed to manage this conversation.", cancellationToken);
@@ -361,7 +361,7 @@ public sealed class ConversationService(
 
     public async Task<Result> RemoveMemberAsync(Guid conversationId, Guid removeUserId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result.Failure("You are not allowed to manage this conversation.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result.Failure("You are not allowed to manage this conversation.");
         if (!await authorization.CanManageConversation(userId, conversationId, cancellationToken))
         {
             return await DenyAsync(userId, "ConversationManageDenied", "Conversation", conversationId, "You are not allowed to manage this conversation.", cancellationToken);
@@ -379,7 +379,7 @@ public sealed class ConversationService(
 
     public async Task<Result<PagedResponse<MessageResponse>>> ListMessagesAsync(Guid conversationId, MessageListQuery query, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result<PagedResponse<MessageResponse>>.Failure("Conversation not found.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result<PagedResponse<MessageResponse>>.Failure("Conversation not found.");
         if (!await authorization.CanViewConversation(userId, conversationId, cancellationToken))
         {
             return await DenyAsync<PagedResponse<MessageResponse>>(userId, "ConversationAccessDenied", "Conversation", conversationId, "Conversation not found.", cancellationToken);
@@ -442,7 +442,7 @@ public sealed class ConversationService(
         Guid? threadRootMessageId,
         CancellationToken cancellationToken)
     {
-        if (!TryCurrentUser(out var userId)) return Result<MessageResponse>.Failure("You are not allowed to send messages.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result<MessageResponse>.Failure("You are not allowed to send messages.");
         if (!await authorization.CanSendMessage(userId, conversationId, cancellationToken))
         {
             return await DenyAsync<MessageResponse>(userId, "communication.message_post_denied", "Conversation", conversationId, "You are not allowed to send messages.", cancellationToken, "post_permission_denied");
@@ -733,7 +733,7 @@ public sealed class ConversationService(
         Guid? anchorReplyMessageId = null,
         CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<MessageThreadResponse>.Failure("Message thread not found.");
         }
@@ -835,7 +835,7 @@ public sealed class ConversationService(
         SendThreadMessageRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<ThreadMessageCreatedResponse>.Failure("Message thread not found.");
         }
@@ -912,7 +912,7 @@ public sealed class ConversationService(
 
     public async Task<Result<MessageResponse>> UpdateMessageAsync(Guid messageId, UpdateMessageRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result<MessageResponse>.Failure("You are not allowed to edit this message.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result<MessageResponse>.Failure("You are not allowed to edit this message.");
         if (!await authorization.CanEditMessage(userId, messageId, cancellationToken))
         {
             return await DenyAsync<MessageResponse>(userId, "communication.message_edit_denied", "Message", messageId, "You are not allowed to edit this message.", cancellationToken, "author_required");
@@ -959,7 +959,7 @@ public sealed class ConversationService(
 
     public async Task<Result> DeleteMessageAsync(Guid messageId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result.Failure("You are not allowed to delete this message.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result.Failure("You are not allowed to delete this message.");
         if (!await authorization.CanDeleteMessage(userId, messageId, cancellationToken))
         {
             return await DenyAsync(userId, "communication.message_delete_denied", "Message", messageId, "You are not allowed to delete this message.", cancellationToken, "moderation_permission_denied");
@@ -1004,7 +1004,7 @@ public sealed class ConversationService(
 
     public async Task<Result> ReportMessageAsync(Guid messageId, MessageReportRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result.Failure("You are not allowed to report this message.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result.Failure("You are not allowed to report this message.");
         var message = await messaging.GetMessageAsync(messageId, cancellationToken);
         if (message is null || message.DeletedAt.HasValue || !await authorization.CanViewConversation(userId, message.ConversationId, cancellationToken))
         {
@@ -1028,7 +1028,7 @@ public sealed class ConversationService(
 
     public async Task<Result> ReportConversationAsync(Guid conversationId, ConversationReportRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result.Failure("You are not allowed to report this conversation.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result.Failure("You are not allowed to report this conversation.");
         if (!await authorization.CanViewConversation(userId, conversationId, cancellationToken))
         {
             return await DenyAsync(userId, "communication.message_report_denied", "Conversation", conversationId, "Conversation not found.", cancellationToken, "report_target_not_visible");
@@ -1051,13 +1051,13 @@ public sealed class ConversationService(
 
     public async Task<Result> MarkReadAsync(Guid conversationId, MarkConversationReadRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result.Failure("Conversation not found.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result.Failure("Conversation not found.");
         if (!await authorization.CanViewConversation(userId, conversationId, cancellationToken))
         {
             return await DenyAsync(userId, "ConversationReadDenied", "Conversation", conversationId, "Conversation not found.", cancellationToken, "participant_missing");
         }
 
-        if (!await ValidateReadableConversationMessageAsync(userId, conversationId, request.LastReadMessageId, "cursor_message_denied", cancellationToken))
+        if (!await ValidateReadableConversationMessageAsync(userId, conversationId, request.LastReadMessageId, cancellationToken))
         {
             return await DenyAsync(userId, "ConversationReadDenied", "Conversation", conversationId, "Message not found.", cancellationToken, "cursor_message_denied");
         }
@@ -1106,7 +1106,7 @@ public sealed class ConversationService(
 
     public async Task<Result<ParticipantStateResponse>> GetParticipantStateAsync(Guid conversationId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result<ParticipantStateResponse>.Failure("Conversation not found.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result<ParticipantStateResponse>.Failure("Conversation not found.");
         if (!await authorization.CanViewConversation(userId, conversationId, cancellationToken))
         {
             return await DenyAsync<ParticipantStateResponse>(userId, "ParticipantStateReadDenied", "Conversation", conversationId, "Conversation not found.", cancellationToken, "self_state_only");
@@ -1123,7 +1123,7 @@ public sealed class ConversationService(
 
     public async Task<Result<ParticipantStateResponse>> UpdateParticipantStateAsync(Guid conversationId, UpdateParticipantStateRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result<ParticipantStateResponse>.Failure("Conversation not found.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result<ParticipantStateResponse>.Failure("Conversation not found.");
         if (!await authorization.CanViewConversation(userId, conversationId, cancellationToken))
         {
             return await DenyAsync<ParticipantStateResponse>(userId, "ParticipantStateUpdateDenied", "Conversation", conversationId, "Conversation not found.", cancellationToken, "self_state_only");
@@ -1135,8 +1135,8 @@ public sealed class ConversationService(
             return await DenyAsync<ParticipantStateResponse>(userId, "ParticipantStateUpdateDenied", "Conversation", conversationId, "Conversation not found.", cancellationToken, "participant_removed");
         }
 
-        if (!await ValidateReadableConversationMessageAsync(userId, conversationId, request.LastReadMessageId, "cursor_message_denied", cancellationToken) ||
-            !await ValidateReadableConversationMessageAsync(userId, conversationId, request.UnreadCursorMessageId, "cursor_message_denied", cancellationToken))
+        if (!await ValidateReadableConversationMessageAsync(userId, conversationId, request.LastReadMessageId, cancellationToken) ||
+            !await ValidateReadableConversationMessageAsync(userId, conversationId, request.UnreadCursorMessageId, cancellationToken))
         {
             return await DenyAsync<ParticipantStateResponse>(userId, "ParticipantStateUpdateDenied", "Conversation", conversationId, "Message not found.", cancellationToken, "cursor_message_denied");
         }
@@ -1198,7 +1198,7 @@ public sealed class ConversationService(
 
     private async Task<Result<ConversationDetailResponse>> SetConversationLockAsync(Guid conversationId, bool isLocked, string? reasonCode, CancellationToken cancellationToken)
     {
-        if (!TryCurrentUser(out var userId)) return Result<ConversationDetailResponse>.Failure("You are not allowed to manage this conversation.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result<ConversationDetailResponse>.Failure("You are not allowed to manage this conversation.");
         if (!await authorization.CanModerateConversation(userId, conversationId, cancellationToken))
         {
             return await DenyAsync<ConversationDetailResponse>(userId, isLocked ? "communication.conversation_lock_denied" : "communication.conversation_unlock_denied", "Conversation", conversationId, "You are not allowed to manage this conversation.", cancellationToken, "moderation_permission_denied");
@@ -1219,7 +1219,6 @@ public sealed class ConversationService(
         return Result<ConversationDetailResponse>.Success(await ToDetailAsync(conversation, cancellationToken));
     }
 
-    private bool TryCurrentUser(out Guid userId) { userId = currentUser.UserId ?? Guid.Empty; return currentUser.IsAuthenticated && currentUser.UserId.HasValue; }
     private static bool IsSupportedMvpType(ConversationType type) => type is ConversationType.DirectMessage or ConversationType.ProjectChannel or ConversationType.Thread;
 
     private async Task<bool> CanBindConversationToProjectAsync(
@@ -1243,7 +1242,7 @@ public sealed class ConversationService(
         }
 
         var parent = await messaging.GetConversationAsync(request.ParentConversationId.Value, cancellationToken);
-        if (parent is null || parent.Type == ConversationType.Thread && parent.ParentConversationId is null)
+        if (parent is null || parent is { Type: ConversationType.Thread, ParentConversationId: null })
         {
             return Result<ConversationDetailResponse>.Failure("Parent conversation not found.");
         }
@@ -1328,7 +1327,7 @@ public sealed class ConversationService(
 
     public async Task<Result<ConversationDetailResponse>> ArchiveAsync(Guid conversationId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId)) return Result<ConversationDetailResponse>.Failure("You are not allowed to manage this conversation.");
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId)) return Result<ConversationDetailResponse>.Failure("You are not allowed to manage this conversation.");
         if (!await authorization.CanModerateConversation(userId, conversationId, cancellationToken))
         {
             return await DenyAsync<ConversationDetailResponse>(userId, "communication.conversation_archive_denied", "Conversation", conversationId, "You are not allowed to manage this conversation.", cancellationToken, "moderation_permission_denied");
@@ -1485,7 +1484,7 @@ public sealed class ConversationService(
             member.UpdatedAt);
     }
 
-    private async Task<bool> ValidateReadableConversationMessageAsync(Guid actorUserId, Guid conversationId, Guid? messageId, string reasonCode, CancellationToken cancellationToken)
+    private async Task<bool> ValidateReadableConversationMessageAsync(Guid actorUserId, Guid conversationId, Guid? messageId, CancellationToken cancellationToken)
     {
         if (!messageId.HasValue)
         {
@@ -1692,7 +1691,7 @@ public sealed class ConversationService(
 
     private Task<Result<Guid>> EnqueueMessagingEventAsync(string eventType, string aggregateType, Guid aggregateId, long? aggregateVersion, Guid actorUserId, string? causationId, JsonElement payload, IReadOnlyCollection<RealtimeRoutingTarget> routingTargets, CancellationToken cancellationToken)
     {
-        var tenantId = conversationTenantId();
+        var tenantId = ConversationTenantId();
         if (tenantId == Guid.Empty)
         {
             return Task.FromResult(Result<Guid>.Failure("A matching active tenant context is required."));
@@ -1700,5 +1699,8 @@ public sealed class ConversationService(
         return outbox.EnqueueAsync(new DurableEventEnvelope(Guid.NewGuid(), eventType, RealtimeEventCatalog.PayloadSchemaVersion1, clock.UtcNow, tenantId, aggregateType, aggregateId, aggregateVersion, new RealtimeActor("User", actorUserId), null, causationId, payload), routingTargets, cancellationToken);
     }
 
-    private Guid conversationTenantId() => currentTenant.IsAvailable && !currentTenant.IsPlatformScope ? currentTenant.TenantId : Guid.Empty;
+    private Guid ConversationTenantId() =>
+        currentTenant is { IsAvailable: true, IsPlatformScope: false }
+            ? currentTenant.TenantId
+            : Guid.Empty;
 }

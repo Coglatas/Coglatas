@@ -24,6 +24,7 @@ jobs:
       QODANA_UNRESOLVED_FILE_THRESHOLD: "0"
       # Existing non-critical debt may remain visible, but Critical findings do not.
       QODANA_CRITICAL_THRESHOLD: "0"
+      QODANA_RULE_BASELINE_PATH: scripts/quality/qodana-rule-baseline.json
 
     steps:
       - name: Repair previous Docker workspace ownership
@@ -71,6 +72,7 @@ jobs:
             qodana.yaml \
             scripts/quality/qodana-bootstrap.sh \
             scripts/quality/check-qodana-project-model.mjs \
+            scripts/quality/qodana-rule-baseline.json \
             scripts/ci/configure-persistent-caches.sh \
             scripts/ci/cleanup-qodana-containers.sh; do
             restore_from_base "$path"
@@ -152,7 +154,10 @@ jobs:
         env:
           QODANA_POLICY_SHA: ${{ github.event.pull_request.base.sha }}
         shell: bash
-        run: git restore --source="$QODANA_POLICY_SHA" --staged --worktree -- scripts/quality/check-qodana-project-model.mjs
+        run: |
+          git restore --source="$QODANA_POLICY_SHA" --staged --worktree -- \
+            scripts/quality/check-qodana-project-model.mjs \
+            scripts/quality/qodana-rule-baseline.json
 
       - name: Guard Qodana findings and project model
         if: steps.qodana_scan.outcome == 'success'

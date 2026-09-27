@@ -30,10 +30,10 @@ public sealed class ProjectService(
     private const int MaximumGanttItems = 500;
     private const int MaximumGanttDependencies = 2_000;
 
-    private Task<bool>? taskDomainV1Enabled;
+    private Task<bool>? _taskDomainV1Enabled;
     public async Task<Result<PagedResponse<ProjectResponse>>> ListAsync(ProjectListQuery query, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<PagedResponse<ProjectResponse>>.Failure("Authentication is required.");
         }
@@ -95,7 +95,7 @@ public sealed class ProjectService(
 
     public async Task<Result<ProjectResponse>> GetAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId) || !await projectAuthorization.CanViewProject(userId, projectId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await projectAuthorization.CanViewProject(userId, projectId, cancellationToken))
         {
             return ProjectNotFound<ProjectResponse>();
         }
@@ -134,7 +134,7 @@ public sealed class ProjectService(
 
     public async Task<Result<ProjectResponse>> UpdateAsync(Guid projectId, UpdateProjectRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId) || !await projectAuthorization.CanManageProject(userId, projectId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await projectAuthorization.CanManageProject(userId, projectId, cancellationToken))
         {
             return Result<ProjectResponse>.Failure("You are not allowed to manage this project.");
         }
@@ -236,7 +236,7 @@ public sealed class ProjectService(
 
     public async Task<Result> ArchiveAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result.Failure("You are not allowed to manage this project.");
         }
@@ -275,7 +275,7 @@ public sealed class ProjectService(
 
     public async Task<Result> RestoreAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result.Failure("You are not allowed to manage this project.");
         }
@@ -321,7 +321,7 @@ public sealed class ProjectService(
 
     public async Task<Result<IReadOnlyList<ProjectMemberResponse>>> ListMembersAsync(Guid projectId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId) || !await projectAuthorization.CanViewProject(userId, projectId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await projectAuthorization.CanViewProject(userId, projectId, cancellationToken))
         {
             return Result<IReadOnlyList<ProjectMemberResponse>>.Failure("Project not found.");
         }
@@ -332,7 +332,7 @@ public sealed class ProjectService(
 
     public async Task<Result<ProjectMemberResponse>> AddMemberAsync(Guid projectId, AddProjectMemberRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var actorUserId) || !await projectAuthorization.CanManageProject(actorUserId, projectId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var actorUserId) || !await projectAuthorization.CanManageProject(actorUserId, projectId, cancellationToken))
         {
             return Result<ProjectMemberResponse>.Failure("You are not allowed to manage project members.");
         }
@@ -375,7 +375,7 @@ public sealed class ProjectService(
 
     public async Task<Result<ProjectMemberResponse>> UpdateMemberAsync(Guid projectId, Guid userId, UpdateProjectMemberRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var actorUserId) || !await projectAuthorization.CanManageProject(actorUserId, projectId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var actorUserId) || !await projectAuthorization.CanManageProject(actorUserId, projectId, cancellationToken))
         {
             return Result<ProjectMemberResponse>.Failure("You are not allowed to manage project members.");
         }
@@ -401,7 +401,7 @@ public sealed class ProjectService(
 
     public async Task<Result> RemoveMemberAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var actorUserId) || !await projectAuthorization.CanManageProject(actorUserId, projectId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var actorUserId) || !await projectAuthorization.CanManageProject(actorUserId, projectId, cancellationToken))
         {
             return Result.Failure("You are not allowed to manage project members.");
         }
@@ -427,7 +427,7 @@ public sealed class ProjectService(
 
     public async Task<Result<PagedResponse<MilestoneResponse>>> ListMilestonesAsync(Guid projectId, ProjectChildListQuery query, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId) || !await projectAuthorization.CanViewProject(userId, projectId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await projectAuthorization.CanViewProject(userId, projectId, cancellationToken))
         {
             return Result<PagedResponse<MilestoneResponse>>.Failure("Project not found.");
         }
@@ -444,7 +444,7 @@ public sealed class ProjectService(
     public async Task<Result<MilestoneResponse>> GetMilestoneAsync(Guid milestoneId, CancellationToken cancellationToken = default)
     {
         var milestone = await projects.GetMilestoneAsync(milestoneId, cancellationToken);
-        if (milestone is null || milestone.DeletedAt.HasValue || !TryCurrentUser(out var userId) ||
+        if (milestone is null || milestone.DeletedAt.HasValue || !CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) ||
             !await projectAuthorization.CanViewProject(userId, milestone.ProjectId, cancellationToken))
         {
             return Result<MilestoneResponse>.Failure("Milestone not found.");
@@ -455,7 +455,7 @@ public sealed class ProjectService(
 
     public async Task<Result<MilestoneResponse>> CreateMilestoneAsync(Guid projectId, CreateMilestoneRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId) || !await projectAuthorization.CanManageProject(userId, projectId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await projectAuthorization.CanManageProject(userId, projectId, cancellationToken))
         {
             return Result<MilestoneResponse>.Failure("You are not allowed to manage this project.");
         }
@@ -504,7 +504,7 @@ public sealed class ProjectService(
             return Result<MilestoneResponse>.Failure("Milestone not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await projectAuthorization.CanManageProject(userId, milestone.ProjectId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await projectAuthorization.CanManageProject(userId, milestone.ProjectId, cancellationToken))
         {
             return Result<MilestoneResponse>.Failure("You are not allowed to manage this project.");
         }
@@ -577,7 +577,7 @@ public sealed class ProjectService(
             return Result.Failure("Milestone not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await projectAuthorization.CanManageProject(userId, milestone.ProjectId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await projectAuthorization.CanManageProject(userId, milestone.ProjectId, cancellationToken))
         {
             return Result.Failure("You are not allowed to manage this project.");
         }
@@ -600,7 +600,7 @@ public sealed class ProjectService(
 
     public async Task<Result<PagedResponse<TaskItemResponse>>> ListTasksAsync(Guid projectId, TaskListQuery query, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId) || !await projectAuthorization.CanViewProject(userId, projectId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await projectAuthorization.CanViewProject(userId, projectId, cancellationToken))
         {
             return Result<PagedResponse<TaskItemResponse>>.Failure("Project not found.");
         }
@@ -654,7 +654,7 @@ public sealed class ProjectService(
 
     public async Task<Result<TaskItemResponse>> CreateTaskAsync(Guid projectId, CreateTaskItemRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId) || !await taskAuthorization.CanCreateTask(userId, projectId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await taskAuthorization.CanCreateTask(userId, projectId, cancellationToken))
         {
             return Result<TaskItemResponse>.Failure("You are not allowed to create tasks.");
         }
@@ -712,7 +712,7 @@ public sealed class ProjectService(
     public async Task<Result<TaskItemResponse>> GetTaskAsync(Guid taskItemId, CancellationToken cancellationToken = default)
     {
         var task = await projects.GetTaskAsync(taskItemId, cancellationToken);
-        if (task is null || task.DeletedAt.HasValue || !TryCurrentUser(out var userId) ||
+        if (task is null || task.DeletedAt.HasValue || !CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) ||
             !await projectAuthorization.CanViewProject(userId, task.ProjectId, cancellationToken))
         {
             return Result<TaskItemResponse>.Failure("Task not found.");
@@ -729,7 +729,7 @@ public sealed class ProjectService(
             return Result<TaskItemResponse>.Failure("Task not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await taskAuthorization.CanUpdateTask(userId, taskItemId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await taskAuthorization.CanUpdateTask(userId, taskItemId, cancellationToken))
         {
             return Result<TaskItemResponse>.Failure("You are not allowed to update this task.");
         }
@@ -775,7 +775,7 @@ public sealed class ProjectService(
             return Result.Failure("Task not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await taskAuthorization.CanUpdateTask(userId, taskItemId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await taskAuthorization.CanUpdateTask(userId, taskItemId, cancellationToken))
         {
             return Result.Failure("You are not allowed to update this task.");
         }
@@ -793,7 +793,7 @@ public sealed class ProjectService(
     public async Task<Result<IReadOnlyList<TaskAssignmentResponse>>> ListAssignmentsAsync(Guid taskItemId, CancellationToken cancellationToken = default)
     {
         var task = await projects.GetTaskAsync(taskItemId, cancellationToken);
-        if (task is null || !TryCurrentUser(out var userId) || !await projectAuthorization.CanViewProject(userId, task.ProjectId, cancellationToken))
+        if (task is null || !CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await projectAuthorization.CanViewProject(userId, task.ProjectId, cancellationToken))
         {
             return Result<IReadOnlyList<TaskAssignmentResponse>>.Failure("Task not found.");
         }
@@ -810,7 +810,7 @@ public sealed class ProjectService(
             return Result<TaskAssignmentResponse>.Failure("Task not found.");
         }
 
-        if (!TryCurrentUser(out var actorUserId) || !await taskAuthorization.CanAssignTask(actorUserId, taskItemId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var actorUserId) || !await taskAuthorization.CanAssignTask(actorUserId, taskItemId, cancellationToken))
         {
             return Result<TaskAssignmentResponse>.Failure("You are not allowed to assign this task.");
         }
@@ -860,10 +860,9 @@ public sealed class ProjectService(
             existing,
             collaborators,
             request.UserId,
-            actorUserId,
-            PreviousRole: null,
-            NewRole: request.Role,
-            AssignmentId: null);
+            previousRole: null,
+            newRole: request.Role,
+            assignmentId: null);
         if (planResult.Error is not null)
         {
             return Result<TaskAssignmentResponse>.Failure(planResult.Error);
@@ -892,7 +891,7 @@ public sealed class ProjectService(
             cancellationToken);
         if (save != TaskCommandSaveResult.Saved)
             return save.Result == TaskCommandSaveResult.UniqueConflict
-                ? (IsAssignmentIdentityConstraint(save.ConstraintName)
+                ? (IsassignmentIdentityConstraint(save.ConstraintName)
                     ? AssignmentConflict<TaskAssignmentResponse>()
                     : GeneralTaskConflict<TaskAssignmentResponse>())
                 : TaskConflict<TaskAssignmentResponse>();
@@ -907,7 +906,7 @@ public sealed class ProjectService(
             return Result<TaskAssignmentResponse>.Failure("Assignment not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await taskAuthorization.CanAssignTask(userId, assignment.TaskItemId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await taskAuthorization.CanAssignTask(userId, assignment.TaskItemId, cancellationToken))
         {
             return Result<TaskAssignmentResponse>.Failure("You are not allowed to assign this task.");
         }
@@ -960,7 +959,6 @@ public sealed class ProjectService(
             existing,
             collaborators,
             assignment.UserId,
-            userId,
             previousRole,
             request.Role,
             assignment.Id);
@@ -982,7 +980,7 @@ public sealed class ProjectService(
             cancellationToken);
         if (save != TaskCommandSaveResult.Saved)
             return save.Result == TaskCommandSaveResult.UniqueConflict
-                ? (IsAssignmentIdentityConstraint(save.ConstraintName)
+                ? (IsassignmentIdentityConstraint(save.ConstraintName)
                     ? AssignmentConflict<TaskAssignmentResponse>()
                     : GeneralTaskConflict<TaskAssignmentResponse>())
                 : TaskConflict<TaskAssignmentResponse>();
@@ -997,7 +995,7 @@ public sealed class ProjectService(
             return Result.Failure("Assignment not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await taskAuthorization.CanAssignTask(userId, assignment.TaskItemId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await taskAuthorization.CanAssignTask(userId, assignment.TaskItemId, cancellationToken))
         {
             return Result.Failure("You are not allowed to assign this task.");
         }
@@ -1022,9 +1020,8 @@ public sealed class ProjectService(
             existing,
             collaborators,
             assignment.UserId,
-            userId,
             assignment.Role,
-            NewRole: null,
+            newRole: null,
             assignment.Id);
         if (planResult.Error is not null)
         {
@@ -1046,7 +1043,7 @@ public sealed class ProjectService(
 
     public async Task<Result<IReadOnlyList<TaskDependencyResponse>>> ListDependenciesAsync(Guid taskItemId, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
             return DependencyFailure<IReadOnlyList<TaskDependencyResponse>>(
                 "TASK_DEPENDENCY_AUTHENTICATION_REQUIRED",
                 "Authentication is required.");
@@ -1109,7 +1106,7 @@ public sealed class ProjectService(
 
     public async Task<Result<TaskDependencyResponse>> AddDependencyAsync(Guid taskItemId, AddTaskDependencyRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
             return DependencyFailure<TaskDependencyResponse>(
                 "TASK_DEPENDENCY_AUTHENTICATION_REQUIRED",
                 "Authentication is required.");
@@ -1297,7 +1294,7 @@ public sealed class ProjectService(
         long expectedVersion,
         CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
             return DependencyFailure(
                 "TASK_DEPENDENCY_AUTHENTICATION_REQUIRED",
                 "Authentication is required.");
@@ -1415,7 +1412,7 @@ public sealed class ProjectService(
 
     public async Task<Result<PagedResponse<CommentResponse>>> ListCommentsAsync(CommentTargetType targetType, Guid targetId, ProjectChildListQuery query, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId) || !await commentAuthorization.CanCommentOnTarget(userId, targetType, targetId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await commentAuthorization.CanCommentOnTarget(userId, targetType, targetId, cancellationToken))
         {
             return Result<PagedResponse<CommentResponse>>.Failure("Comment target not found.");
         }
@@ -1431,7 +1428,7 @@ public sealed class ProjectService(
 
     public async Task<Result<CommentResponse>> AddCommentAsync(CreateCommentRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId) || !await commentAuthorization.CanCommentOnTarget(userId, request.TargetType, request.TargetId, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await commentAuthorization.CanCommentOnTarget(userId, request.TargetType, request.TargetId, cancellationToken))
         {
             return Result<CommentResponse>.Failure("Comment target not found.");
         }
@@ -1475,7 +1472,7 @@ public sealed class ProjectService(
             return Result<CommentResponse>.Failure("Comment body is required.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await CanModifyCommentAsync(userId, comment, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await CanModifyCommentAsync(userId, comment, cancellationToken))
         {
             return Result<CommentResponse>.Failure("You are not allowed to edit this comment.");
         }
@@ -1494,7 +1491,7 @@ public sealed class ProjectService(
             return Result.Failure("Comment not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await CanModifyCommentAsync(userId, comment, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await CanModifyCommentAsync(userId, comment, cancellationToken))
         {
             return Result.Failure("You are not allowed to delete this comment.");
         }
@@ -1502,27 +1499,6 @@ public sealed class ProjectService(
         comment.MarkDeleted(clock.UtcNow);
         await AuditAsync(userId, "CommentDeleted", "Comment", comment.Id, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return Result.Success();
-    }
-
-    private async Task<Result> ValidateProjectParentAsync(Guid workspaceId, Guid groupId, CancellationToken cancellationToken)
-    {
-        if (await workspaces.GetByIdAsync(workspaceId, cancellationToken) is null)
-        {
-            return Result.Failure("Workspace not found.");
-        }
-
-        if (groupId == Guid.Empty)
-        {
-            return Result.Failure("Project group is required.");
-        }
-
-        var group = await groups.GetByIdAsync(groupId, cancellationToken);
-        if (group is null || group.WorkspaceId != workspaceId || group.Status != GroupStatus.Active)
-        {
-            return Result.Failure("Group must belong to the selected workspace.");
-        }
-
         return Result.Success();
     }
 
@@ -1675,12 +1651,6 @@ public sealed class ProjectService(
         return null;
     }
 
-    private bool TryCurrentUser(out Guid userId)
-    {
-        userId = currentUser.UserId ?? Guid.Empty;
-        return currentUser.IsAuthenticated && currentUser.UserId.HasValue;
-    }
-
     private async Task<bool> SaveMilestoneMutationAsync(CancellationToken cancellationToken)
     {
         var save = await taskUnitOfWork.SaveTaskCommandAsync(cancellationToken);
@@ -1750,14 +1720,18 @@ public sealed class ProjectService(
 
     private static bool IsRecoveryStateConsistent(Project project, ProjectStatus status) => status switch
     {
-        ProjectStatus.Planning =>
-            project.ActivationState == ProjectActivationState.NeverActivated &&
-            !project.ActivatedAtUtc.HasValue &&
-            !project.ActivationVersion.HasValue,
-        ProjectStatus.Active or ProjectStatus.Review or ProjectStatus.Completed =>
-            project.ActivationState == ProjectActivationState.Activated &&
-            project.ActivatedAtUtc.HasValue &&
-            project.ActivationVersion is > 0,
+        ProjectStatus.Planning => project is
+        {
+            ActivationState: ProjectActivationState.NeverActivated,
+            ActivatedAtUtc: null,
+            ActivationVersion: null
+        },
+        ProjectStatus.Active or ProjectStatus.Review or ProjectStatus.Completed => project is
+        {
+            ActivationState: ProjectActivationState.Activated,
+            ActivatedAtUtc: not null,
+            ActivationVersion: > 0
+        },
         _ => false
     };
 
@@ -1773,7 +1747,6 @@ public sealed class ProjectService(
             ProjectStatus.Review => next is ProjectStatus.Active or ProjectStatus.Completed or ProjectStatus.Suspended or ProjectStatus.Archived,
             ProjectStatus.Completed => next is ProjectStatus.Archived,
             ProjectStatus.Suspended => next is ProjectStatus.Archived,
-            ProjectStatus.Archived => false,
             _ => false
         };
     }
@@ -1870,12 +1843,15 @@ public sealed class ProjectService(
     }
 
     private static bool IsCanonicalActivationCandidate(Project project) =>
-        project.VersionNo > 0 &&
-        project.Visibility.HasValue &&
-        project.ActivationState == ProjectActivationState.NeverActivated &&
-        project.Status == ProjectStatus.Planning &&
-        !project.ActivatedAtUtc.HasValue &&
-        !project.ActivationVersion.HasValue;
+        project is
+        {
+            VersionNo: > 0,
+            Visibility: not null,
+            ActivationState: ProjectActivationState.NeverActivated,
+            Status: ProjectStatus.Planning,
+            ActivatedAtUtc: null,
+            ActivationVersion: null
+        };
 
     private static ProjectMemberResponse ToProjectMember(ProjectMember member)
     {
@@ -1897,9 +1873,11 @@ public sealed class ProjectService(
     {
         var canEdit = await taskAuthorization.CanUpdateTask(userId, task.Id, cancellationToken);
         var canAssign = await taskAuthorization.CanAssignTask(userId, task.Id, cancellationToken);
-        var derived = derivedOverride;
-        if (derived is null)
-            derived = ParentTaskDerivedValuesCalculator.Calculate(task, await projects.ListTasksAsync(task.ProjectId, cancellationToken), CategoryOf);
+        var derived = derivedOverride ??
+            ParentTaskDerivedValuesCalculator.Calculate(
+                task,
+                await projects.ListTasksAsync(task.ProjectId, cancellationToken),
+                CategoryOf);
         var timeZone = timeZoneOverride ?? (timeZones is null
             ? TimeZoneInfo.Utc
             : await timeZones.ResolveAsync(task.TenantId, task.WorkspaceId, cancellationToken));
@@ -1961,8 +1939,8 @@ public sealed class ProjectService(
             return null;
         }
 
-        taskDomainV1Enabled ??= featureFlags.IsEnabledAsync(FeatureKeys.TasksDomainV1, cancellationToken);
-        return await taskDomainV1Enabled
+        _taskDomainV1Enabled ??= featureFlags.IsEnabledAsync(FeatureKeys.TasksDomainV1, cancellationToken);
+        return await _taskDomainV1Enabled
             ? task.VersionNo.ToString(System.Globalization.CultureInfo.InvariantCulture)
             : null;
     }
@@ -1977,12 +1955,11 @@ public sealed class ProjectService(
         IReadOnlyList<TaskAssignment> assignments,
         IReadOnlyList<WorkItemCollaborator> collaborators,
         Guid relationshipUserId,
-        Guid actorUserId,
-        TaskAssignmentRole? PreviousRole,
-        TaskAssignmentRole? NewRole,
-        Guid? AssignmentId)
+        TaskAssignmentRole? previousRole,
+        TaskAssignmentRole? newRole,
+        Guid? assignmentId)
     {
-        if (NewRole == TaskAssignmentRole.Owner && PreviousRole != TaskAssignmentRole.Owner)
+        if (newRole == TaskAssignmentRole.Owner && previousRole != TaskAssignmentRole.Owner)
         {
             return CompatibilityRelationshipPlanResult.Failure(
                 "TASK_ASSIGNMENT_ROLE_UNSUPPORTED",
@@ -1998,11 +1975,11 @@ public sealed class ProjectService(
         var addCollaborator = false;
 
         bool HasOtherRole(TaskAssignmentRole role) => assignments.Any(item =>
-            item.Id != AssignmentId && item.Role == role);
+            item.Id != assignmentId && item.Role == role);
 
-        if (PreviousRole == NewRole)
+        if (previousRole == newRole)
         {
-            switch (PreviousRole)
+            switch (previousRole)
             {
                 case TaskAssignmentRole.Assignee:
                     if (HasOtherRole(TaskAssignmentRole.Assignee) ||
@@ -2036,7 +2013,7 @@ public sealed class ProjectService(
         }
         else
         {
-            switch (PreviousRole)
+            switch (previousRole)
             {
                 case TaskAssignmentRole.Assignee:
                     if (originalPrimaryAssigneeUserId == relationshipUserId)
@@ -2049,7 +2026,7 @@ public sealed class ProjectService(
                         }
                         finalPrimaryAssigneeUserId = null;
                     }
-                    else if (NewRole.HasValue)
+                    else if (newRole.HasValue)
                     {
                         return CompatibilityRelationshipPlanResult.Failure(
                             "TASK_ASSIGNMENT_AMBIGUOUS",
@@ -2068,7 +2045,7 @@ public sealed class ProjectService(
                         }
                         finalReviewerUserId = null;
                     }
-                    else if (NewRole.HasValue)
+                    else if (newRole.HasValue)
                     {
                         return CompatibilityRelationshipPlanResult.Failure(
                             "TASK_ASSIGNMENT_AMBIGUOUS",
@@ -2078,7 +2055,7 @@ public sealed class ProjectService(
 
                 case TaskAssignmentRole.Support:
                     collaboratorToRemove = collaborators.FirstOrDefault(item => item.UserId == relationshipUserId);
-                    if (collaboratorToRemove is null && NewRole.HasValue)
+                    if (collaboratorToRemove is null && newRole.HasValue)
                     {
                         return CompatibilityRelationshipPlanResult.Failure(
                             "TASK_ASSIGNMENT_AMBIGUOUS",
@@ -2091,7 +2068,7 @@ public sealed class ProjectService(
                     break;
             }
 
-            switch (NewRole)
+            switch (newRole)
             {
                 case TaskAssignmentRole.Assignee:
                     if (HasOtherRole(TaskAssignmentRole.Assignee))
@@ -2158,7 +2135,7 @@ public sealed class ProjectService(
         var collaboratorChanged = collaboratorToRemove is not null || addCollaborator;
         var canonicalChanged = primaryChanged || reviewerChanged || collaboratorChanged;
         var semanticChange = canonicalChanged
-            ? CompatibilityAssignmentSemanticChange(NewRole ?? PreviousRole)
+            ? CompatibilityAssignmentSemanticChange(newRole ?? previousRole)
             : null;
         var changedFields = new List<string>();
         if (primaryChanged) changedFields.Add("primaryAssigneeUserId");
@@ -2257,12 +2234,12 @@ public sealed class ProjectService(
             affectedUserIds,
             cancellationToken);
 
-        if (plan.CanonicalChanged && plan.SemanticChange is not null)
+        if (plan is { CanonicalChanged: true, SemanticChange: { } semanticChange })
         {
             await invalidations.TaskAssignmentChangedAsync(
                 task,
                 actorUserId,
-                plan.SemanticChange,
+                semanticChange,
                 plan.AffectedUserIds,
                 cancellationToken);
         }
@@ -2466,7 +2443,7 @@ public sealed class ProjectService(
     // This is the generated PostgreSQL index name for the unique TaskAssignment
     // identity configured in TaskAssignmentConfiguration.  Do not map other
     // database unique constraints to the assignment-specific error.
-    private static bool IsAssignmentIdentityConstraint(string? constraintName) =>
+    private static bool IsassignmentIdentityConstraint(string? constraintName) =>
         string.Equals(constraintName, "IX_task_assignments_TenantId_TaskItemId_UserId_Role", StringComparison.Ordinal);
 
     private static TaskDependencyResponse ToDependency(
@@ -2484,8 +2461,7 @@ public sealed class ProjectService(
                     GanttWarningSeverity.Warning,
                     "Dependency",
                     dependency.Id,
-                    "type",
-                    false));
+                    "type"));
         }
         return new TaskDependencyResponse(
             dependency.Id,
@@ -2533,8 +2509,7 @@ public sealed class ProjectService(
                 GanttWarningSeverity.Warning,
                 "Dependency",
                 dependency.Id,
-                "plannedStartDate",
-                false)
+                "plannedStartDate")
         ];
     }
 

@@ -34,8 +34,8 @@ public sealed class AnnouncementService(
             return Result<PagedResponse<AnnouncementListItemResponse>>.Failure("Authentication is required.");
         }
 
-        var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, 1, MaxPageSize);
+        var page = NormalizePage(query.Page, pageSize);
         var normalizedQuery = query with { Page = page, PageSize = pageSize };
         var result = await announcements.ListVisibleAsync(userId, await IsSystemAdminAsync(userId, cancellationToken), normalizedQuery, cancellationToken);
         var items = new List<AnnouncementListItemResponse>();
@@ -54,7 +54,7 @@ public sealed class AnnouncementService(
             return Result<AnnouncementDetailResponse>.Failure("Authentication is required.");
         }
 
-        var validation = await ValidateRequestAsync(request.Title, request.Body, request.PublishedAt ?? clock.UtcNow, request.ExpiresAt, cancellationToken);
+        var validation = await ValidateRequestAsync(request.Title, request.Body, request.PublishedAt ?? clock.UtcNow, request.ExpiresAt);
         if (!validation.IsSuccess)
         {
             return Result<AnnouncementDetailResponse>.Failure(validation.Error!);
@@ -130,7 +130,7 @@ public sealed class AnnouncementService(
 
         var nextPublished = request.PublishedAt ?? announcement.PublishedAt;
         var nextExpires = request.ExpiresAt ?? announcement.ExpiresAt;
-        var validation = await ValidateRequestAsync(request.Title ?? announcement.Title, request.Body ?? announcement.Body, nextPublished, nextExpires, cancellationToken);
+        var validation = await ValidateRequestAsync(request.Title ?? announcement.Title, request.Body ?? announcement.Body, nextPublished, nextExpires);
         if (!validation.IsSuccess)
         {
             return Result<AnnouncementDetailResponse>.Failure(validation.Error!);
@@ -288,7 +288,7 @@ public sealed class AnnouncementService(
         if (request.GroupId.HasValue)
         {
             var group = await groups.GetByIdAsync(request.GroupId.Value, cancellationToken);
-            if (group is null || group.DeletedAt.HasValue || !await CanCreateGroupAnnouncementAsync(userId, group.Id, cancellationToken))
+            if (group is null || group.DeletedAt.HasValue || !await AnnouncementScopeAuthorization.CanCreateGroupAsync(groupAuthorization, userId, group.Id, IsTeacherAsync, cancellationToken))
             {
                 return Result<AnnouncementScope>.Failure("You are not allowed to create group announcements.");
             }
@@ -299,7 +299,7 @@ public sealed class AnnouncementService(
         if (request.WorkspaceId.HasValue)
         {
             if (await workspaces.GetByIdAsync(request.WorkspaceId.Value, cancellationToken) is null ||
-                !await CanCreateWorkspaceAnnouncementAsync(userId, request.WorkspaceId.Value, cancellationToken))
+                !await AnnouncementScopeAuthorization.CanCreateWorkspaceAsync(workspaceAuthorization, userId, request.WorkspaceId.Value, IsTeacherAsync, cancellationToken))
             {
                 return Result<AnnouncementScope>.Failure("You are not allowed to create workspace announcements.");
             }
@@ -326,12 +326,22 @@ public sealed class AnnouncementService(
 
         if (announcement.GroupId.HasValue)
         {
-            return await CanCreateGroupAnnouncementAsync(userId, announcement.GroupId.Value, cancellationToken);
+            return await AnnouncementScopeAuthorization.CanCreateGroupAsync(
+                groupAuthorization,
+                userId,
+                announcement.GroupId.Value,
+                IsTeacherAsync,
+                cancellationToken);
         }
 
         if (announcement.WorkspaceId.HasValue)
         {
-            return await CanCreateWorkspaceAnnouncementAsync(userId, announcement.WorkspaceId.Value, cancellationToken);
+            return await AnnouncementScopeAuthorization.CanCreateWorkspaceAsync(
+                workspaceAuthorization,
+                userId,
+                announcement.WorkspaceId.Value,
+                IsTeacherAsync,
+                cancellationToken);
         }
 
         return false;
@@ -342,28 +352,6 @@ public sealed class AnnouncementService(
         return announcement.AuthorUserId == userId ||
             await IsSystemAdminAsync(userId, cancellationToken) ||
             await CanManageAnnouncementAsync(userId, announcement, cancellationToken);
-    }
-
-    private async Task<bool> CanCreateWorkspaceAnnouncementAsync(Guid userId, Guid workspaceId, CancellationToken cancellationToken)
-    {
-        if (await workspaceAuthorization.CanManageWorkspace(userId, workspaceId, cancellationToken))
-        {
-            return true;
-        }
-
-        return await IsTeacherAsync(userId, cancellationToken) &&
-            await workspaceAuthorization.CanViewWorkspace(userId, workspaceId, cancellationToken);
-    }
-
-    private async Task<bool> CanCreateGroupAnnouncementAsync(Guid userId, Guid groupId, CancellationToken cancellationToken)
-    {
-        if (await groupAuthorization.CanManageGroup(userId, groupId, cancellationToken))
-        {
-            return true;
-        }
-
-        return await IsTeacherAsync(userId, cancellationToken) &&
-            await groupAuthorization.CanViewGroup(userId, groupId, cancellationToken);
     }
 
     private async Task<bool> IsSystemAdminAsync(Guid userId, CancellationToken cancellationToken)
@@ -378,7 +366,7 @@ public sealed class AnnouncementService(
         return user is { Status: UserStatus.Active, SystemRole: SystemRole.Teacher or SystemRole.Admin or SystemRole.SystemAdmin };
     }
 
-    private static Task<Result> ValidateRequestAsync(string title, string body, DateTimeOffset publishedAt, DateTimeOffset? expiresAt, CancellationToken cancellationToken)
+    private static Task<Result> ValidateRequestAsync(string title, string body, DateTimeOffset publishedAt, DateTimeOffset? expiresAt)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -398,10 +386,24 @@ public sealed class AnnouncementService(
         return Task.FromResult(Result.Success());
     }
 
+    private static int NormalizePage(int requestedPage, int pageSize)
+    {
+        var maxPage = Math.Min(
+            2_147_483_647L,
+            (2_147_483_647L / pageSize) + 1L);
+        return (int)Math.Clamp(requestedPage, 1L, maxPage);
+    }
+
     private bool TryCurrentUser(out Guid userId)
     {
-        userId = currentUser.UserId ?? Guid.Empty;
-        return currentUser.IsAuthenticated && currentUser.UserId.HasValue;
+        if (currentUser is { IsAuthenticated: true, UserId: { } authenticatedUserId })
+        {
+            userId = authenticatedUserId;
+            return true;
+        }
+
+        userId = Guid.Empty;
+        return false;
     }
 
     private async Task PublishInvalidationAsync(Announcement announcement, Guid actorUserId, string change, CancellationToken cancellationToken)
