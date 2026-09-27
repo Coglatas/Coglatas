@@ -3,7 +3,7 @@
   "sourceRevision": "c6aedb95c8780a5e8fac42b7b96ecccf80f1ad80",
   "totalFindings": 3479,
   "ruleBudgets": {
-    "AccessToDisposedClosure": 121,
+    "AccessToDisposedClosure": 0,
     "AsyncMethodWithoutAwait": 2,
     "AutoPropertyCanBeMadeGetOnly.Global": 66,
     "AutoPropertyCanBeMadeGetOnly.Local": 9,
