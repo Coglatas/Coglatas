@@ -64,10 +64,11 @@ public sealed class ArtifactReportRefinementServiceTests
             oldDocument.Sections.OrderBy(section => section.Ordinal).Select(section => (section.LogicalSectionId, section.Heading, section.BodyText)),
             newDocument.Sections.OrderBy(section => section.Ordinal).Select(section => (section.LogicalSectionId, section.Heading, section.BodyText)));
 
+        var baseVersionId = fixture.BaseVersionId;
         var oldClaims = await fixture.Context.Set<ArtifactClaim>()
             .AsNoTracking()
             .Include(claim => claim.Evidence)
-            .Where(claim => claim.ArtifactVersionId == fixture.BaseVersionId)
+            .Where(claim => claim.ArtifactVersionId == baseVersionId)
             .ToListAsync();
         var newClaims = await fixture.Context.Set<ArtifactClaim>()
             .AsNoTracking()

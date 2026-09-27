@@ -116,19 +116,21 @@ public sealed class Ws01WorkspaceDashboardProjectionPostgreSqlTests
 
             var readableConversationIds = new MessagingRepository(dbContext)
                 .QueryReadableConversationIds(graph.Actor.Id)!;
+            var messages = dbContext.Messages;
+            var readStates = dbContext.ReadStates;
             Assert.True(await readableConversationIds.ContainsAsync(graph.OwnMessageConversation.Id));
             var unreadConversationTitles = await dbContext.Conversations
                 .Where(conversation =>
                     conversation.WorkspaceId == graph.OwnerWorkspace.Id &&
                     readableConversationIds.Contains(conversation.Id) &&
-                    dbContext.Messages.Any(message =>
+                    messages.Any(message =>
                         message.ConversationId == conversation.Id &&
                         message.AuthorUserId != graph.Actor.Id &&
                         message.DeletedAt == null &&
-                        (!dbContext.ReadStates.Any(readState =>
+                        (!readStates.Any(readState =>
                              readState.ConversationId == conversation.Id &&
                              readState.UserId == graph.Actor.Id) ||
-                         dbContext.ReadStates.Any(readState =>
+                         readStates.Any(readState =>
                              readState.ConversationId == conversation.Id &&
                              readState.UserId == graph.Actor.Id &&
                              message.CreatedAt > readState.LastReadAt))))
