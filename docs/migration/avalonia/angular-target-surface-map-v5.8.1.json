@@ -1,1 +1,519 @@
-{"schemaVersion":1,"issue":765,"sourceSnapshot":"4e6a10903a5a472ca89f833aba993a29e1b2cf73","sourceRouteInventory":"docs/migration/avalonia/angular-frontend-inventory.json","legacyFreezeSnapshot":"docs/migration/avalonia/angular-feature-freeze-matrix.json","uiArchitecture":"AIPsiteNYG_Avalonia_Frontend_Panel_Reorganization_v5_8_1_Review_Closure","rule":"This file is authoritative for target PNL/disposition/owner. The legacy freeze snapshot remains source-history only where its target mapping differs.","routes":[{"path":"/signin","targetPnlMode":"PNL-00 / Login alias","disposition":"RetireAlias","owner":780,"support":[770]},{"path":"/login","targetPnlMode":"PNL-00 / Login","disposition":"Migrate","owner":780,"support":[773,775]},{"path":"/session-expired","targetPnlMode":"PNL-00 / Session Recovery","disposition":"Migrate","owner":780,"support":[771,773]},{"path":"/register/invite","targetPnlMode":"PNL-00 / Invite Registration","disposition":"Migrate","owner":780,"support":[773,791]},{"path":"/permission-denied","targetPnlMode":"PNL-00 / Permission-Safe Denial","disposition":"IntentionallyChanged","owner":780,"support":[771,773]},{"path":"/","targetPnlMode":"PNL-00 / AppShell entry","disposition":"Migrate","owner":780,"support":[770,773,775]},{"path":"/messages/saved","targetPnlMode":"PNL-48 / Saved Messages","disposition":"Migrate","owner":785,"support":[778,814]},{"path":"/messages/settings","targetPnlMode":"PNL-35 / Message Settings","disposition":"Migrate","owner":791,"support":[775,785]},{"path":"/messages","targetPnlMode":"PNL-40 Team Chat entry + PNL-41 DM Inbox","disposition":"IntentionallyChanged","owner":785,"support":[778,814]},{"path":"/conversations/:conversationId","targetPnlMode":"PNL-40 / Team Chat Channel Workspace","disposition":"IntentionallyChanged","owner":785,"support":[778,814]},{"path":"/workspaces/:workspaceId/channels/:conversationId","targetPnlMode":"PNL-40 / Team Chat Channel Workspace","disposition":"IntentionallyChanged","owner":785,"support":[778,781,814]},{"path":"/dm/:conversationId","targetPnlMode":"PNL-42 / Direct Message Detail","disposition":"IntentionallyChanged","owner":785,"support":[778,814]},{"path":"/workspaces/:workspaceId/research/new","targetPnlMode":"PNL-13 / Research Quick Create","disposition":"IntentionallyChanged","owner":782,"support":[781,814]},{"path":"/workspaces/:workspaceId/projects","targetPnlMode":"PNL-02 Workspace Hub -> PNL-03 Project Workbench entry","disposition":"Migrate","owner":782,"support":[781,814]},{"path":"/workspaces/:workspaceId/files","targetPnlMode":"PNL-07 / Files","disposition":"Migrate","owner":786,"support":[779,814]},{"path":"/workspaces/:workspaceId/members","targetPnlMode":"PNL-02 / Workspace Hub Members mode","disposition":"Migrate","owner":781,"support":[770,775]},{"path":"/workspaces","targetPnlMode":"PNL-02 / Workspace Hub","disposition":"Migrate","owner":781,"support":[770,774,814]},{"path":"/announcements","targetPnlMode":"PNL-12 / Announcement","disposition":"Migrate","owner":792,"support":[775]},{"path":"/announcements/:announcementId","targetPnlMode":"PNL-12 / Announcement Detail","disposition":"Migrate","owner":792,"support":[775]},{"path":"/app/projects/:projectId/tasks/:taskId/reports/:artifactVersionId","targetPnlMode":"PNL-47 / Artifact-Report Reader","disposition":"RetireAlias","owner":817,"support":[782,783,814,816]},{"path":"/app/projects/:projectId/reports/:artifactVersionId","targetPnlMode":"PNL-47 / Artifact-Report Reader","disposition":"RetireAlias","owner":817,"support":[782,783,814,816]},{"path":"/projects/:projectId/tasks/:taskId/reports/:artifactVersionId","targetPnlMode":"PNL-47 / Artifact-Report Reader","disposition":"Migrate","owner":817,"support":[782,783,814,816]},{"path":"/projects/:projectId/reports/:artifactVersionId","targetPnlMode":"PNL-47 / Artifact-Report Reader","disposition":"Migrate","owner":817,"support":[782,783,814,816]},{"path":"/projects/:projectId/tasks/new","targetPnlMode":"PNL-04 / Task Inspector Create mode","disposition":"Migrate","owner":783,"support":[772,814]},{"path":"/projects/:projectId/tasks/:taskId","targetPnlMode":"PNL-04 / Task Inspector","disposition":"Migrate","owner":783,"support":[779,814]},{"path":"/projects/:projectId","targetPnlMode":"PNL-03 / Project Workbench","disposition":"Migrate","owner":782,"support":[776,777,787,814]},{"path":"/tasks","targetPnlMode":"PNL-05 / My Work","disposition":"Migrate","owner":784,"support":[776,778,814]},{"path":"/projects","targetPnlMode":"PNL-03 / Project Workbench entry","disposition":"Migrate","owner":782,"support":[814]},{"path":"/artifacts/:artifactId","targetPnlMode":"PNL-47 / Artifact-Report Reader","disposition":"Migrate","owner":817,"support":[814,816]},{"path":"/files","targetPnlMode":"PNL-07 / Files","disposition":"Migrate","owner":786,"support":[779,814]},{"path":"/account","targetPnlMode":"PNL-11 / Account","disposition":"Migrate","owner":791,"support":[773,775]},{"path":"/admin/audit/findings","targetPnlMode":"PNL-10/PNL-20 / Audit Findings","disposition":"Migrate","owner":790,"support":[776,775]},{"path":"/admin/audit/claims-evidence","targetPnlMode":"PNL-10/PNL-20 / Claims-Evidence","disposition":"Migrate","owner":790,"support":[776,817]},{"path":"/admin/audit/package-export","targetPnlMode":"PNL-10 / Audit Export handoff","disposition":"Migrate","owner":790,"support":[779,774]},{"path":"/admin/audit","targetPnlMode":"PNL-20 / Activity-Audit Log","disposition":"Migrate","owner":790,"support":[776,778]},{"path":"/admin/invites","targetPnlMode":"PNL-17 / Invite Admin","disposition":"Migrate","owner":791,"support":[773,775]},{"path":"/admin/export-diagnostics","targetPnlMode":"PNL-38 / Diagnostics Export","disposition":"Migrate","owner":791,"support":[771,774]},{"path":"**","targetPnlMode":"PNL-00 / NotFound-Safe404","disposition":"RetireFallback","owner":780,"support":[770,771]}],"embeddedSurfaces":[{"id":"project-table","source":"Project Task Table/List inside /projects/:projectId","target":"PNL-03 + PNL-14","disposition":"Migrate","owner":782,"support":[776,814]},{"id":"project-kanban","source":"Project Kanban inside /projects/:projectId","target":"PNL-03 Board WorkSurface","disposition":"Migrate","owner":782,"support":[776,814]},{"id":"project-gantt","source":"Project Gantt/Schedule inside /projects/:projectId","target":"PNL-15 Timeline/Gantt","disposition":"Migrate","owner":787,"support":[777,782,814]},{"id":"shell-right-panel-continue-working","source":"AppShell/right panel/continue-working","target":"PNL-00/01 + PNL-08 integration","disposition":"IntentionallyChanged","owner":780,"support":[788,770,774,775]},{"id":"realtime","source":"frontend/src/app/core/realtime/*","target":"cross-cutting Realtime","disposition":"Migrate","owner":778,"support":[773,793,794]},{"id":"relation-graph","source":"No standalone Angular route at pinned snapshot","target":"RelationGraph projection","disposition":"AvaloniaFirst","owner":816,"support":[814,775,805]},{"id":"dock-layout","source":"No canonical Dock equivalent at pinned snapshot","target":"PNL-33 Dock/Workspace Layout","disposition":"AvaloniaFirst","owner":815,"support":[814,770,774]},{"id":"calendar","source":"No Calendar/Scheduler product surface; Project Schedule is Gantt","target":"PNL-16 Calendar/Schedule","disposition":"Deferred","owner":null,"semanticOwners":[782,784],"promotionRule":"Create dedicated implementation Issue on promotion; never owner TBD."}],"deferredPnls":["PNL-21","PNL-22","PNL-23","PNL-24","PNL-36","PNL-37","PNL-45-deep-RTC"],"assertions":{"routeCount":38,"artifactReportOwner":817,"graphOwner":816,"inviteRegistrationOwner":780,"mixedConversationTargetForbidden":true}}
+{
+  "schemaVersion": 1,
+  "issue": 765,
+  "sourceSnapshot": "4e6a10903a5a472ca89f833aba993a29e1b2cf73",
+  "sourceRouteInventory": "docs/migration/avalonia/angular-frontend-inventory.json",
+  "legacyFreezeSnapshot": "docs/migration/avalonia/angular-feature-freeze-matrix.json",
+  "uiArchitecture": "AIPsiteNYG_Avalonia_Frontend_Panel_Reorganization_v5_8_1_Review_Closure",
+  "rule": "This file is authoritative for target PNL/disposition/owner. The legacy freeze snapshot remains source-history only where its target mapping differs.",
+  "routes": [
+    {
+      "path": "/signin",
+      "targetPnlMode": "PNL-00 / Login alias",
+      "disposition": "RetireAlias",
+      "owner": 780,
+      "support": [
+        770
+      ]
+    },
+    {
+      "path": "/login",
+      "targetPnlMode": "PNL-00 / Login",
+      "disposition": "Migrate",
+      "owner": 780,
+      "support": [
+        773,
+        775
+      ]
+    },
+    {
+      "path": "/session-expired",
+      "targetPnlMode": "PNL-00 / Session Recovery",
+      "disposition": "Migrate",
+      "owner": 780,
+      "support": [
+        771,
+        773
+      ]
+    },
+    {
+      "path": "/register/invite",
+      "targetPnlMode": "PNL-00 / Invite Registration",
+      "disposition": "Migrate",
+      "owner": 780,
+      "support": [
+        773,
+        791
+      ]
+    },
+    {
+      "path": "/permission-denied",
+      "targetPnlMode": "PNL-00 / Permission-Safe Denial",
+      "disposition": "IntentionallyChanged",
+      "owner": 780,
+      "support": [
+        771,
+        773
+      ]
+    },
+    {
+      "path": "/",
+      "targetPnlMode": "PNL-00 / AppShell entry",
+      "disposition": "Migrate",
+      "owner": 780,
+      "support": [
+        770,
+        773,
+        775
+      ]
+    },
+    {
+      "path": "/messages/saved",
+      "targetPnlMode": "PNL-48 / Saved Messages",
+      "disposition": "Migrate",
+      "owner": 785,
+      "support": [
+        778,
+        814
+      ]
+    },
+    {
+      "path": "/messages/settings",
+      "targetPnlMode": "PNL-35 / Message Settings",
+      "disposition": "Migrate",
+      "owner": 791,
+      "support": [
+        775,
+        785
+      ]
+    },
+    {
+      "path": "/messages",
+      "targetPnlMode": "PNL-40 Team Chat entry + PNL-41 DM Inbox",
+      "disposition": "IntentionallyChanged",
+      "owner": 785,
+      "support": [
+        778,
+        814
+      ]
+    },
+    {
+      "path": "/conversations/:conversationId",
+      "targetPnlMode": "PNL-40 / Team Chat Channel Workspace",
+      "disposition": "IntentionallyChanged",
+      "owner": 785,
+      "support": [
+        778,
+        814
+      ]
+    },
+    {
+      "path": "/workspaces/:workspaceId/channels/:conversationId",
+      "targetPnlMode": "PNL-40 / Team Chat Channel Workspace",
+      "disposition": "IntentionallyChanged",
+      "owner": 785,
+      "support": [
+        778,
+        781,
+        814
+      ]
+    },
+    {
+      "path": "/dm/:conversationId",
+      "targetPnlMode": "PNL-42 / Direct Message Detail",
+      "disposition": "IntentionallyChanged",
+      "owner": 785,
+      "support": [
+        778,
+        814
+      ]
+    },
+    {
+      "path": "/workspaces/:workspaceId/research/new",
+      "targetPnlMode": "PNL-13 / Research Quick Create",
+      "disposition": "IntentionallyChanged",
+      "owner": 782,
+      "support": [
+        781,
+        814
+      ]
+    },
+    {
+      "path": "/workspaces/:workspaceId/projects",
+      "targetPnlMode": "PNL-02 Workspace Hub -> PNL-03 Project Workbench entry",
+      "disposition": "Migrate",
+      "owner": 782,
+      "support": [
+        781,
+        814
+      ]
+    },
+    {
+      "path": "/workspaces/:workspaceId/files",
+      "targetPnlMode": "PNL-07 / Files",
+      "disposition": "Migrate",
+      "owner": 786,
+      "support": [
+        779,
+        814
+      ]
+    },
+    {
+      "path": "/workspaces/:workspaceId/members",
+      "targetPnlMode": "PNL-02 / Workspace Hub Members mode",
+      "disposition": "Migrate",
+      "owner": 781,
+      "support": [
+        770,
+        775
+      ]
+    },
+    {
+      "path": "/workspaces",
+      "targetPnlMode": "PNL-02 / Workspace Hub",
+      "disposition": "Migrate",
+      "owner": 781,
+      "support": [
+        770,
+        774,
+        814
+      ]
+    },
+    {
+      "path": "/announcements",
+      "targetPnlMode": "PNL-12 / Announcement",
+      "disposition": "Migrate",
+      "owner": 792,
+      "support": [
+        775
+      ]
+    },
+    {
+      "path": "/announcements/:announcementId",
+      "targetPnlMode": "PNL-12 / Announcement Detail",
+      "disposition": "Migrate",
+      "owner": 792,
+      "support": [
+        775
+      ]
+    },
+    {
+      "path": "/app/projects/:projectId/tasks/:taskId/reports/:artifactVersionId",
+      "targetPnlMode": "PNL-47 / Artifact-Report Reader",
+      "disposition": "RetireAlias",
+      "owner": 817,
+      "support": [
+        782,
+        783,
+        814,
+        816
+      ]
+    },
+    {
+      "path": "/app/projects/:projectId/reports/:artifactVersionId",
+      "targetPnlMode": "PNL-47 / Artifact-Report Reader",
+      "disposition": "RetireAlias",
+      "owner": 817,
+      "support": [
+        782,
+        783,
+        814,
+        816
+      ]
+    },
+    {
+      "path": "/projects/:projectId/tasks/:taskId/reports/:artifactVersionId",
+      "targetPnlMode": "PNL-47 / Artifact-Report Reader",
+      "disposition": "Migrate",
+      "owner": 817,
+      "support": [
+        782,
+        783,
+        814,
+        816
+      ]
+    },
+    {
+      "path": "/projects/:projectId/reports/:artifactVersionId",
+      "targetPnlMode": "PNL-47 / Artifact-Report Reader",
+      "disposition": "Migrate",
+      "owner": 817,
+      "support": [
+        782,
+        783,
+        814,
+        816
+      ]
+    },
+    {
+      "path": "/projects/:projectId/tasks/new",
+      "targetPnlMode": "PNL-04 / Task Inspector Create mode",
+      "disposition": "Migrate",
+      "owner": 783,
+      "support": [
+        772,
+        814
+      ]
+    },
+    {
+      "path": "/projects/:projectId/tasks/:taskId",
+      "targetPnlMode": "PNL-04 / Task Inspector",
+      "disposition": "Migrate",
+      "owner": 783,
+      "support": [
+        779,
+        814
+      ]
+    },
+    {
+      "path": "/projects/:projectId",
+      "targetPnlMode": "PNL-03 / Project Workbench",
+      "disposition": "Migrate",
+      "owner": 782,
+      "support": [
+        776,
+        777,
+        787,
+        814
+      ]
+    },
+    {
+      "path": "/tasks",
+      "targetPnlMode": "PNL-05 / My Work",
+      "disposition": "Migrate",
+      "owner": 784,
+      "support": [
+        776,
+        778,
+        814
+      ]
+    },
+    {
+      "path": "/projects",
+      "targetPnlMode": "PNL-03 / Project Workbench entry",
+      "disposition": "Migrate",
+      "owner": 782,
+      "support": [
+        814
+      ]
+    },
+    {
+      "path": "/artifacts/:artifactId",
+      "targetPnlMode": "PNL-47 / Artifact-Report Reader",
+      "disposition": "Migrate",
+      "owner": 817,
+      "support": [
+        814,
+        816
+      ]
+    },
+    {
+      "path": "/files",
+      "targetPnlMode": "PNL-07 / Files",
+      "disposition": "Migrate",
+      "owner": 786,
+      "support": [
+        779,
+        814
+      ]
+    },
+    {
+      "path": "/account",
+      "targetPnlMode": "PNL-11 / Account",
+      "disposition": "Migrate",
+      "owner": 791,
+      "support": [
+        773,
+        775
+      ]
+    },
+    {
+      "path": "/admin/audit/findings",
+      "targetPnlMode": "PNL-10/PNL-20 / Audit Findings",
+      "disposition": "Migrate",
+      "owner": 790,
+      "support": [
+        776,
+        775
+      ]
+    },
+    {
+      "path": "/admin/audit/claims-evidence",
+      "targetPnlMode": "PNL-10/PNL-20 / Claims-Evidence",
+      "disposition": "Migrate",
+      "owner": 790,
+      "support": [
+        776,
+        817
+      ]
+    },
+    {
+      "path": "/admin/audit/package-export",
+      "targetPnlMode": "PNL-10 / Audit Export handoff",
+      "disposition": "Migrate",
+      "owner": 790,
+      "support": [
+        779,
+        774
+      ]
+    },
+    {
+      "path": "/admin/audit",
+      "targetPnlMode": "PNL-20 / Activity-Audit Log",
+      "disposition": "Migrate",
+      "owner": 790,
+      "support": [
+        776,
+        778
+      ]
+    },
+    {
+      "path": "/admin/invites",
+      "targetPnlMode": "PNL-17 / Invite Admin",
+      "disposition": "Migrate",
+      "owner": 791,
+      "support": [
+        773,
+        775
+      ]
+    },
+    {
+      "path": "/admin/export-diagnostics",
+      "targetPnlMode": "PNL-38 / Diagnostics Export",
+      "disposition": "Migrate",
+      "owner": 791,
+      "support": [
+        771,
+        774
+      ]
+    },
+    {
+      "path": "**",
+      "targetPnlMode": "PNL-00 / NotFound-Safe404",
+      "disposition": "RetireFallback",
+      "owner": 780,
+      "support": [
+        770,
+        771
+      ]
+    }
+  ],
+  "embeddedSurfaces": [
+    {
+      "id": "project-table",
+      "source": "Project Task Table/List inside /projects/:projectId",
+      "target": "PNL-03 + PNL-14",
+      "disposition": "Migrate",
+      "owner": 782,
+      "support": [
+        776,
+        814
+      ]
+    },
+    {
+      "id": "project-kanban",
+      "source": "Project Kanban inside /projects/:projectId",
+      "target": "PNL-03 Board WorkSurface",
+      "disposition": "Migrate",
+      "owner": 782,
+      "support": [
+        776,
+        814
+      ]
+    },
+    {
+      "id": "project-gantt",
+      "source": "Project Gantt/Schedule inside /projects/:projectId",
+      "target": "PNL-15 Timeline/Gantt",
+      "disposition": "Migrate",
+      "owner": 787,
+      "support": [
+        777,
+        782,
+        814
+      ]
+    },
+    {
+      "id": "shell-right-panel-continue-working",
+      "source": "AppShell/right panel/continue-working",
+      "target": "PNL-00/01 + PNL-08 integration",
+      "disposition": "IntentionallyChanged",
+      "owner": 780,
+      "support": [
+        788,
+        770,
+        774,
+        775
+      ]
+    },
+    {
+      "id": "realtime",
+      "source": "frontend/src/app/core/realtime/*",
+      "target": "cross-cutting Realtime",
+      "disposition": "Migrate",
+      "owner": 778,
+      "support": [
+        773,
+        793,
+        794
+      ]
+    },
+    {
+      "id": "relation-graph",
+      "source": "No standalone Angular route at pinned snapshot",
+      "target": "RelationGraph projection",
+      "disposition": "AvaloniaFirst",
+      "owner": 816,
+      "support": [
+        814,
+        775,
+        805
+      ]
+    },
+    {
+      "id": "dock-layout",
+      "source": "No canonical Dock equivalent at pinned snapshot",
+      "target": "PNL-33 Dock/Workspace Layout",
+      "disposition": "AvaloniaFirst",
+      "owner": 815,
+      "support": [
+        814,
+        770,
+        774
+      ]
+    },
+    {
+      "id": "calendar",
+      "source": "No Calendar/Scheduler product surface; Project Schedule is Gantt",
+      "target": "PNL-16 Calendar/Schedule",
+      "disposition": "Deferred",
+      "owner": null,
+      "semanticOwners": [
+        782,
+        784
+      ],
+      "promotionRule": "Create dedicated implementation Issue on promotion; never owner TBD."
+    }
+  ],
+  "deferredPnls": [
+    "PNL-21",
+    "PNL-22",
+    "PNL-23",
+    "PNL-24",
+    "PNL-36",
+    "PNL-37",
+    "PNL-45-deep-RTC"
+  ],
+  "assertions": {
+    "routeCount": 38,
+    "artifactReportOwner": 817,
+    "graphOwner": 816,
+    "inviteRegistrationOwner": 780,
+    "mixedConversationTargetForbidden": true
+  },
+  "platformPolicy": {
+    "authorityIssue": 767,
+    "status": "ProvisionalUntilIssueCloses",
+    "rule": "Target PNL/disposition/owner mapping is fixed here; platform Tier/support/fallback classification remains authoritative in #767 and is not duplicated in this map."
+  }
+}
