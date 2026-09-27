@@ -156,6 +156,25 @@ jobs:
           --verbosity normal
           --logger "trx;LogFileName=backend-tests.trx"
           --results-directory artifacts/test-results
+          --collect "XPlat Code Coverage"
+
+      - name: Generate .NET coverage report
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet reportgenerator \
+            "-reports:artifacts/test-results/**/coverage.cobertura.xml" \
+            "-targetdir:artifacts/coverage" \
+            "-reporttypes:Html;Cobertura;MarkdownSummaryGithub"
+          cat artifacts/coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload .NET coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dotnet-coverage-report
+          path: artifacts/coverage
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Upload backend results on failure
         if: failure()

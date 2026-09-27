@@ -22,6 +22,28 @@ export function stripExternalGoogleFontImports(css) {
   );
 }
 
+async function findCssFiles(directory) {
+  let entries;
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Unable to inspect Syncfusion theme directory ${directory}: ${reason}`);
+  }
+
+  const files = [];
+  for (const entry of entries) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await findCssFiles(entryPath));
+    } else if (entry.isFile() && entry.name.endsWith('.css')) {
+      files.push(entryPath);
+    }
+  }
+
+  return files.sort();
+}
+
 export async function sanitizeSyncfusionThemeCss(themeRoot = defaultThemeRoot) {
   const cssFiles = await findCssFiles(themeRoot);
   if (cssFiles.length === 0) {
@@ -46,27 +68,6 @@ export async function sanitizeSyncfusionThemeCss(themeRoot = defaultThemeRoot) {
   return { scannedFiles: cssFiles.length, changedFiles };
 }
 
-async function findCssFiles(directory) {
-  let entries;
-  try {
-    entries = await readdir(directory, { withFileTypes: true });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(`Unable to inspect Syncfusion theme directory ${directory}: ${reason}`);
-  }
-
-  const files = [];
-  for (const entry of entries) {
-    const entryPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...await findCssFiles(entryPath));
-    } else if (entry.isFile() && entry.name.endsWith('.css')) {
-      files.push(entryPath);
-    }
-  }
-
-  return files.sort();
-}
 
 async function main() {
   const themeRoot = process.argv[2]

@@ -3,7 +3,6 @@ using Coglatas.Application.Common.Tenancy;
 using Coglatas.Application.Auth;
 using Coglatas.Application.Messaging;
 using Coglatas.Application.Notifications;
-using Coglatas.Application.Security.Redaction;
 using Coglatas.Infrastructure.Persistence;
 using Coglatas.Web.Audit;
 using Coglatas.Web.Configuration;
@@ -12,8 +11,8 @@ using Coglatas.Web.Security;
 using Coglatas.Web.Services;
 using Coglatas.Web.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -22,6 +21,9 @@ namespace Coglatas.Web.Extensions;
 
 public static class DependencyInjection
 {
+    // Returning IServiceCollection is intentional for standard DI fluent composition,
+    // even though the current composition root does not consume the return value.
+    // ReSharper disable once UnusedMethodReturnValue.Global
     public static IServiceCollection AddWebServices(this IServiceCollection services, IConfiguration configuration)
     {
         var security = configuration.GetSection("Security").Get<SecurityOptions>() ?? new SecurityOptions();
@@ -35,7 +37,7 @@ public static class DependencyInjection
         services.AddSingleton(provider => provider.GetRequiredService<IOptions<TenancyOptions>>().Value);
         services.AddSingleton<CsrfProtectionState>();
         services.AddCors(options => HttpSecurityPolicy.ConfigureCors(options, security));
-        services.AddHsts(options => HttpSecurityPolicy.ConfigureHsts(options));
+        services.AddHsts(HttpSecurityPolicy.ConfigureHsts);
         services.Configure<FormOptions>(options =>
         {
             options.MultipartBodyLengthLimit = security.MaxMultipartBodySizeBytes;
@@ -90,6 +92,17 @@ public static class DependencyInjection
                             "query"));
                     }
 
+                    if (IsCommunicationPollingPath(path))
+                    {
+                        // Model-binding conversion failures can embed the raw
+                        // attempted query value in ValidationProblemDetails.
+                        // The SEC-06 active scanner can then make its own test
+                        // payload look like server-side PII. Preserve field
+                        // ownership while removing attacker-controlled text.
+                        return new BadRequestObjectResult(
+                            new ValidationProblemDetails(CreateSanitizedModelState(context.ModelState)));
+                    }
+
                     if (IsWpcCreatePath(path, context.HttpContext.Request.Method))
                     {
                         if (context.HttpContext.User.Identity?.IsAuthenticated != true)
@@ -138,6 +151,10 @@ public static class DependencyInjection
                         // options configurator.  Capturing it here can therefore
                         // legitimately yield null, which used to turn ordinary
                         // data-annotation failures into 500 responses.
+                        // InvalidModelStateResponseFactory is annotated non-null, but this
+                        // configurator can observe it before MVC's later default configurator.
+                        // Keep the runtime fallback that prevents validation failures becoming 500s.
+                        // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
                         return defaultFactory?.Invoke(context) ??
                             new BadRequestObjectResult(new ValidationProblemDetails(context.ModelState));
                     }
@@ -189,6 +206,29 @@ public static class DependencyInjection
         var normalized = NormalizePath(path);
         return normalized.Equals("/api/search", StringComparison.OrdinalIgnoreCase) ||
                normalized.Equals("/api/search/message-authors", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsCommunicationPollingPath(string? path) =>
+        NormalizePath(path).StartsWith("/api/communication/poll/", StringComparison.OrdinalIgnoreCase);
+
+    private static ModelStateDictionary CreateSanitizedModelState(ModelStateDictionary source)
+    {
+        var sanitized = new ModelStateDictionary();
+        foreach (var entry in source)
+        {
+            var errorCount = entry.Value?.Errors.Count ?? 0;
+            for (var index = 0; index < errorCount; index++)
+            {
+                sanitized.AddModelError(entry.Key, "The supplied value is invalid.");
+            }
+        }
+
+        if (sanitized.ErrorCount == 0)
+        {
+            sanitized.AddModelError(string.Empty, "The request parameters are invalid.");
+        }
+
+        return sanitized;
     }
 
     private static bool IsWpcCreatePath(string? path, string method) =>
