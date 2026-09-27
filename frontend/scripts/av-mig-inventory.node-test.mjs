@@ -12,6 +12,7 @@ async function readJson(relativePath) {
   return JSON.parse(await readFile(resolve(repoRoot, relativePath), 'utf8'));
 }
 
+const pinnedSourceSha = '4e6a10903a5a472ca89f833aba993a29e1b2cf73';
 const inventoryPath = 'docs/migration/avalonia/angular-frontend-inventory.json';
 const legacyFreezePath = 'docs/migration/avalonia/angular-feature-freeze-matrix.json';
 const targetMapPath = 'docs/migration/avalonia/angular-target-surface-map-v5.8.1.json';
@@ -71,7 +72,9 @@ test('source inventory, legacy freeze snapshot and v5.8.1 target map cover the s
   assert.deepEqual(legacyPaths, inventoryPaths, 'legacy source/freeze route sets must match exactly');
   assert.deepEqual(targetPaths, inventoryPaths, 'v5.8.1 target map must match the pinned source route set exactly');
   assert.equal(new Set(targetPaths).size, 38, 'pinned target route set must not contain duplicates');
-  assert.equal(targetMap.sourceSnapshot, inventory.source.commit);
+  assert.equal(inventory.source.commit, pinnedSourceSha, 'source inventory must remain pinned to the approved snapshot');
+  assert.equal(legacyFreeze.sourceSnapshot, pinnedSourceSha, 'legacy freeze must remain pinned to the approved snapshot');
+  assert.equal(targetMap.sourceSnapshot, pinnedSourceSha, 'v5.8.1 target map must remain pinned to the approved snapshot');
 });
 
 test('every v5.8.1 target route has PNL/mode, disposition and execution owner', async () => {
