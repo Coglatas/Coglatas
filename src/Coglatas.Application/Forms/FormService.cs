@@ -23,7 +23,7 @@ public sealed class FormService(
 
     public async Task<Result<PagedResponse<FormListItemResponse>>> ListAsync(FormListQuery query, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<PagedResponse<FormListItemResponse>>.Failure("Authentication is required.");
         }
@@ -53,7 +53,7 @@ public sealed class FormService(
 
     public async Task<Result<FormDetailResponse>> CreateAsync(CreateFormRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<FormDetailResponse>.Failure("Authentication is required.");
         }
@@ -117,7 +117,7 @@ public sealed class FormService(
             return Result<FormDetailResponse>.Failure("Form not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanViewForm(userId, form, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanViewForm(userId, form, cancellationToken))
         {
             return Result<FormDetailResponse>.Failure("Form not found.");
         }
@@ -133,7 +133,7 @@ public sealed class FormService(
             return Result<FormDetailResponse>.Failure("Form not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
         {
             return Result<FormDetailResponse>.Failure("You are not allowed to update this form.");
         }
@@ -184,7 +184,7 @@ public sealed class FormService(
         form.ClosesAt = nextClosesAt;
         form.IsAnonymous = request.IsAnonymous ?? form.IsAnonymous;
 
-        if (form.Status == FormStatus.Archived && !form.DeletedAt.HasValue)
+        if (form is { Status: FormStatus.Archived, DeletedAt: null })
         {
             form.MarkDeleted(clock.UtcNow);
         }
@@ -218,7 +218,7 @@ public sealed class FormService(
             return Result.Failure("Form not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
         {
             return Result.Failure("You are not allowed to archive this form.");
         }
@@ -252,7 +252,7 @@ public sealed class FormService(
             return Result<IReadOnlyList<FormQuestionResponse>>.Failure("Form not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanViewForm(userId, form, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanViewForm(userId, form, cancellationToken))
         {
             return Result<IReadOnlyList<FormQuestionResponse>>.Failure("Form not found.");
         }
@@ -268,7 +268,7 @@ public sealed class FormService(
             return Result<FormQuestionResponse>.Failure("Form not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
         {
             return Result<FormQuestionResponse>.Failure("You are not allowed to update questions for this form.");
         }
@@ -304,7 +304,7 @@ public sealed class FormService(
             return Result<FormQuestionResponse>.Failure("Form not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
         {
             return Result<FormQuestionResponse>.Failure("You are not allowed to update questions for this form.");
         }
@@ -349,7 +349,7 @@ public sealed class FormService(
             return Result.Failure("Form not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
         {
             return Result.Failure("You are not allowed to update questions for this form.");
         }
@@ -379,7 +379,7 @@ public sealed class FormService(
             return Result<FormResponseDetailResponse>.Failure("Form not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanViewForm(userId, form, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanViewForm(userId, form, cancellationToken))
         {
             return Result<FormResponseDetailResponse>.Failure("Form not found.");
         }
@@ -432,7 +432,7 @@ public sealed class FormService(
             return Result<PagedResponse<FormResponseDetailResponse>>.Failure("Form not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
         {
             return Result<PagedResponse<FormResponseDetailResponse>>.Failure("You are not allowed to view responses for this form.");
         }
@@ -457,7 +457,7 @@ public sealed class FormService(
             return Result<FormResponseDetailResponse?>.Failure("Form not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanViewForm(userId, form, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanViewForm(userId, form, cancellationToken))
         {
             return Result<FormResponseDetailResponse?>.Failure("Form not found.");
         }
@@ -474,7 +474,7 @@ public sealed class FormService(
             return Result<FormSummaryResponse>.Failure("Form not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
         {
             return Result<FormSummaryResponse>.Failure("You are not allowed to view the summary for this form.");
         }
@@ -497,7 +497,7 @@ public sealed class FormService(
             return Result<IReadOnlyList<UnansweredUserResponse>>.Failure("Form not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanManageForm(userId, form, cancellationToken))
         {
             return Result<IReadOnlyList<UnansweredUserResponse>>.Failure("You are not allowed to view unanswered users for this form.");
         }
@@ -527,7 +527,7 @@ public sealed class FormService(
         DateTimeOffset? closesAt,
         CancellationToken cancellationToken)
     {
-        if (!HasExactlyOneScope(workspaceId, groupId, projectId))
+        if (!ScopedResourceValidation.HasExactlyOneScope(workspaceId, groupId, projectId))
         {
             return Result.Failure("Exactly one of WorkspaceId, GroupId, or ProjectId must be set.");
         }
@@ -542,34 +542,14 @@ public sealed class FormService(
             return Result.Failure("Form open time must be before the close time.");
         }
 
-        if (workspaceId.HasValue)
-        {
-            var workspace = await workspaces.GetByIdAsync(workspaceId.Value, cancellationToken);
-            if (workspace is null || workspace.DeletedAt.HasValue || workspace.Status != WorkspaceStatus.Active)
-            {
-                return Result.Failure("Workspace not found.");
-            }
-        }
-
-        if (groupId.HasValue)
-        {
-            var group = await groups.GetByIdAsync(groupId.Value, cancellationToken);
-            if (group is null || group.DeletedAt.HasValue || group.Status != GroupStatus.Active)
-            {
-                return Result.Failure("Group not found.");
-            }
-        }
-
-        if (projectId.HasValue)
-        {
-            var project = await projects.GetProjectAsync(projectId.Value, cancellationToken);
-            if (project is null || project.DeletedAt.HasValue || project.Status == ProjectStatus.Archived)
-            {
-                return Result.Failure("Project not found.");
-            }
-        }
-
-        return Result.Success();
+        return await ScopedResourceValidation.ValidateExistingScopeAsync(
+            workspaces,
+            groups,
+            projects,
+            workspaceId,
+            groupId,
+            projectId,
+            cancellationToken);
     }
 
     private static Result ValidateQuestion(string questionText, FormQuestionType questionType, IReadOnlyList<string>? options)
@@ -615,7 +595,7 @@ public sealed class FormService(
         var answersByQuestionId = new Dictionary<Guid, SubmitFormAnswerRequest>();
         foreach (var answer in submittedAnswers)
         {
-            if (!questions.Any(question => question.Id == answer.FormQuestionId))
+            if (questions.All(question => question.Id != answer.FormQuestionId))
             {
                 return Result<IReadOnlyList<ValidatedAnswer>>.Failure("An answer references an unknown question.");
             }
@@ -806,21 +786,6 @@ public sealed class FormService(
             form.Id,
             actorUserId,
             cancellationToken);
-    }
-
-    private bool TryCurrentUser(out Guid userId)
-    {
-        userId = currentUser.UserId ?? Guid.Empty;
-        return currentUser.IsAuthenticated && currentUser.UserId.HasValue;
-    }
-
-    private static bool HasExactlyOneScope(Guid? workspaceId, Guid? groupId, Guid? projectId)
-    {
-        var count = 0;
-        if (workspaceId.HasValue) count++;
-        if (groupId.HasValue) count++;
-        if (projectId.HasValue) count++;
-        return count == 1;
     }
 
     private static bool IsChoiceQuestion(FormQuestionType questionType)

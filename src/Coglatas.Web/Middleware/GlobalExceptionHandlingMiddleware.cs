@@ -24,6 +24,22 @@ public sealed class GlobalExceptionHandlingMiddleware(
                 context.TraceIdentifier);
             await RequestBodyLimitMiddleware.WriteTooLargeResponseAsync(context);
         }
+        catch (BadHttpRequestException exception) when (
+            exception.StatusCode is >= StatusCodes.Status400BadRequest and < StatusCodes.Status500InternalServerError)
+        {
+            logger.LogWarning(
+                "Rejected malformed request body with status {StatusCode}. TraceId: {TraceId}",
+                exception.StatusCode,
+                context.TraceIdentifier);
+            await WriteClientRequestErrorAsync(context, exception.StatusCode);
+        }
+        catch (InvalidDataException) when (IsFormRequest(context.Request))
+        {
+            logger.LogWarning(
+                "Rejected malformed form request body. TraceId: {TraceId}",
+                context.TraceIdentifier);
+            await WriteClientRequestErrorAsync(context, StatusCodes.Status400BadRequest);
+        }
         catch (Exception exception)
         {
             logger.LogError(exception, "Unhandled request exception. TraceId: {TraceId}", context.TraceIdentifier);
@@ -73,6 +89,26 @@ public sealed class GlobalExceptionHandlingMiddleware(
             }
         }
     }
+
+    private static Task WriteClientRequestErrorAsync(HttpContext context, int statusCode)
+    {
+        var unsupportedMediaType = statusCode == StatusCodes.Status415UnsupportedMediaType;
+        context.Response.StatusCode = unsupportedMediaType
+            ? StatusCodes.Status415UnsupportedMediaType
+            : StatusCodes.Status400BadRequest;
+        context.Response.ContentType = "application/json";
+        return context.Response.WriteAsJsonAsync(new ErrorResponse(
+            unsupportedMediaType ? "UnsupportedMediaType" : "InvalidRequest",
+            unsupportedMediaType
+                ? "The request Content-Type is not supported."
+                : "The request body is invalid.",
+            context.TraceIdentifier));
+    }
+
+    private static bool IsFormRequest(HttpRequest request) =>
+        request.HasFormContentType ||
+        request.ContentType?.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase) == true ||
+        request.ContentType?.StartsWith("application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase) == true;
 
     private static bool IsPr06Path(string? path) =>
         IsPr06SnapshotPath(path) ||

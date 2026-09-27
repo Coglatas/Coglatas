@@ -7,7 +7,7 @@ namespace Coglatas.Web.Controllers;
 
 [ApiController]
 [Authorize]
-public sealed class TenantIntegrationsController(IIntegrationService integrations) : ControllerBase
+public sealed class TenantIntegrationsController(IIntegrationService integrations) : ApiResultControllerBase
 {
     [HttpGet("api/tenant/integrations")]
     public async Task<IActionResult> ListIntegrations(CancellationToken cancellationToken) =>
@@ -66,9 +66,4 @@ public sealed class TenantIntegrationsController(IIntegrationService integration
     public async Task<IActionResult> RevokeApiToken(Guid tokenId, CancellationToken cancellationToken) =>
         OkOrBad(await integrations.RevokeApiTokenAsync(tokenId, cancellationToken));
 
-    private IActionResult OkOrBad(Coglatas.Application.Common.Result result) =>
-        result.IsSuccess ? Ok(new { status = "OK" }) : BadRequest(new { error = result.Error });
-
-    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result) =>
-        result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
 }

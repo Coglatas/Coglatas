@@ -24,7 +24,7 @@ public sealed class EventService(
 
     public async Task<Result<PagedResponse<EventListItemResponse>>> ListAsync(EventListQuery query, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<PagedResponse<EventListItemResponse>>.Failure("Authentication is required.");
         }
@@ -58,7 +58,7 @@ public sealed class EventService(
 
     public async Task<Result<EventDetailResponse>> CreateAsync(CreateEventRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<EventDetailResponse>.Failure("Authentication is required.");
         }
@@ -117,7 +117,7 @@ public sealed class EventService(
             return Result<EventDetailResponse>.Failure("Event not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanViewEvent(userId, activityEvent, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanViewEvent(userId, activityEvent, cancellationToken))
         {
             return Result<EventDetailResponse>.Failure("Event not found.");
         }
@@ -135,7 +135,7 @@ public sealed class EventService(
             return Result<EventDetailResponse>.Failure("Event not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanManageEvent(userId, activityEvent, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanManageEvent(userId, activityEvent, cancellationToken))
         {
             return Result<EventDetailResponse>.Failure("You are not allowed to update this event.");
         }
@@ -184,7 +184,7 @@ public sealed class EventService(
         activityEvent.BringItemsText = request.BringItemsText is null ? activityEvent.BringItemsText : NormalizeOptionalText(request.BringItemsText);
         activityEvent.Status = request.Status ?? activityEvent.Status;
 
-        if (activityEvent.Status == EventStatus.Archived && !activityEvent.DeletedAt.HasValue)
+        if (activityEvent is { Status: EventStatus.Archived, DeletedAt: null })
         {
             activityEvent.MarkDeleted(clock.UtcNow);
         }
@@ -216,7 +216,7 @@ public sealed class EventService(
             return Result.Failure("Event not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanManageEvent(userId, activityEvent, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanManageEvent(userId, activityEvent, cancellationToken))
         {
             return Result.Failure("You are not allowed to archive this event.");
         }
@@ -240,7 +240,7 @@ public sealed class EventService(
             return Result<IReadOnlyList<AttendanceResponse>>.Failure("Event not found.");
         }
 
-        if (!TryCurrentUser(out var userId) || !await authorization.CanManageAttendance(userId, activityEvent, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId) || !await authorization.CanManageAttendance(userId, activityEvent, cancellationToken))
         {
             return Result<IReadOnlyList<AttendanceResponse>>.Failure("You are not allowed to view attendance for this event.");
         }
@@ -251,7 +251,7 @@ public sealed class EventService(
 
     public async Task<Result<AttendanceResponse>> UpsertMyAttendanceAsync(Guid eventId, UpdateMyAttendanceRequest request, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<AttendanceResponse>.Failure("Authentication is required.");
         }
@@ -274,7 +274,7 @@ public sealed class EventService(
             return Result<AttendanceResponse>.Failure("Event not found.");
         }
 
-        if (!TryCurrentUser(out var actorUserId) || !await authorization.CanManageAttendance(actorUserId, activityEvent, cancellationToken))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var actorUserId) || !await authorization.CanManageAttendance(actorUserId, activityEvent, cancellationToken))
         {
             return Result<AttendanceResponse>.Failure("You are not allowed to update attendance for this event.");
         }
@@ -295,7 +295,7 @@ public sealed class EventService(
 
     public async Task<Result<IReadOnlyList<CalendarItemResponse>>> GetCalendarAsync(CalendarQuery query, CancellationToken cancellationToken = default)
     {
-        if (!TryCurrentUser(out var userId))
+        if (!CurrentUserIdentity.TryGetAuthenticatedUserId(currentUser, out var userId))
         {
             return Result<IReadOnlyList<CalendarItemResponse>>.Failure("Authentication is required.");
         }
@@ -426,7 +426,7 @@ public sealed class EventService(
         int? capacity,
         CancellationToken cancellationToken)
     {
-        if (!HasExactlyOneScope(workspaceId, groupId, projectId))
+        if (!ScopedResourceValidation.HasExactlyOneScope(workspaceId, groupId, projectId))
         {
             return Result.Failure("Exactly one of WorkspaceId, GroupId, or ProjectId must be set.");
         }
@@ -451,40 +451,14 @@ public sealed class EventService(
             return Result.Failure("Capacity must be greater than or equal to 0.");
         }
 
-        if (workspaceId.HasValue)
-        {
-            var workspace = await workspaces.GetByIdAsync(workspaceId.Value, cancellationToken);
-            if (workspace is null || workspace.DeletedAt.HasValue || workspace.Status != WorkspaceStatus.Active)
-            {
-                return Result.Failure("Workspace not found.");
-            }
-        }
-
-        if (groupId.HasValue)
-        {
-            var group = await groups.GetByIdAsync(groupId.Value, cancellationToken);
-            if (group is null || group.DeletedAt.HasValue || group.Status != GroupStatus.Active)
-            {
-                return Result.Failure("Group not found.");
-            }
-        }
-
-        if (projectId.HasValue)
-        {
-            var project = await projects.GetProjectAsync(projectId.Value, cancellationToken);
-            if (project is null || project.DeletedAt.HasValue || project.Status == ProjectStatus.Archived)
-            {
-                return Result.Failure("Project not found.");
-            }
-        }
-
-        return Result.Success();
-    }
-
-    private bool TryCurrentUser(out Guid userId)
-    {
-        userId = currentUser.UserId ?? Guid.Empty;
-        return currentUser.IsAuthenticated && currentUser.UserId.HasValue;
+        return await ScopedResourceValidation.ValidateExistingScopeAsync(
+            workspaces,
+            groups,
+            projects,
+            workspaceId,
+            groupId,
+            projectId,
+            cancellationToken);
     }
 
     private async Task NotifyEventChangeAsync(Guid actorUserId, ActivityEvent activityEvent, EventStatus? previousStatus, CancellationToken cancellationToken)
@@ -542,15 +516,6 @@ public sealed class EventService(
         }
 
         // TODO: add scheduled attendance deadline reminders when background jobs are introduced.
-    }
-
-    private static bool HasExactlyOneScope(Guid? workspaceId, Guid? groupId, Guid? projectId)
-    {
-        var count = 0;
-        if (workspaceId.HasValue) count++;
-        if (groupId.HasValue) count++;
-        if (projectId.HasValue) count++;
-        return count == 1;
     }
 
     private static string? NormalizeOptionalText(string? value)

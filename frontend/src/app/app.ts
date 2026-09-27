@@ -14,7 +14,7 @@ import { I18nService } from './core/i18n/i18n.service';
 })
 export class AppComponent {
   // Root ownership makes the transport lifecycle follow the authenticated app,
-  // rather than any individual product feature or route.
+  // Rather than any individual product feature or route.
   private readonly realtime = inject(RealtimeFacade);
 
   constructor() {

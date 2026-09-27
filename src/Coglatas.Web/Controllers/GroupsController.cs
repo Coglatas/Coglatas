@@ -6,7 +6,7 @@ namespace Coglatas.Web.Controllers;
 
 [ApiController]
 [Authorize]
-public sealed class GroupsController(IGroupService groups) : ControllerBase
+public sealed class GroupsController(IGroupService groups) : ApiResultControllerBase
 {
     [HttpGet("api/workspaces/{workspaceId:guid}/groups")]
     public async Task<IActionResult> List(Guid workspaceId, CancellationToken cancellationToken)
@@ -78,8 +78,4 @@ public sealed class GroupsController(IGroupService groups) : ControllerBase
         return result.IsSuccess ? Ok(new { status = "OK" }) : BadRequest(new { error = result.Error });
     }
 
-    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result)
-    {
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
-    }
 }

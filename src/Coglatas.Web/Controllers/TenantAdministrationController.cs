@@ -1,7 +1,7 @@
-using Coglatas.Application.Common;
 using Coglatas.Application.TenantAdministration;
 using Coglatas.Application.Tenancy;
 using Coglatas.Web.Configuration;
+using Coglatas.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -13,7 +13,7 @@ namespace Coglatas.Web.Controllers;
 [EnableRateLimiting(HttpSecurityPolicy.AdminRateLimitPolicy)]
 public sealed class TenantAdministrationController(
     ITenantAdministrationService tenantAdministration,
-    ITenantService tenantService) : ControllerBase
+    ITenantService tenantService) : ApiResultControllerBase
 {
     [HttpGet("api/tenant/overview")]
     public async Task<IActionResult> GetTenantOverview(CancellationToken cancellationToken)
@@ -66,13 +66,13 @@ public sealed class TenantAdministrationController(
     [HttpPost("api/tenant/users/{userId:guid}/suspend")]
     public async Task<IActionResult> SuspendTenantUser(Guid userId, CancellationToken cancellationToken)
     {
-        return ToActionResult(await tenantService.UpdateCurrentTenantUserAsync(userId, new UpdateTenantUserRequest(null, Coglatas.Domain.Enums.TenantUserStatus.Suspended), cancellationToken));
+        return ToActionResult(await tenantService.UpdateCurrentTenantUserAsync(userId, new UpdateTenantUserRequest(null, TenantUserStatus.Suspended), cancellationToken));
     }
 
     [HttpPost("api/tenant/users/{userId:guid}/activate")]
     public async Task<IActionResult> ActivateTenantUser(Guid userId, CancellationToken cancellationToken)
     {
-        return ToActionResult(await tenantService.UpdateCurrentTenantUserAsync(userId, new UpdateTenantUserRequest(null, Coglatas.Domain.Enums.TenantUserStatus.Active), cancellationToken));
+        return ToActionResult(await tenantService.UpdateCurrentTenantUserAsync(userId, new UpdateTenantUserRequest(null, TenantUserStatus.Active), cancellationToken));
     }
 
     [HttpDelete("api/tenant/users/{userId:guid}")]
@@ -144,7 +144,4 @@ public sealed class TenantAdministrationController(
         return ToActionResult(await tenantAdministration.GetPlatformUsageAsync(cancellationToken));
     }
 
-    private IActionResult OkOrBad(Result result) => result.IsSuccess ? Ok(new { status = "OK" }) : BadRequest(new { error = result.Error });
-
-    private IActionResult ToActionResult<T>(Result<T> result) => result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
 }
