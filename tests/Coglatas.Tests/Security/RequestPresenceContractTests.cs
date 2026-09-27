@@ -26,4 +26,13 @@ public sealed class RequestPresenceContractTests
             JsonSerializer.Deserialize<CreateIntegrationAccountRequest>(
                 "{\"displayName\":\"Example\",\"settingsJson\":null}", WebOptions));
     }
+
+    [Fact]
+    public void IntegrationCreationRequiresExplicitSettingsJson()
+    {
+        Assert.Throws<JsonException>(() =>
+            JsonSerializer.Deserialize<CreateIntegrationAccountRequest>(
+                "{\"provider\":0,\"displayName\":\"Example\"}", WebOptions));
+    }
+
 }

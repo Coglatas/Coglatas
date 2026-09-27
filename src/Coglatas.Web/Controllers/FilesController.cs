@@ -30,6 +30,7 @@ public sealed class FilesController(
     }
 
     [HttpPost("api/files")]
+    [Consumes("multipart/form-data")]
     [EnableRateLimiting("file-upload")]
     public async Task<IActionResult> Upload([FromForm] UploadAttachmentForm form, CancellationToken cancellationToken)
     {

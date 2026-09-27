@@ -21,24 +21,11 @@ public sealed class EventRepository(AppDbContext dbContext) : IEventRepository
         var source = BaseEventQuery(includeArchived: false)
             .Where(activityEvent => activityEvent.Status != EventStatus.Archived && activityEvent.DeletedAt == null);
 
-        if (query.WorkspaceId.HasValue)
-        {
-            source = source.Where(activityEvent =>
-                activityEvent.WorkspaceId == query.WorkspaceId ||
-                (activityEvent.Project != null && activityEvent.Project.WorkspaceId == query.WorkspaceId));
-        }
-
-        if (query.GroupId.HasValue)
-        {
-            source = source.Where(activityEvent =>
-                activityEvent.GroupId == query.GroupId ||
-                (activityEvent.Project != null && activityEvent.Project.GroupId == query.GroupId));
-        }
-
-        if (query.ProjectId.HasValue)
-        {
-            source = source.Where(activityEvent => activityEvent.ProjectId == query.ProjectId);
-        }
+        source = ApplyScopeFilters(
+            source,
+            query.WorkspaceId,
+            query.GroupId,
+            query.ProjectId);
 
         source = ApplyDateRange(source, query.FromDate, query.ToDate);
 
@@ -237,26 +224,41 @@ public sealed class EventRepository(AppDbContext dbContext) : IEventRepository
             : source.Where(activityEvent => activityEvent.DeletedAt == null && activityEvent.Status != EventStatus.Archived);
     }
 
+    private static IQueryable<ActivityEvent> ApplyScopeFilters(
+        IQueryable<ActivityEvent> source,
+        Guid? workspaceId,
+        Guid? groupId,
+        Guid? projectId)
+    {
+        if (workspaceId.HasValue)
+        {
+            source = source.Where(activityEvent =>
+                activityEvent.WorkspaceId == workspaceId ||
+                (activityEvent.Project != null && activityEvent.Project.WorkspaceId == workspaceId));
+        }
+
+        if (groupId.HasValue)
+        {
+            source = source.Where(activityEvent =>
+                activityEvent.GroupId == groupId ||
+                (activityEvent.Project != null && activityEvent.Project.GroupId == groupId));
+        }
+
+        if (projectId.HasValue)
+        {
+            source = source.Where(activityEvent => activityEvent.ProjectId == projectId);
+        }
+
+        return source;
+    }
+
     private static IQueryable<ActivityEvent> ApplyEventFilters(IQueryable<ActivityEvent> source, EventListQuery query)
     {
-        if (query.WorkspaceId.HasValue)
-        {
-            source = source.Where(activityEvent =>
-                activityEvent.WorkspaceId == query.WorkspaceId ||
-                (activityEvent.Project != null && activityEvent.Project.WorkspaceId == query.WorkspaceId));
-        }
-
-        if (query.GroupId.HasValue)
-        {
-            source = source.Where(activityEvent =>
-                activityEvent.GroupId == query.GroupId ||
-                (activityEvent.Project != null && activityEvent.Project.GroupId == query.GroupId));
-        }
-
-        if (query.ProjectId.HasValue)
-        {
-            source = source.Where(activityEvent => activityEvent.ProjectId == query.ProjectId);
-        }
+        source = ApplyScopeFilters(
+            source,
+            query.WorkspaceId,
+            query.GroupId,
+            query.ProjectId);
 
         source = ApplyDateRange(source, query.FromDate, query.ToDate);
 
