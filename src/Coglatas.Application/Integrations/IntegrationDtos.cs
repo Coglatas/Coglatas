@@ -15,7 +15,7 @@ public sealed record IntegrationAccountResponse(
 public sealed record CreateIntegrationAccountRequest(
     [property: System.Text.Json.Serialization.JsonRequired] IntegrationProvider Provider,
     string DisplayName,
-    string? SettingsJson,
+    [property: System.Text.Json.Serialization.JsonRequired] string? SettingsJson,
     IntegrationAccountStatus Status = IntegrationAccountStatus.Draft);
 
 public sealed record UpdateIntegrationAccountRequest(

@@ -19,8 +19,11 @@ public sealed class InvalidModelStateResponseFactoryTests
         services.AddWebServices(new ConfigurationBuilder().Build());
         using var provider = services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<ApiBehaviorOptions>>().Value;
-        var httpContext = new DefaultHttpContext { RequestServices = provider };
-        httpContext.Request.Path = "/api/files/00000000-0000-0000-0000-000000000001/move";
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = provider,
+            Request = { Path = "/api/files/00000000-0000-0000-0000-000000000001/move" }
+        };
         var actionContext = new ActionContext(
             httpContext,
             new RouteData(),
@@ -31,6 +34,43 @@ public sealed class InvalidModelStateResponseFactoryTests
         var result = options.InvalidModelStateResponseFactory(actionContext);
 
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.IsType<ValidationProblemDetails>(badRequest.Value);
+        var details = Assert.IsType<ValidationProblemDetails>(badRequest.Value);
+        Assert.Equal(
+            "The field must be non-negative.",
+            Assert.Single(details.Errors["expectedDestinationVersion"]));
+    }
+
+    [Fact]
+    public void CommunicationPollingValidationDoesNotReflectAttackerControlledValues()
+    {
+        var services = new ServiceCollection();
+        services.AddWebServices(new ConfigurationBuilder().Build());
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<ApiBehaviorOptions>>().Value;
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = provider,
+            Request = { Path = "/api/communication/poll/updates" }
+        };
+        var actionContext = new ActionContext(
+            httpContext,
+            new RouteData(),
+            new ActionDescriptor(),
+            new ModelStateDictionary());
+
+        const string scannerPayload = "4111111111111111";
+        actionContext.ModelState.AddModelError(
+            "WorkspaceId",
+            $"The value '{scannerPayload}' is not valid for WorkspaceId.");
+
+        var result = options.InvalidModelStateResponseFactory(actionContext);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var details = Assert.IsType<ValidationProblemDetails>(badRequest.Value);
+        Assert.Equal("The supplied value is invalid.", Assert.Single(details.Errors["WorkspaceId"]));
+        Assert.DoesNotContain(
+            scannerPayload,
+            System.Text.Json.JsonSerializer.Serialize(details),
+            StringComparison.Ordinal);
     }
 }

@@ -58,19 +58,18 @@ public sealed class DbSearchService(
             return Result<SearchResponse>.Failure("Author is invalid.");
         }
 
-        if (request.FromDate.HasValue && request.ToDate.HasValue && request.FromDate > request.ToDate)
+        if (request is { FromDate: { } fromDate, ToDate: { } toDate } && fromDate > toDate)
         {
             return Result<SearchResponse>.Failure("Date range is invalid.");
         }
 
-        if (request.ToDate.HasValue && request.ToDateExclusive.HasValue)
+        if (request is { ToDate: not null, ToDateExclusive: not null })
         {
             return Result<SearchResponse>.Failure("Date range is invalid.");
         }
 
-        if (request.FromDate.HasValue &&
-            request.ToDateExclusive.HasValue &&
-            request.FromDate >= request.ToDateExclusive)
+        if (request is { FromDate: { } rangeStart, ToDateExclusive: { } rangeEnd } &&
+            rangeStart >= rangeEnd)
         {
             return Result<SearchResponse>.Failure("Date range is invalid.");
         }
@@ -206,21 +205,9 @@ public sealed class DbSearchService(
                     conversation.TenantId == message.TenantId &&
                     conversation.WorkspaceId == message.WorkspaceId));
 
-        var readableConversationIds = messaging.QueryReadableConversationIds(userId);
-        if (readableConversationIds is not null)
-        {
-            var authorizedConversationIds = await readableConversationIds
-                .ToArrayAsync(cancellationToken);
-            if (authorizedConversationIds.Length == 0)
-            {
-                return Result<MessageAuthorOptionsResponse>.Success(new MessageAuthorOptionsResponse([]));
-            }
-
-            messages = messages.Where(message => authorizedConversationIds.Contains(message.ConversationId));
-        }
-        else
-        {
-            var candidateConversationIds = await messages
+        var authorizedConversationIds = await ResolveReadableConversationIdsAsync(
+            userId,
+            async token => await messages
                 .GroupBy(message => message.ConversationId)
                 .Select(group => new
                 {
@@ -231,19 +218,14 @@ public sealed class DbSearchService(
                 .ThenBy(item => item.ConversationId)
                 .Take(100)
                 .Select(item => item.ConversationId)
-                .ToListAsync(cancellationToken);
-            var authorizedConversationIds = await messaging.FilterReadableConversationIdsAsync(
-                userId,
-                candidateConversationIds,
-                cancellationToken);
-
-            if (authorizedConversationIds.Count == 0)
-            {
-                return Result<MessageAuthorOptionsResponse>.Success(new MessageAuthorOptionsResponse([]));
-            }
-
-            messages = messages.Where(message => authorizedConversationIds.Contains(message.ConversationId));
+                .ToListAsync(token),
+            cancellationToken);
+        if (authorizedConversationIds.Count == 0)
+        {
+            return Result<MessageAuthorOptionsResponse>.Success(new MessageAuthorOptionsResponse([]));
         }
+
+        messages = messages.Where(message => authorizedConversationIds.Contains(message.ConversationId));
 
         var tenantAuthors = dbContext.TenantUsers
             .AsNoTracking()
@@ -585,30 +567,9 @@ public sealed class DbSearchService(
                                 file.DeletedAt == null))));
         }
 
-        var readableConversationIds = messaging.QueryReadableConversationIds(userId);
-        if (readableConversationIds is not null)
-        {
-            // Resolve the authoritative recursive relation as its own set.
-            // Composing its full Project/Workspace authorization graph into
-            // every optional Message predicate produces a pathological
-            // PostgreSQL plan once From is present. Materializing only the
-            // authorized IDs keeps authorization before ordering/limiting and
-            // lets the bounded Message query use an indexed ANY predicate.
-            var authorizedConversationIds = await readableConversationIds
-                .ToArrayAsync(cancellationToken);
-            if (authorizedConversationIds.Length == 0)
-            {
-                return [];
-            }
-
-            query = query.Where(item => authorizedConversationIds.Contains(item.conversation.Id));
-        }
-        else
-        {
-            // Non-relational test providers cannot compose the recursive CTE.
-            // Keep their existing fail-closed bound, but make candidate choice
-            // deterministic and recency-first before the bounded recursive check.
-            var candidateConversationIds = await query
+        var authorizedConversationIds = await ResolveReadableConversationIdsAsync(
+            userId,
+            async token => await query
                 .GroupBy(item => item.conversation.Id)
                 .Select(group => new
                 {
@@ -619,19 +580,14 @@ public sealed class DbSearchService(
                 .ThenBy(item => item.ConversationId)
                 .Take(100)
                 .Select(item => item.ConversationId)
-                .ToListAsync(cancellationToken);
-            var authorizedConversationIds = await messaging.FilterReadableConversationIdsAsync(
-                userId,
-                candidateConversationIds,
-                cancellationToken);
-
-            if (authorizedConversationIds.Count == 0)
-            {
-                return [];
-            }
-
-            query = query.Where(item => authorizedConversationIds.Contains(item.conversation.Id));
+                .ToListAsync(token),
+            cancellationToken);
+        if (authorizedConversationIds.Count == 0)
+        {
+            return [];
         }
+
+        query = query.Where(item => authorizedConversationIds.Contains(item.conversation.Id));
 
         var rows = await query
             .OrderByDescending(item => item.message.CreatedAt)
@@ -660,7 +616,7 @@ public sealed class DbSearchService(
         var rowIds = rows.Select(row => row.MessageId).ToArray();
         var attributedAuthors = await (
                 from message in dbContext.Messages.AsNoTracking()
-                where rowIds.Contains(message.Id)
+                where Enumerable.Contains(rowIds, message.Id)
                 join tenantUser in dbContext.TenantUsers.AsNoTracking()
                     on new { message.TenantId, UserId = message.AuthorUserId }
                     equals new { tenantUser.TenantId, tenantUser.UserId }
@@ -702,7 +658,7 @@ public sealed class DbSearchService(
                 null,
                 null,
                 row.CreatedAt,
-                authorNames.TryGetValue(row.MessageId, out var displayName) ? displayName : null))
+                authorNames.GetValueOrDefault(row.MessageId)))
             .ToList();
     }
 
@@ -786,16 +742,7 @@ public sealed class DbSearchService(
                 grant.RecipientKind == FileAccessGrantRecipientKind.ExternalProjectMember)
             .Select(grant => grant.FileObjectId);
 
-        var query = dbContext.Attachments
-            .AsNoTracking()
-            .Where(attachment =>
-                attachment.WorkspaceId == workspaceId &&
-                attachment.OwnerType == AttachmentOwnerType.Workspace &&
-                attachment.OwnerId == workspaceId &&
-                !attachment.DeletedAt.HasValue &&
-                attachment.FileObject != null &&
-                !attachment.FileObject.DeletedAt.HasValue &&
-                attachment.FileObject.Status != FileObjectStatus.Deleted);
+        var query = FileAttachmentQueryFilters.WorkspaceFiles(dbContext, workspaceId);
 
         if (!canManageSharing)
         {
@@ -819,7 +766,7 @@ public sealed class DbSearchService(
             query = query.Where(attachment => attachment.FileObject!.UploadedByUserId == request.AuthorUserId.Value);
         }
 
-        query = ApplyFileKindFilter(query, request.FileKind);
+        query = FileAttachmentQueryFilters.ApplyKind(query, request.FileKind);
         query = query.Where(attachment =>
             (!request.FromDate.HasValue || (attachment.FileObject!.UpdatedAt ?? attachment.FileObject.CreatedAt) >= request.FromDate.Value) &&
             (!request.ToDate.HasValue || (attachment.FileObject!.UpdatedAt ?? attachment.FileObject.CreatedAt) <= request.ToDate.Value));
@@ -860,51 +807,51 @@ public sealed class DbSearchService(
     }
 
 
-    private static IQueryable<Coglatas.Domain.Entities.Attachment> ApplyFileKindFilter(
-        IQueryable<Coglatas.Domain.Entities.Attachment> query,
-        FileSearchKind fileKind) => fileKind switch
+    private async Task<IReadOnlyCollection<Guid>> ResolveReadableConversationIdsAsync(
+        Guid userId,
+        Func<CancellationToken, Task<List<Guid>>> fallbackCandidateIds,
+        CancellationToken cancellationToken)
     {
-        FileSearchKind.Image => query.Where(attachment =>
-            EF.Functions.ILike(attachment.FileObject!.ContentType, "image/%")),
-        FileSearchKind.Pdf => query.Where(attachment =>
-            EF.Functions.ILike(attachment.FileObject!.ContentType, "application/pdf%")),
-        FileSearchKind.Video => query.Where(attachment =>
-            EF.Functions.ILike(attachment.FileObject!.ContentType, "video/%")),
-        FileSearchKind.Archive => query.Where(attachment =>
-            EF.Functions.ILike(attachment.FileObject!.ContentType, "application/zip%") ||
-            EF.Functions.ILike(attachment.FileObject.ContentType, "application/x-zip-compressed%") ||
-            EF.Functions.ILike(attachment.FileObject.OriginalFileName, "%.zip")),
-        FileSearchKind.Document => query.Where(attachment =>
-            !EF.Functions.ILike(attachment.FileObject!.ContentType, "image/%") &&
-            !EF.Functions.ILike(attachment.FileObject.ContentType, "application/pdf%") &&
-            !EF.Functions.ILike(attachment.FileObject.ContentType, "video/%") &&
-            !EF.Functions.ILike(attachment.FileObject.ContentType, "application/zip%") &&
-            !EF.Functions.ILike(attachment.FileObject.ContentType, "application/x-zip-compressed%") &&
-            !EF.Functions.ILike(attachment.FileObject.OriginalFileName, "%.zip")),
-        _ => query
-    };
+        var readableConversationIds = messaging.QueryReadableConversationIds(userId);
+        if (readableConversationIds is not null)
+        {
+            return await readableConversationIds.ToArrayAsync(cancellationToken);
+        }
 
-    private async Task<IReadOnlyList<SearchResultItemResponse>> SearchTasksAsync(Guid userId, string? q, SearchRequest request, CancellationToken cancellationToken)
+        var candidateConversationIds = await fallbackCandidateIds(cancellationToken);
+        return await messaging.FilterReadableConversationIdsAsync(
+            userId,
+            candidateConversationIds,
+            cancellationToken);
+    }
+
+    private IQueryable<Guid> ScopedVisibleProjectIds(Guid userId, SearchRequest request)
     {
-        var visibleProjectIds = dbContext.VisibleProjectsFor(userId).Select(project => project.Id);
-        var query = dbContext.TaskItems.AsNoTracking()
-            .Where(task => task.DeletedAt == null && visibleProjectIds.Contains(task.ProjectId))
-            .Join(dbContext.Projects, task => task.ProjectId, project => project.Id, (task, project) => new { task, project });
-
+        var projects = dbContext.VisibleProjectsFor(userId);
         if (request.WorkspaceId.HasValue)
         {
-            query = query.Where(item => item.project.WorkspaceId == request.WorkspaceId);
+            projects = projects.Where(project => project.WorkspaceId == request.WorkspaceId);
         }
 
         if (request.GroupId.HasValue)
         {
-            query = query.Where(item => item.project.GroupId == request.GroupId);
+            projects = projects.Where(project => project.GroupId == request.GroupId);
         }
 
         if (request.ProjectId.HasValue)
         {
-            query = query.Where(item => item.project.Id == request.ProjectId);
+            projects = projects.Where(project => project.Id == request.ProjectId);
         }
+
+        return projects.Select(project => project.Id);
+    }
+
+    private async Task<IReadOnlyList<SearchResultItemResponse>> SearchTasksAsync(Guid userId, string? q, SearchRequest request, CancellationToken cancellationToken)
+    {
+        var visibleProjectIds = ScopedVisibleProjectIds(userId, request);
+        var query = dbContext.TaskItems.AsNoTracking()
+            .Where(task => task.DeletedAt == null && visibleProjectIds.Contains(task.ProjectId))
+            .Join(dbContext.Projects, task => task.ProjectId, project => project.Id, (task, project) => new { task, project });
 
         if (!string.IsNullOrWhiteSpace(q))
         {
@@ -923,25 +870,10 @@ public sealed class DbSearchService(
 
     private async Task<IReadOnlyList<SearchResultItemResponse>> SearchArtifactsAsync(Guid userId, string? q, SearchRequest request, CancellationToken cancellationToken)
     {
-        var visibleProjectIds = dbContext.VisibleProjectsFor(userId).Select(project => project.Id);
+        var visibleProjectIds = ScopedVisibleProjectIds(userId, request);
         var query = dbContext.Artifacts.AsNoTracking()
             .Where(artifact => artifact.DeletedAt == null && visibleProjectIds.Contains(artifact.ProjectId))
             .Join(dbContext.Projects, artifact => artifact.ProjectId, project => project.Id, (artifact, project) => new { artifact, project });
-
-        if (request.WorkspaceId.HasValue)
-        {
-            query = query.Where(item => item.project.WorkspaceId == request.WorkspaceId);
-        }
-
-        if (request.GroupId.HasValue)
-        {
-            query = query.Where(item => item.project.GroupId == request.GroupId);
-        }
-
-        if (request.ProjectId.HasValue)
-        {
-            query = query.Where(item => item.project.Id == request.ProjectId);
-        }
 
         if (!string.IsNullOrWhiteSpace(q))
         {
@@ -960,25 +892,10 @@ public sealed class DbSearchService(
 
     private async Task<IReadOnlyList<SearchResultItemResponse>> SearchActivityLogsAsync(Guid userId, string? q, SearchRequest request, CancellationToken cancellationToken)
     {
-        var visibleProjectIds = dbContext.VisibleProjectsFor(userId).Select(project => project.Id);
+        var visibleProjectIds = ScopedVisibleProjectIds(userId, request);
         var query = dbContext.ActivityLogs.AsNoTracking()
             .Where(log => visibleProjectIds.Contains(log.ProjectId))
             .Join(dbContext.Projects, log => log.ProjectId, project => project.Id, (log, project) => new { log, project });
-
-        if (request.WorkspaceId.HasValue)
-        {
-            query = query.Where(item => item.project.WorkspaceId == request.WorkspaceId);
-        }
-
-        if (request.GroupId.HasValue)
-        {
-            query = query.Where(item => item.project.GroupId == request.GroupId);
-        }
-
-        if (request.ProjectId.HasValue)
-        {
-            query = query.Where(item => item.project.Id == request.ProjectId);
-        }
 
         if (request.AuthorUserId.HasValue)
         {
@@ -1002,7 +919,7 @@ public sealed class DbSearchService(
 
     private async Task<IReadOnlyList<SearchResultItemResponse>> SearchCommentsAsync(Guid userId, string? q, SearchRequest request, CancellationToken cancellationToken)
     {
-        var visibleProjectIds = dbContext.VisibleProjectsFor(userId).Select(project => project.Id);
+        var visibleProjectIds = ScopedVisibleProjectIds(userId, request);
         var query = dbContext.Comments.AsNoTracking()
             .Where(comment => comment.DeletedAt == null &&
                 ((comment.TargetType == CommentTargetType.Project && visibleProjectIds.Contains(comment.TargetId)) ||
