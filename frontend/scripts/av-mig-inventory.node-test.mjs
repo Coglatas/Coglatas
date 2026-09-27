@@ -159,6 +159,26 @@ test('embedded Project WorkSurface surfaces are explicit migration units', async
   assert.ok(table?.support.includes(776));
 });
 
+test('embedded Project surfaces carry explicit freeze classifications', async () => {
+  const legacyFreeze = await readJson(legacyFreezePath);
+  const embedded = new Map(legacyFreeze.embeddedSurfaces.map((surface) => [surface.surface, surface]));
+
+  const table = embedded.get('Project Task Table/List');
+  assert.equal(table?.november, true);
+  assert.equal(table?.freeze, 'November Required');
+  assert.equal(table?.avaloniaIssue, 782);
+
+  const kanban = embedded.get('Project Kanban');
+  assert.equal(kanban?.november, false);
+  assert.equal(kanban?.freeze, 'Maintenance Only');
+  assert.equal(kanban?.avaloniaIssue, 782);
+
+  const gantt = embedded.get('Project Gantt/Schedule');
+  assert.equal(gantt?.november, false);
+  assert.equal(gantt?.freeze, 'Maintenance Only');
+  assert.equal(gantt?.avaloniaIssue, 787);
+});
+
 test('Graph/Dock are owned Avalonia-first capabilities and Calendar remains promotion-gated', async () => {
   const targetMap = await readJson(targetMapPath);
   const embedded = new Map(targetMap.embeddedSurfaces.map((surface) => [surface.id, surface]));
@@ -213,6 +233,26 @@ test('browser/session persisted state is fully classified and never claims autho
   const nav = persisted.get('messaging-navigation');
   assert.equal(nav?.disposition, 'RetireAndRebuild');
   assert.match(nav?.targetFamily ?? '', /renderer-local/);
+});
+
+test('platform support classification remains delegated to authoritative issue #767', async () => {
+  const [inventory, legacyFreeze, targetMap] = await Promise.all([
+    readJson(inventoryPath),
+    readJson(legacyFreezePath),
+    readJson(targetMapPath),
+  ]);
+
+  assert.equal(inventory.platformPolicy?.authorityIssue, 767);
+  assert.equal(legacyFreeze.platformPolicy?.authorityIssue, 767);
+  assert.equal(targetMap.platformPolicy?.authorityIssue, 767);
+  assert.match(inventory.platformPolicy?.rule ?? '', /#767/u);
+  assert.match(legacyFreeze.platformPolicy?.rule ?? '', /does not invent/u);
+  assert.match(targetMap.platformPolicy?.rule ?? '', /not duplicated/u);
+
+  const graph = legacyFreeze.nonRouteSurfaces.find((surface) =>
+    surface.surface.startsWith('Graph surface requested by #798'),
+  );
+  assert.equal(graph?.avaloniaIssue, 816);
 });
 
 test('active target inventory has no owner-TBD and does not invent NgRx migration work', async () => {
