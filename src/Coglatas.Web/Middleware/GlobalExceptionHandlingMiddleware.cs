@@ -1,4 +1,5 @@
 using Coglatas.Web.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Coglatas.Web.Middleware;
 
@@ -32,6 +33,13 @@ public sealed class GlobalExceptionHandlingMiddleware(
                 exception.StatusCode,
                 context.TraceIdentifier);
             await WriteClientRequestErrorAsync(context, exception.StatusCode);
+        }
+        catch (ValueProviderException) when (IsFormRequest(context.Request))
+        {
+            logger.LogWarning(
+                "Rejected malformed form model-binding input. TraceId: {TraceId}",
+                context.TraceIdentifier);
+            await WriteClientRequestErrorAsync(context, StatusCodes.Status400BadRequest);
         }
         catch (InvalidDataException) when (IsFormRequest(context.Request))
         {

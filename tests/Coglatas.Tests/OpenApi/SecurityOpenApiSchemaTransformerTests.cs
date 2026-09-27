@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Coglatas.Application.Announcements;
+using Coglatas.Application.Integrations;
 using Coglatas.Application.Messaging;
 using Coglatas.Web.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
@@ -41,6 +42,19 @@ public sealed class SecurityOpenApiSchemaTransformerTests
 
         var body = Assert.IsType<OpenApiSchema>(schema.Properties!["body"]);
         Assert.Equal(generatedMaximum, body.MaxLength);
+    }
+
+    [Fact]
+    public async Task Api_token_schema_keeps_only_name_required()
+    {
+        var schema = await Transform(
+            typeof(CreateApiTokenRequest),
+            required: ["name", "scopesJson", "expiresAt"]);
+
+        Assert.NotNull(schema.Required);
+        Assert.Contains("name", schema.Required);
+        Assert.DoesNotContain("scopesJson", schema.Required);
+        Assert.DoesNotContain("expiresAt", schema.Required);
     }
 
     [Fact]
@@ -138,13 +152,15 @@ public sealed class SecurityOpenApiSchemaTransformerTests
 
     private static async Task<OpenApiSchema> Transform(
         Type type,
-        IReadOnlyDictionary<string, OpenApiSchema>? properties = null)
+        IReadOnlyDictionary<string, OpenApiSchema>? properties = null,
+        HashSet<string>? required = null)
     {
         var schema = new OpenApiSchema
         {
             Properties = properties?.ToDictionary(
                 pair => pair.Key,
-                pair => (IOpenApiSchema)pair.Value)
+                pair => (IOpenApiSchema)pair.Value),
+            Required = required
         };
         var options = new JsonSerializerOptions { TypeInfoResolver = new DefaultJsonTypeInfoResolver() };
         var context = new OpenApiSchemaTransformerContext

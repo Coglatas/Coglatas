@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Coglatas.Web.Middleware;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Coglatas.Tests.Auth;
@@ -38,6 +39,33 @@ public sealed class GlobalExceptionHandlingMiddlewareTests
         Assert.DoesNotContain("C:\\internal\\path", body, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("SELECT", body, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("leaked", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task MalformedMultipartModelBindingReturnsBadRequest()
+    {
+        var middleware = new GlobalExceptionHandlingMiddleware(
+            _ => throw new ValueProviderException("malformed multipart form"),
+            NullLogger<GlobalExceptionHandlingMiddleware>.Instance);
+        var context = new DefaultHttpContext
+        {
+            TraceIdentifier = "multipart-trace",
+            Response = { Body = new MemoryStream() }
+        };
+        context.Request.Method = HttpMethods.Post;
+        context.Request.ContentType = "multipart/form-data; boundary=test-boundary";
+        context.Request.Path = "/api/files";
+
+        await middleware.InvokeAsync(context);
+
+        context.Response.Body.Position = 0;
+        using var payload = await JsonDocument.ParseAsync(context.Response.Body);
+        var root = payload.RootElement;
+
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+        Assert.Equal("InvalidRequest", root.GetProperty("code").GetString());
+        Assert.Equal("The request body is invalid.", root.GetProperty("message").GetString());
+        Assert.Equal("multipart-trace", root.GetProperty("traceId").GetString());
     }
 
     [Fact]
