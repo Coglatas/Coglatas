@@ -18,7 +18,7 @@ const angularJson = JSON.parse(await readFile(new URL('../angular.json', import.
     'zone.js': '0.16.3',
   },
   expectedDevDependencies = {
-    '@angular-devkit/build-angular': '22.1.7',
+    '@angular-devkit/build-angular': '22.2.0',
     '@storybook/angular': '10.6.0',
     jsdom: '30.1.1',
     storybook: '10.6.0',
