@@ -123,9 +123,6 @@ public sealed class AuditFilterPostgreSqlTests
         public Task<AuditCapabilityResponse> GetCapabilitiesAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(Capabilities);
 
-        public Task<bool> HasCapabilityAsync(string capabilityKey, CancellationToken cancellationToken = default) =>
-            Task.FromResult(capabilityKey is CapabilityKeys.AuditView or CapabilityKeys.AuditSensitiveMetadataView);
-
         public Task<Result> AuthorizeAsync(
             string capabilityKey,
             string operation,
