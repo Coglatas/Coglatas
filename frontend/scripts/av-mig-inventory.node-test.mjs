@@ -287,6 +287,17 @@ test('browser/session persisted state is fully classified and never claims autho
   assert.match(nav?.targetFamily ?? '', /renderer-local/);
 });
 
+test('every routed Angular retirement remains gated by #797', async () => {
+  const legacyFreeze = await readJson(legacyFreezePath);
+  for (const route of legacyFreeze.routes) {
+    assert.match(
+      route.deleteCondition ?? '',
+      /#797/u,
+      `${route.path}: Angular delete condition must remain gated by #797`,
+    );
+  }
+});
+
 test('active target inventory has no owner-TBD and does not invent NgRx migration work', async () => {
   const [inventory, targetMap] = await Promise.all([readJson(inventoryPath), readJson(targetMapPath)]);
   assert.equal(targetMap.assertions.routeCount, 38);
