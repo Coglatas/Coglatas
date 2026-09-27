@@ -97,6 +97,7 @@ jobs:
         run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
 
       - name: Build
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
         run: dotnet build Coglatas.slnx --configuration Release --no-restore --disable-build-servers -m:1
 
       - name: Verify deterministic OpenAPI 3.1 generation
@@ -389,6 +390,11 @@ jobs:
             exit 1
           fi
           exit "$status"
+
+      - name: Verify AV-MIG production contracts and mutation suites
+        if: github.event_name != 'pull_request' || steps.route.outputs.avmig_contract == 'true'
+        shell: bash
+        run: bash scripts/ci/generate-security-openapi-contract.sh
 
       - name: Validate Compose files
         if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
