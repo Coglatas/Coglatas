@@ -35,8 +35,5 @@
   "dependencies": {
     "rg": "^0.0.2"
   },
-  "allowScripts": {
-    "fsevents@2.3.2": true
-  },
   "license": "UNLICENSED"
 }
