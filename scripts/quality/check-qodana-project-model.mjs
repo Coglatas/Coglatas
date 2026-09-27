@@ -15,6 +15,8 @@ const changedFilesPath = process.env.QODANA_CHANGED_FILES_PATH,
     return value;
   },
   criticalThreshold = configuredThresholdParser('QODANA_CRITICAL_THRESHOLD', '0'),
+  ruleBaselinePath =
+    process.env.QODANA_RULE_BASELINE_PATH || 'scripts/quality/qodana-rule-baseline.json',
   sarifPath =
     process.argv[2] ||
     process.env.QODANA_SARIF_PATH ||
@@ -36,11 +38,25 @@ if (changedFilesPath && !existsSync(changedFilesPath)) {
   throw new Error(`Qodana changed-files list was not found: ${changedFilesPath}`);
 }
 
+if (!existsSync(ruleBaselinePath)) {
+  throw new Error(`Qodana rule baseline was not found: ${ruleBaselinePath}`);
+}
+
 let sarif;
+let ruleBaseline;
 try {
   sarif = JSON.parse(readFileSync(sarifPath, 'utf8'));
 } catch (error) {
   console.error(`Qodana SARIF file is not valid JSON: ${sarifPath}`);
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
+
+try {
+  ruleBaseline = JSON.parse(readFileSync(ruleBaselinePath, 'utf8'));
+  validateRuleBaseline(ruleBaseline);
+} catch (error) {
+  console.error(`Qodana rule baseline is invalid: ${ruleBaselinePath}`);
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 }
@@ -97,7 +113,9 @@ for (const result of results) {
   }
 }
 
-const categoryCounts = countBy(unresolvedResults.map(classifyUnresolved)),
+const ruleCounts = countBy(results.map((result) => result.ruleId || '<missing-rule-id>')),
+  ruleRegressions = findRuleRegressions(ruleCounts, ruleBaseline.ruleBudgets),
+  categoryCounts = countBy(unresolvedResults.map(classifyUnresolved)),
   changedResults = changedFiles
     ? results.filter((result) =>
         (result.locations || []).some((location) =>
@@ -114,6 +132,11 @@ const summary = {
   severityCounts: Object.fromEntries([...severityCounts.entries()].sort()),
   changedFiles: changedFiles?.size ?? Number(),
   changedFindings: changedResults.length,
+  ruleBaselinePath,
+  ruleBaselineSourceRevision: ruleBaseline.sourceRevision ?? null,
+  ruleBaselineTotalFindings: ruleBaseline.totalFindings,
+  currentRuleCounts: Object.fromEntries([...ruleCounts.entries()].sort(([left], [right]) => left.localeCompare(right))),
+  ruleRegressions,
   criticalFindings: ['critical', 'error'].reduce(
     (count, severity) => count + (severityCounts.get(severity) || Number()),
     Number()
@@ -153,9 +176,40 @@ if (unresolvedResults.length > unresolvedThreshold || unresolvedFiles.size > unr
   process.exit(1);
 }
 
-if (changedFiles && changedResults.length) {
+if (ruleRegressions.length > 0) {
   throw new Error(
-    `Qodana reported ${changedResults.length} finding(s) in files changed by this pull request.`
+    `Qodana rule debt increased above the ratchet baseline: ${JSON.stringify(ruleRegressions)}`
+  );
+}
+
+function validateRuleBaseline(baseline) {
+  if (baseline?.version !== 1 || !baseline.ruleBudgets || typeof baseline.ruleBudgets !== 'object') {
+    throw new TypeError('Expected Qodana rule baseline version 1 with a ruleBudgets object.');
+  }
+
+  for (const [ruleId, budget] of Object.entries(baseline.ruleBudgets)) {
+    if (!ruleId || !Number.isSafeInteger(budget) || budget < 0) {
+      throw new TypeError(`Invalid Qodana rule baseline entry: ${JSON.stringify({ ruleId, budget })}`);
+    }
+  }
+
+  if (!Number.isSafeInteger(baseline.totalFindings) || baseline.totalFindings < 0) {
+    throw new TypeError('Qodana rule baseline totalFindings must be a non-negative integer.');
+  }
+}
+
+function findRuleRegressions(currentCounts, budgets) {
+  const regressions = [];
+
+  for (const [ruleId, current] of currentCounts) {
+    const budget = budgets[ruleId] ?? 0;
+    if (current > budget) {
+      regressions.push({ ruleId, budget, current, delta: current - budget });
+    }
+  }
+
+  return regressions.sort(
+    (left, right) => right.delta - left.delta || left.ruleId.localeCompare(right.ruleId)
   );
 }
 

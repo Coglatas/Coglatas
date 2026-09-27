@@ -6,7 +6,7 @@ namespace Coglatas.Web.Controllers;
 
 [ApiController]
 [Authorize]
-public sealed class ChannelsController(IChannelService channels) : ControllerBase
+public sealed class ChannelsController(IChannelService channels) : ApiResultControllerBase
 {
     [HttpGet("api/groups/{groupId:guid}/channels")]
     public async Task<IActionResult> List(Guid groupId, CancellationToken cancellationToken)
@@ -121,8 +121,4 @@ public sealed class ChannelsController(IChannelService channels) : ControllerBas
         return ToActionResult(await channels.ListPinnedPostsAsync(channelId, cancellationToken));
     }
 
-    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result)
-    {
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
-    }
 }

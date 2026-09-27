@@ -6,7 +6,7 @@ namespace Coglatas.Web.Controllers;
 
 [ApiController]
 [Authorize]
-public sealed class StudentRecordsController(IStudentRecordService studentRecords) : ControllerBase
+public sealed class StudentRecordsController(IStudentRecordService studentRecords) : ApiResultControllerBase
 {
     [HttpGet("api/student-records/{studentRecordId:guid}/public")]
     public async Task<IActionResult> GetPublic(Guid studentRecordId, CancellationToken cancellationToken)
@@ -48,8 +48,4 @@ public sealed class StudentRecordsController(IStudentRecordService studentRecord
         return ToActionResult(await studentRecords.DownloadRestrictedExportAsync(exportPackageGrantId, cancellationToken));
     }
 
-    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result)
-    {
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
-    }
 }

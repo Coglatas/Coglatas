@@ -38,6 +38,7 @@ jobs:
       QODANA_UNRESOLVED_THRESHOLD: "0"
       QODANA_UNRESOLVED_FILE_THRESHOLD: "0"
       QODANA_CRITICAL_THRESHOLD: "0"
+      QODANA_RULE_BASELINE_PATH: scripts/quality/qodana-rule-baseline.json
 
     steps:
       - name: Repair previous Docker workspace ownership

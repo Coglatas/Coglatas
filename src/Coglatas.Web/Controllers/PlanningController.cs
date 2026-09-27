@@ -1,3 +1,4 @@
+using Coglatas.Application.Common;
 using Coglatas.Application.Planning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,7 +7,7 @@ namespace Coglatas.Web.Controllers;
 
 [ApiController]
 [Authorize]
-public sealed class PlanningController(IPlanningService planning) : ControllerBase
+public sealed class PlanningController(IPlanningService planning) : ApiResultControllerBase
 {
     [AllowAnonymous]
     [HttpGet("api/projects/{projectId:guid}/gantt")]
@@ -31,12 +32,7 @@ public sealed class PlanningController(IPlanningService planning) : ControllerBa
     [HttpGet("api/projects/{projectId:guid}/workload")]
     public async Task<IActionResult> Workload(Guid projectId, CancellationToken cancellationToken) => ToActionResult(await planning.GetWorkloadAsync(projectId, cancellationToken));
 
-    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result)
-    {
-        return result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
-    }
-
-    private IActionResult ToGanttActionResult<T>(Coglatas.Application.Common.Result<T> result)
+    private IActionResult ToGanttActionResult<T>(Result<T> result)
     {
         if (result.IsSuccess)
         {
@@ -69,7 +65,7 @@ public sealed class PlanningController(IPlanningService planning) : ControllerBa
         });
     }
 
-    private IActionResult ToMyTasksActionResult<T>(Coglatas.Application.Common.Result<T> result)
+    private IActionResult ToMyTasksActionResult<T>(Result<T> result)
     {
         if (result.IsSuccess)
         {

@@ -275,12 +275,26 @@ public sealed class IntegrationService(
             return Result<CreateApiTokenResponse>.Failure(auth.Error ?? "Authentication is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.Name))
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 160)
         {
-            return Result<CreateApiTokenResponse>.Failure("API token name is required.");
+            return Result<CreateApiTokenResponse>.Failure("API token name must be 1 to 160 characters.");
         }
 
-        var scopesJson = NormalizeJson(request.ScopesJson, "[]");
+        string scopesJson;
+        try
+        {
+            scopesJson = NormalizeJson(request.ScopesJson, "[]");
+            using var document = JsonDocument.Parse(scopesJson);
+            if (scopesJson.Length > 4000 || document.RootElement.ValueKind != JsonValueKind.Array ||
+                document.RootElement.EnumerateArray().Any(item => item.ValueKind != JsonValueKind.String))
+            {
+                return Result<CreateApiTokenResponse>.Failure("API token scopes must be a JSON array of strings (at most 4000 characters).");
+            }
+        }
+        catch (JsonException)
+        {
+            return Result<CreateApiTokenResponse>.Failure("API token scopes must be a JSON array of strings (at most 4000 characters).");
+        }
         if (request.ExpiresAt.HasValue && request.ExpiresAt.Value <= clock.UtcNow)
         {
             return Result<CreateApiTokenResponse>.Failure("API token expiry must be in the future.");
@@ -292,7 +306,7 @@ public sealed class IntegrationService(
             Name = request.Name.Trim(),
             TokenHash = tokenHasher.HashToken(rawToken),
             ScopesJson = scopesJson,
-            ExpiresAt = request.ExpiresAt,
+            ExpiresAt = request.ExpiresAt?.ToUniversalTime(),
             CreatedByUserId = userId
         };
 
@@ -397,11 +411,18 @@ public sealed class IntegrationService(
             return Result.Failure("Integration display name is required.");
         }
 
-        var json = NormalizeJson(settingsJson, "{}");
-        using var document = JsonDocument.Parse(json);
-        if (ContainsSensitiveKey(document.RootElement))
+        try
         {
-            return Result.Failure("Integration settings must not contain raw secrets, tokens, passwords, or API keys.");
+            var json = NormalizeJson(settingsJson, "{}");
+            using var document = JsonDocument.Parse(json);
+            if (ContainsSensitiveKey(document.RootElement))
+            {
+                return Result.Failure("Integration settings must not contain raw secrets, tokens, passwords, or API keys.");
+            }
+        }
+        catch (JsonException)
+        {
+            return Result.Failure("Integration settings must contain valid JSON.");
         }
 
         return Result.Success();
@@ -424,7 +445,15 @@ public sealed class IntegrationService(
             return Result.Failure("Webhook URL must use HTTPS.");
         }
 
-        _ = NormalizeJson(enabledEventsJson, "[]");
+        try
+        {
+            _ = NormalizeJson(enabledEventsJson, "[]");
+        }
+        catch (JsonException)
+        {
+            return Result.Failure("Webhook events must contain valid JSON.");
+        }
+
         return Result.Success();
     }
 
@@ -476,7 +505,7 @@ public sealed class IntegrationService(
     private bool TryCurrentUser(out Guid userId)
     {
         userId = currentUser.UserId ?? Guid.Empty;
-        return currentUser.IsAuthenticated && currentUser.UserId.HasValue;
+        return currentUser is { IsAuthenticated: true, UserId: not null };
     }
 
     private static string GenerateRawToken()

@@ -12,6 +12,7 @@
     <Project Path="src/Coglatas.Web/Coglatas.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Coglatas.Architecture.Tests/Coglatas.Architecture.Tests.csproj" />
     <Project Path="tests/Coglatas.Tests/Coglatas.Tests.csproj" />
   </Folder>
 </Solution>

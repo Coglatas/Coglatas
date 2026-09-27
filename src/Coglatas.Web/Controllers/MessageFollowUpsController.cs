@@ -6,7 +6,7 @@ namespace Coglatas.Web.Controllers;
 
 [ApiController]
 [Authorize]
-public sealed class MessageFollowUpsController(IMessageFollowUpService followUps) : ControllerBase
+public sealed class MessageFollowUpsController(IMessageFollowUpService followUps) : ApiResultControllerBase
 {
     [HttpGet("api/me/message-follow-ups")]
     public async Task<IActionResult> List(
@@ -22,6 +22,4 @@ public sealed class MessageFollowUpsController(IMessageFollowUpService followUps
     public async Task<IActionResult> Remove(Guid messageId, CancellationToken cancellationToken) =>
         ToActionResult(await followUps.RemoveAsync(messageId, cancellationToken));
 
-    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result) =>
-        result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
 }

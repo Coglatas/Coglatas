@@ -74,6 +74,19 @@ rescue Psych::Exception => e
   fail!("Automation plan YAML is invalid: #{e.message}")
 end
 fail!("Automation plan root must be a mapping") unless document.is_a?(Hash)
+env = document["env"]
+fail!("Automation plan env must be a mapping") unless env.is_a?(Hash)
+contexts = hash_array(env["contexts"], "Automation plan contexts must be an array of mappings")
+fail!("Automation plan must contain exactly one SEC-06 context") unless contexts.length == 1
+context = contexts.first
+required_auth_exclusions = [
+  "${COGLATAS_SECURITY_ZAP_TARGET_REGEX}/api/auth/logout(?:[/?#].*)?$",
+  "${COGLATAS_SECURITY_ZAP_TARGET_REGEX}/api/auth/change-password(?:[/?#].*)?$",
+]
+exclude_paths = context["excludePaths"]
+unless exclude_paths.is_a?(Array) && (required_auth_exclusions - exclude_paths).empty?
+  fail!("SEC-06 context must exclude session-mutating auth routes before OpenAPI import")
+end
 jobs = hash_array(document["jobs"], "Automation plan jobs must be an array of mappings")
 
 openapi = only_job(jobs, "openapi")
@@ -88,11 +101,18 @@ require_blocking_stats_test(
 
 requestor = only_job(jobs, "requestor")
 requests = hash_array(requestor["requests"], "requestor requests must be an array of mappings")
+required_probe_headers = [
+  "X-Tenant-Slug:${COGLATAS_SECURITY_ZAP_TENANT}",
+  "Cookie:${COGLATAS_SECURITY_ZAP_COOKIE}",
+  "X-CSRF-Token:${COGLATAS_SECURITY_ZAP_CSRF_TOKEN}",
+]
 unless requests.any? { |request|
   request["url"] == "${COGLATAS_SECURITY_ZAP_TARGET}/api/announcements/audiences" &&
-    request["responseCode"] == 200
+    request["responseCode"] == 200 &&
+    request["headers"].is_a?(Array) &&
+    (required_probe_headers - request["headers"]).empty?
 }
-  fail!("Automation plan authenticated request/response probe is missing")
+  fail!("Automation plan authenticated request/response probe is missing or lacks explicit auth headers")
 end
 
 unless jobs.any? { |job| job["type"] == "passiveScan-wait" }
@@ -103,8 +123,8 @@ policy_job = only_job(jobs, "activeScan-policy")
 policy_definition = policy_job["policyDefinition"]
 fail!("Automation plan activeScan policyDefinition is missing") unless policy_definition.is_a?(Hash)
 default_threshold = policy_definition["defaultThreshold"]
-unless default_threshold == "Off" || default_threshold == false
-  fail!("Automation plan defaultThreshold must remain Off")
+unless default_threshold == "Off"
+  fail!("Automation plan defaultThreshold must remain the string Off")
 end
 rules = hash_array(policy_definition["rules"], "Automation plan activeScan rules must be an array of mappings")
 plan_rule_ids = rules.map { |rule| rule["id"] }.compact.map(&:to_s)
@@ -117,6 +137,10 @@ unless plan_rule_ids.length == required_active_rule_ids.length &&
 end
 
 active_scan = only_job(jobs, "activeScan")
+active_parameters = active_scan["parameters"]
+unless active_parameters.is_a?(Hash) && active_parameters["scanHeadersAllRequests"] == true
+  fail!("Active scan must scan headers on all requests so required parameter-oriented rules receive work")
+end
 active_tests = hash_array(active_scan["tests"], "activeScan tests must be an array of mappings")
 statistics = active_tests.map { |test| test["statistic"] }.compact.map(&:to_s)
 fail!("Active scan forced-stop invariant is missing") unless statistics.include?("stats.ascan.stopped")
@@ -210,6 +234,41 @@ command -v ruby >/dev/null 2>&1 || test_fail "Ruby is required to parse the SEC-
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
+# The real ZAP job parser leaves job placeholders untouched. Verify that the
+# private rendered plan is valid YAML and preserves escaped credential values.
+export COGLATAS_SECURITY_ZAP_TARGET='http://app:8080'
+export COGLATAS_SECURITY_ZAP_TARGET_REGEX='http://app:8080'
+export COGLATAS_SECURITY_ZAP_TENANT='security-alpha'
+export COGLATAS_SECURITY_ZAP_COOKIE='session=contract-"quoted"'
+export COGLATAS_SECURITY_ZAP_CSRF_TOKEN='contract-token'
+export COGLATAS_SECURITY_ZAP_REPORT_DIR='/state'
+export COGLATAS_SECURITY_ZAP_REPORT_FILE='zap-contract.json'
+python3 scripts/security/render-zap-plan.py "$plan" "$tmp/private-plan.yaml"
+python3 - "$tmp/private-plan.yaml" <<'PY'
+import os
+import stat
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+assert stat.S_IMODE(path.stat().st_mode) == 0o600
+assert b"${COGLATAS_SECURITY_ZAP_" not in path.read_bytes()
+PY
+ruby - "$tmp/private-plan.yaml" <<'RUBY'
+require "yaml"
+plan = YAML.safe_load(File.read(ARGV.fetch(0)), aliases: false)
+replacer = plan.fetch("jobs").find { |job| job["type"] == "replacer" }
+requestor = plan.fetch("jobs").find { |job| job["type"] == "requestor" }
+probe_headers = requestor.fetch("requests").first.fetch("headers")
+abort "SEC-06 rendered cookie changed" unless replacer.fetch("rules")[1]["replacementString"] == ENV.fetch("COGLATAS_SECURITY_ZAP_COOKIE")
+abort "SEC-06 rendered URL changed" unless replacer.fetch("rules")[0]["url"] == "http://app:8080/.*"
+abort "SEC-06 requestor cookie header changed" unless probe_headers.include?("Cookie:#{ENV.fetch("COGLATAS_SECURITY_ZAP_COOKIE")}")
+abort "SEC-06 requestor tenant header changed" unless probe_headers.include?("X-Tenant-Slug:#{ENV.fetch("COGLATAS_SECURITY_ZAP_TENANT")}")
+abort "SEC-06 requestor CSRF header changed" unless probe_headers.include?("X-CSRF-Token:#{ENV.fetch("COGLATAS_SECURITY_ZAP_CSRF_TOKEN")}")
+RUBY
+unset COGLATAS_SECURITY_ZAP_TARGET COGLATAS_SECURITY_ZAP_TARGET_REGEX COGLATAS_SECURITY_ZAP_TENANT
+unset COGLATAS_SECURITY_ZAP_COOKIE COGLATAS_SECURITY_ZAP_CSRF_TOKEN
+unset COGLATAS_SECURITY_ZAP_REPORT_DIR COGLATAS_SECURITY_ZAP_REPORT_FILE
+
 python3 - "$policy" "$required_active_rule_ids" <<'PY'
 import json
 import re
@@ -275,16 +334,22 @@ expect_plan_comment_rejected() {
 }
 
 for invariant in \
+  '- "${COGLATAS_SECURITY_ZAP_TARGET_REGEX}/api/auth/logout(?:[/?#].*)?$"' \
+  '- "${COGLATAS_SECURITY_ZAP_TARGET_REGEX}/api/auth/change-password(?:[/?#].*)?$"' \
   '- type: openapi' \
   'statistic: openapi.urls.added' \
   'operator: ">"' \
   '- type: requestor' \
   'url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/announcements/audiences"' \
+  '- "X-Tenant-Slug:${COGLATAS_SECURITY_ZAP_TENANT}"' \
+  '- "Cookie:${COGLATAS_SECURITY_ZAP_COOKIE}"' \
+  '- "X-CSRF-Token:${COGLATAS_SECURITY_ZAP_CSRF_TOKEN}"' \
   'responseCode: 200' \
   '- type: passiveScan-wait' \
   '- type: activeScan-policy' \
-  'defaultThreshold: Off' \
+  'defaultThreshold: "Off"' \
   '- type: activeScan' \
+  'scanHeadersAllRequests: true' \
   'statistic: stats.ascan.stopped' \
   'template: traditional-json' \
   '- type: exitStatus' \

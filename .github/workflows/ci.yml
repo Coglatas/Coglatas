@@ -156,6 +156,25 @@ jobs:
           --verbosity normal
           --logger "trx;LogFileName=backend-tests.trx"
           --results-directory artifacts/test-results
+          --collect "XPlat Code Coverage"
+
+      - name: Generate .NET coverage report
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet reportgenerator \
+            "-reports:artifacts/test-results/**/coverage.cobertura.xml" \
+            "-targetdir:artifacts/coverage" \
+            "-reporttypes:Html;Cobertura;MarkdownSummaryGithub"
+          cat artifacts/coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload .NET coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dotnet-coverage-report
+          path: artifacts/coverage
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Upload backend results on failure
         if: failure()
@@ -302,12 +321,44 @@ jobs:
 
       - name: Validate Compose files
         shell: bash
+        env:
+          # Compose resolves environment-backed build secrets during config validation.
+          # This placeholder is used only for static Compose rendering; no licensed build runs here.
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
         run: |
           docker compose -f docker-compose.db.yml config --quiet
           docker compose -f docker-compose.dev.yml config --quiet
           docker compose -f docker-compose.playwright.yml config --quiet
           docker compose -p coglatas-real-backend-smoke-ci-config -f docker-compose.real-backend-smoke.yml config --quiet
-          docker compose -p coglatas-security-ci-config -f docker-compose.real-backend-smoke.yml -f docker-compose.security.yml config --format json | python3 scripts/ci/verify-security-compose.py
+          # Scanner contract fixtures are verbose; preserve failure output without
+          # overwhelming GitHub's downloadable job log.
+          compose_validation_log="$(mktemp)"
+          if docker compose -p coglatas-security-ci-config -f docker-compose.real-backend-smoke.yml -f docker-compose.security.yml config --format json |
+            python3 scripts/ci/verify-security-compose.py > "$compose_validation_log" 2>&1; then
+            tail -n 16 "$compose_validation_log"
+          else
+            # Cleanup logs can be large; surface the redacted scanner failure first.
+            awk '/runtime gate failed; dumping redacted Compose state/ { exit }
+              /replacementString|Cookie|CSRF token/ { next }
+              /SEC-06|SEC-03 scanner|SEC-02 app|ZAP|scanner network|internal scanner|app alias|report rejected|Job:|Job |Test:|Test |Automation plan|ERROR:|WARN:|Failed|Exception|Permission denied|Traceback/ { print substr($0, 1, 400) }' \
+              "$compose_validation_log" | tail -n 90 || true
+            # Keep the last redacted runtime lines before Compose cleanup floods
+            # the log, including Schemathesis counterexamples and scanner exit.
+            awk '/runtime gate failed; dumping redacted Compose state/ {
+                   start = total > 70 ? total - 69 : 1
+                   for (row_number = start; row_number <= total; row_number++) print lines[row_number % 70]
+                   exit
+                 }
+                 { total++; lines[total % 70] = substr($0, 1, 320) }' \
+              "$compose_validation_log"
+            if [[ -f artifacts/security/zap/preflight-stage.txt ]]; then
+              grep -E '^stage=[a-z-]+$' artifacts/security/zap/preflight-stage.txt || true
+            fi
+            tail -n 16 "$compose_validation_log"
+            rm -f "$compose_validation_log"
+            exit 1
+          fi
+          rm -f "$compose_validation_log"
           docker compose -p coglatas-u22-demo-ci-config -f docker-compose.real-backend-smoke.yml -f docker-compose.u22-demo.yml config --quiet
           docker compose config --quiet
           docker compose -f docker-compose.local.yml config --quiet

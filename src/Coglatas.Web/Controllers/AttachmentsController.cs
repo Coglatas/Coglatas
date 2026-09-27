@@ -9,7 +9,7 @@ namespace Coglatas.Web.Controllers;
 
 [ApiController]
 [Authorize]
-public sealed class AttachmentsController(IFileService files) : ControllerBase
+public sealed class AttachmentsController(IFileService files) : ApiResultControllerBase
 {
     [HttpPost("api/attachments")]
     [Consumes("multipart/form-data")]
@@ -89,9 +89,6 @@ public sealed class AttachmentsController(IFileService files) : ControllerBase
     [HttpDelete("api/attachments/{attachmentId:guid}")]
     public async Task<IActionResult> Delete(Guid attachmentId, CancellationToken cancellationToken) => OkOrBad(await files.DeleteAsync(attachmentId, cancellationToken));
 
-    private IActionResult OkOrBad(Coglatas.Application.Common.Result result) => result.IsSuccess ? Ok(new { status = "OK" }) : BadRequest(new { error = result.Error });
-    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result) => result.IsSuccess ? Ok(result.Value) : BadRequest(new { error = result.Error });
-
     private FileStreamResult PrivateFile(Stream content, string contentType, string fileName)
     {
         Response.Headers.CacheControl = "no-store, max-age=0";
@@ -103,10 +100,14 @@ public sealed class AttachmentsController(IFileService files) : ControllerBase
 
 public sealed class UploadAttachmentForm
 {
+    // ASP.NET Core form model binding assigns these setters via reflection.
+    // ReSharper disable once UnusedAutoPropertyAccessor.Global
     public AttachmentOwnerType OwnerType { get; set; }
 
+    // ReSharper disable once UnusedAutoPropertyAccessor.Global
     public Guid OwnerId { get; set; }
 
     [Required]
+    // ReSharper disable once UnusedAutoPropertyAccessor.Global
     public IFormFile? File { get; set; }
 }
