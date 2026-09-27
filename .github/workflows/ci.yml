@@ -71,20 +71,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          fetch-depth: 0
           persist-credentials: false
 
+      - name: Route pull request changes
+        id: route
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/ci/route-main-ci-changes.sh
+
+      - name: Skip backend checks for unrelated PR
+        if: github.event_name == 'pull_request' && steps.route.outputs.backend != 'true'
+        run: echo "No backend-relevant changes detected; build-test passes without running the backend suite."
+
       - name: Set up .NET SDK
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
 
       - name: Restore
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
         run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
 
       - name: Build
         run: dotnet build Coglatas.slnx --configuration Release --no-restore --disable-build-servers -m:1
 
       - name: Verify deterministic OpenAPI 3.1 generation
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
         shell: bash
         env:
           # Build-time contract generation must be read-only. Point database
@@ -130,6 +146,7 @@ jobs:
           fi
 
       - name: Upload OpenAPI 3.1 contract
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: openapi-3.1-contract
@@ -138,27 +155,41 @@ jobs:
           retention-days: 7
 
       - name: Restore .NET tools
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
         run: dotnet tool restore
 
       - name: Apply PostgreSQL migrations
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
         run: dotnet ef database update --project src/Coglatas.Infrastructure --startup-project src/Coglatas.Web --configuration Release --no-build
 
       - name: Reject pending EF Core model changes
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
         run: dotnet ef migrations has-pending-model-changes --project src/Coglatas.Infrastructure --startup-project src/Coglatas.Web --configuration Release --no-build
 
       - name: Test
-        run: >-
-          dotnet test Coglatas.slnx
-          --configuration Release
-          --no-build
-          --disable-build-servers
-          -m:1
-          --verbosity normal
-          --logger "trx;LogFileName=backend-tests.trx"
-          --results-directory artifacts/test-results
-          --collect "XPlat Code Coverage"
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true'
+        shell: bash
+        env:
+          BACKEND_TEST_SCOPE: ${{ steps.route.outputs.backend_test_scope }}
+          BACKEND_TEST_FILTER: ${{ steps.route.outputs.backend_test_filter }}
+        run: |
+          args=(
+            --configuration Release
+            --no-build
+            --disable-build-servers
+            -m:1
+            --verbosity normal
+            --logger "trx;LogFileName=backend-tests.trx"
+            --results-directory artifacts/test-results
+            --collect "XPlat Code Coverage"
+          )
+          if [[ "$BACKEND_TEST_SCOPE" == "scoped" && -n "$BACKEND_TEST_FILTER" ]]; then
+            args+=(--filter "$BACKEND_TEST_FILTER")
+          fi
+          dotnet test Coglatas.slnx "${args[@]}"
 
       - name: Generate .NET coverage report
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -169,6 +200,7 @@ jobs:
           cat artifacts/coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload .NET coverage report
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: dotnet-coverage-report
@@ -177,7 +209,7 @@ jobs:
           retention-days: 7
 
       - name: Upload backend results on failure
-        if: failure()
+        if: failure() && (github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true')
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -195,17 +227,33 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          fetch-depth: 0
           persist-credentials: false
 
+      - name: Route pull request changes
+        id: route
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/ci/route-main-ci-changes.sh
+
+      - name: Skip frontend checks for unrelated PR
+        if: github.event_name == 'pull_request' && steps.route.outputs.frontend != 'true'
+        run: echo "No frontend-relevant changes detected; frontend-test passes without running the frontend suite."
+
       - name: Set up Node.js
+        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24"
 
       - name: Use repository npm version without lifecycle scripts
+        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
         run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
 
       - name: Validate MVP-A CI helper syntax
+        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
         shell: bash
         run: |
           python3 -m py_compile \
@@ -227,36 +275,47 @@ jobs:
           node --check /tmp/mvp-a-authz-boundary-acceptance.mjs
 
       - name: Verify MVP-A accessibility coverage contract
+        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
         run: python3 scripts/ci/verify-mvp-a-required-a11y-tests.py
 
       - name: Install UI runner dependencies with reviewed lifecycle policy
+        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
         run: bash scripts/ci/npm-ci-retry.sh .
 
       - name: Install Angular dependencies with reviewed lifecycle policy
+        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
         run: bash scripts/ci/npm-ci-retry.sh frontend
 
       - name: Build Angular production bundle without repository secrets
+        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_build == 'true'
         run: npm --prefix frontend run build
 
       - name: Run Angular unit tests
+        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_unit == 'true'
         run: npm --prefix frontend test
 
       - name: Validate frontend architecture
+        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_architecture == 'true'
         run: |
           npm --prefix frontend run check:architecture
           npm --prefix frontend run test:architecture
-          npm --prefix frontend run test:syncfusion-license
+
+      - name: Validate Syncfusion license guard
+        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_license_guard == 'true'
+        run: npm --prefix frontend run test:syncfusion-license
 
       - name: Build Storybook
+        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_storybook == 'true'
         env:
           NODE_OPTIONS: --max-old-space-size=4096
         run: npm --prefix frontend run build-storybook
 
       - name: Run Angular Playwright smoke in Docker
+        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_playwright == 'true'
         run: npm run test:ui:angular:docker
 
       - name: Upload browser artifacts on failure
-        if: failure()
+        if: failure() && (github.event_name != 'pull_request' || steps.route.outputs.frontend_playwright == 'true')
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -286,7 +345,16 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Route pull request changes
+        id: route
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/ci/route-main-ci-changes.sh
+
       - name: Create masked SEC-03 synthetic credential
+        if: github.event_name != 'pull_request' || steps.route.outputs.security == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -299,14 +367,17 @@ jobs:
           printf 'COGLATAS_SECURITY_CI_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
 
       - name: Set up .NET SDK
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true'
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
 
       - name: Restore
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true'
         run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
 
       - name: Reject vulnerable NuGet packages
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true'
         shell: bash
         run: |
           set +e
@@ -320,6 +391,7 @@ jobs:
           exit "$status"
 
       - name: Validate Compose files
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
         shell: bash
         env:
           # Compose resolves environment-backed build secrets during config validation.
@@ -368,6 +440,7 @@ jobs:
           bash scripts/ci/verify-onprem-proxy-topology.sh
 
       - name: Scan repository filesystem with Trivy
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_image == 'true'
         shell: bash
         run: |
           set +e
@@ -383,14 +456,23 @@ jobs:
           cat trivy-filesystem-report.txt
           exit "$status"
 
-      - name: Scan full reachable Git history with Gitleaks
+      - name: Scan PR diff or full main history with Gitleaks
         shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set +e
+          extra_args=()
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            merge_base="$(git merge-base "$PR_BASE_SHA" "$PR_HEAD_SHA")"
+            extra_args+=(--log-opts="${merge_base}..${PR_HEAD_SHA}")
+          fi
           docker run --rm \
             -v "$PWD:/repo" \
             zricethezav/gitleaks:v8.24.3 \
             detect --source /repo --redact --verbose \
+            "${extra_args[@]}" \
             --report-format json \
             --report-path /repo/gitleaks-report.json
           status=$?
@@ -399,7 +481,7 @@ jobs:
           exit "$status"
 
       - name: Upload SEC-06 sanitized ZAP evidence
-        if: always()
+        if: always() && (github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sec06-zap-evidence
