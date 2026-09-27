@@ -91,8 +91,10 @@ public sealed class AuditFilterPostgreSqlTests
         var result = await service.ListAuditGridAsync(new AuditLogQuery(
             Action: "FILE.EXPORT.FAILED",
             EntityType: "exportjob",
-            FromDate: now.AddMinutes(-1),
-            ToDate: now.AddMinutes(1),
+            // RFC3339 permits non-UTC offsets. Normalize them before Npgsql
+            // parameter binding so schema-compliant fuzz inputs cannot become 500s.
+            FromDate: now.AddMinutes(-1).ToOffset(TimeSpan.FromMinutes(220)),
+            ToDate: now.AddMinutes(1).ToOffset(TimeSpan.FromMinutes(220)),
             PageSize: 100,
             Q: $"neptune {runId}",
             Actor: runId,
