@@ -5,6 +5,19 @@ on:
   push:
     branches: ["main"]
   pull_request:
+    paths:
+      - ".github/workflows/sbom-security.yml"
+      - "Coglatas.slnx"
+      - "global.json"
+      - "NuGet.config"
+      - "Directory.Build.*"
+      - "Directory.Packages.*"
+      - "**/*.csproj"
+      - "**/package.json"
+      - "**/package-lock.json"
+      - "scripts/ci/*sbom*"
+      - "scripts/ci/install-syft.sh"
+      - "scripts/ci/install-grype.sh"
 
 concurrency:
   group: sbom-security-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
