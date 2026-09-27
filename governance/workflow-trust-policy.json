@@ -52,6 +52,20 @@
       "reason": "Publish CodeQL SARIF for pull requests, trusted main pushes, and the scheduled scan. On fork pull_request runs GitHub downgrades GITHUB_TOKEN writes while Code Scanning still permits PR result upload."
     },
     {
+      "workflow": ".github/workflows/qodana_cloud_quality.yml",
+      "jobs": [
+        "qodana-cloud"
+      ],
+      "events": [
+        "workflow_dispatch",
+        "push"
+      ],
+      "permissions": [
+        "security-events:write"
+      ],
+      "reason": "Publish normalized Qodana SARIF only from the trusted default-branch full scan; pull-request Qodana workflows remain read-only."
+    },
+    {
       "workflow": ".github/workflows/nuget-dependency-submission.yml",
       "jobs": [
         "submit-nuget"
