@@ -90,8 +90,8 @@ public sealed class InviteAcceptancePostgreSqlTests
                 firstService.AcceptInviteAsync(new AcceptInviteRequest(Token, "Ignored display name", InvitePassword)),
                 secondService.AcceptInviteAsync(new AcceptInviteRequest(Token, "Ignored display name", InvitePassword)));
 
-            var success = Assert.Single(results.Where(result => result.IsSuccess));
-            var denied = Assert.Single(results.Where(result => !result.IsSuccess));
+            var success = Assert.Single(results, result => result.IsSuccess);
+            var denied = Assert.Single(results, result => !result.IsSuccess);
             Assert.NotNull(success.Value);
             Assert.Equal("Invite has already been used.", denied.Error);
 
