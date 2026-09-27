@@ -55,8 +55,15 @@ public sealed class MessageNotificationPreferenceServiceTests
         Assert.Empty(store.Calls);
     }
 
-    private sealed class RecordingStore(bool enabled) : IMessageNotificationPreferenceStore
+    private sealed class RecordingStore : IMessageNotificationPreferenceStore
     {
+        private bool enabled;
+
+        public RecordingStore(bool enabled)
+        {
+            this.enabled = enabled;
+        }
+
         public List<Call> Calls { get; } = [];
 
         public Task<bool?> GetEnabledAsync(
