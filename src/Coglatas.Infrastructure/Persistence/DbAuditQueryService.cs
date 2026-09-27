@@ -88,12 +88,14 @@ public sealed class DbAuditQueryService(
 
         if (query.FromDate.HasValue)
         {
-            source = source.Where(log => log.CreatedAt >= query.FromDate.Value);
+            var fromDateUtc = NormalizePostgresTimestamp(query.FromDate.Value);
+            source = source.Where(log => log.CreatedAt >= fromDateUtc);
         }
 
         if (query.ToDate.HasValue)
         {
-            source = source.Where(log => log.CreatedAt <= query.ToDate.Value);
+            var toDateUtc = NormalizePostgresTimestamp(query.ToDate.Value);
+            source = source.Where(log => log.CreatedAt <= toDateUtc);
         }
 
         var total = await source.CountAsync(cancellationToken);
@@ -205,12 +207,14 @@ public sealed class DbAuditQueryService(
 
         if (query.FromDate.HasValue)
         {
-            source = source.Where(log => log.CreatedAt >= query.FromDate.Value);
+            var fromDateUtc = NormalizePostgresTimestamp(query.FromDate.Value);
+            source = source.Where(log => log.CreatedAt >= fromDateUtc);
         }
 
         if (query.ToDate.HasValue)
         {
-            source = source.Where(log => log.CreatedAt <= query.ToDate.Value);
+            var toDateUtc = NormalizePostgresTimestamp(query.ToDate.Value);
+            source = source.Where(log => log.CreatedAt <= toDateUtc);
         }
 
         if (!string.IsNullOrWhiteSpace(query.Q))
@@ -399,12 +403,14 @@ public sealed class DbAuditQueryService(
 
         if (query.FromDate.HasValue)
         {
-            source = source.Where(item => item.CreatedAt >= query.FromDate.Value);
+            var fromDateUtc = NormalizePostgresTimestamp(query.FromDate.Value);
+            source = source.Where(item => item.CreatedAt >= fromDateUtc);
         }
 
         if (query.ToDate.HasValue)
         {
-            source = source.Where(item => item.CreatedAt <= query.ToDate.Value);
+            var toDateUtc = NormalizePostgresTimestamp(query.ToDate.Value);
+            source = source.Where(item => item.CreatedAt <= toDateUtc);
         }
 
         var total = await source.CountAsync(cancellationToken);
@@ -530,6 +536,10 @@ public sealed class DbAuditQueryService(
         var normalized = value?.Trim();
         return string.IsNullOrEmpty(normalized) ? null : normalized;
     }
+
+    private static DateTimeOffset NormalizePostgresTimestamp(DateTimeOffset value) =>
+        value.ToUniversalTime();
+
 
     private static IQueryable<AuditLog> ApplyResultFilter(IQueryable<AuditLog> source, string result)
     {
