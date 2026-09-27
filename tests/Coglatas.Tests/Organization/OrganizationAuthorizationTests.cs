@@ -302,8 +302,9 @@ public sealed class OrganizationAuthorizationTests
                 source = source.Where(thread => thread.CreatedAt > after.Value);
             }
 
-            var items = source.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-            return Task.FromResult(new PagedResponse<PostThread>(items, page, pageSize, source.Count()));
+            var filtered = source.ToList();
+            var items = filtered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            return Task.FromResult(new PagedResponse<PostThread>(items, page, pageSize, filtered.Count));
         }
         public Task AddAsync(Channel channel, CancellationToken cancellationToken = default) { Items[channel.Id] = channel; return Task.CompletedTask; }
         public Task AddMemberAsync(ChannelMember member, CancellationToken cancellationToken = default) { Members.Add(member); return Task.CompletedTask; }

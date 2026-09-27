@@ -187,13 +187,14 @@ public sealed class TaskExecutionScopeServiceTests
     public async Task RunSnapshotIsReadInsideTheIdempotentCreationStage()
     {
         await using var fixture = await Fixture.CreateAsync();
+        var scope = await fixture.Db.ProjectExecutionScopes.SingleAsync();
+        Func<CancellationToken, Task<int>> saveChangesAsync = fixture.Db.SaveChangesAsync;
         var coordinator = new BeforeStageIdempotencyCoordinator(async cancellationToken =>
         {
-            var scope = await fixture.Db.ProjectExecutionScopes.SingleAsync(cancellationToken);
             scope.WebEnabled = true;
             scope.ProjectFilesEnabled = true;
             scope.VersionNo = 2;
-            await fixture.Db.SaveChangesAsync(cancellationToken);
+            await saveChangesAsync(cancellationToken);
         });
         var service = fixture.CreateService(new EfUnitOfWork(fixture.Db), coordinator);
 
