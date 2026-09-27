@@ -1,0 +1,1225 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "repository": "NYGsatoshi/AIPsiteNYG",
+    "branch": "main",
+    "commit": "4e6a10903a5a472ca89f833aba993a29e1b2cf73",
+    "inventoryDate": "2026-09-13",
+    "issue": 765,
+    "parentIssue": 764,
+    "executionRoadmapIssue": 798
+  },
+  "ngrx": {
+    "declaredDependencies": [
+      "@ngrx/component-store@22.0.0",
+      "@ngrx/effects@22.0.0",
+      "@ngrx/entity@22.0.0",
+      "@ngrx/store@22.0.0"
+    ],
+    "productionImportsFound": false,
+    "status": "dependency-only-at-snapshot",
+    "note": "No production @ngrx/* imports, reducer/effect/store implementation, or ComponentStore implementation were found at the pinned snapshot. Application state is predominantly Angular Signals plus RxJS in facades/services."
+  },
+  "routes": [
+    {
+      "path": "/signin",
+      "kind": "redirect",
+      "redirectTo": "/login",
+      "access": "public",
+      "stateOwners": [
+        "Router"
+      ],
+      "integrations": []
+    },
+    {
+      "path": "/login",
+      "kind": "screen",
+      "component": "LoginPageComponent",
+      "access": "public",
+      "stateOwners": [
+        "LoginPageComponent",
+        "AuthSessionFacade"
+      ],
+      "integrations": [
+        "rest-auth"
+      ],
+      "demoScope": "november-core"
+    },
+    {
+      "path": "/session-expired",
+      "kind": "screen",
+      "component": "SessionExpiredPageComponent",
+      "access": "public",
+      "stateOwners": [
+        "SessionExpiredPageComponent"
+      ],
+      "integrations": [],
+      "demoScope": "november-core"
+    },
+    {
+      "path": "/register/invite",
+      "kind": "screen",
+      "component": "InviteRegistrationPageComponent",
+      "access": "public",
+      "stateOwners": [
+        "InviteRegistrationPageComponent"
+      ],
+      "integrations": [
+        "rest"
+      ]
+    },
+    {
+      "path": "/permission-denied",
+      "kind": "screen",
+      "component": "AppPermissionDeniedComponent",
+      "access": "public-system",
+      "stateOwners": [
+        "AppPermissionDeniedComponent"
+      ],
+      "integrations": [],
+      "demoScope": "november-core"
+    },
+    {
+      "path": "/",
+      "kind": "redirect",
+      "redirectTo": "/workspaces",
+      "access": "protected",
+      "stateOwners": [
+        "AuthSessionFacade",
+        "AppShellFacade"
+      ],
+      "integrations": [],
+      "demoScope": "november-core"
+    },
+    {
+      "path": "/messages/saved",
+      "kind": "screen",
+      "component": "MessageFollowUpsPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "MessageFollowUpsPageComponent",
+        "MessageFollowUpFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr"
+      ]
+    },
+    {
+      "path": "/messages/settings",
+      "kind": "screen",
+      "component": "MessageSettingsPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "MessageSettingsPageComponent",
+        "MessageGlobalSettingsService"
+      ],
+      "integrations": [
+        "rest"
+      ]
+    },
+    {
+      "path": "/messages",
+      "kind": "screen",
+      "component": "MessagesPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "MessagesPageComponent",
+        "MessagingFacade",
+        "MessageGlobalSettingsService"
+      ],
+      "integrations": [
+        "rest",
+        "signalr"
+      ],
+      "demoScope": "post-november-wave-6"
+    },
+    {
+      "path": "/conversations/:conversationId",
+      "kind": "screen",
+      "component": "ChannelMessagingPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "ChannelMessagingPageComponent",
+        "MessagingFacade",
+        "RealtimeFacade",
+        "MessageGlobalSettingsService",
+        "ActiveWorkspaceFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr"
+      ],
+      "demoScope": "post-november-wave-6"
+    },
+    {
+      "path": "/workspaces/:workspaceId/channels/:conversationId",
+      "kind": "screen",
+      "component": "ChannelMessagingPageComponent",
+      "access": "protected-workspace",
+      "stateOwners": [
+        "ChannelMessagingPageComponent",
+        "MessagingFacade",
+        "RealtimeFacade",
+        "MessageGlobalSettingsService",
+        "ActiveWorkspaceFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr"
+      ],
+      "demoScope": "post-november-wave-6"
+    },
+    {
+      "path": "/dm/:conversationId",
+      "kind": "screen",
+      "component": "DmPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "DmPageComponent",
+        "MessagingFacade",
+        "RealtimeFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr"
+      ],
+      "demoScope": "post-november-wave-6"
+    },
+    {
+      "path": "/workspaces/:workspaceId/research/new",
+      "kind": "screen",
+      "component": "WorkspaceResearchQuickCreatePageComponent",
+      "access": "protected-workspace",
+      "stateOwners": [
+        "WorkspaceResearchQuickCreatePageComponent",
+        "WorkspacesFacade"
+      ],
+      "integrations": [
+        "rest"
+      ]
+    },
+    {
+      "path": "/workspaces/:workspaceId/projects",
+      "kind": "screen",
+      "component": "ProjectsOverviewPageComponent",
+      "access": "protected-workspace",
+      "stateOwners": [
+        "ProjectsOverviewPageComponent",
+        "ProjectsFacade",
+        "ActiveWorkspaceFacade",
+        "WorkspacesFacade",
+        "ProjectCreateFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr"
+      ],
+      "demoScope": "november-core"
+    },
+    {
+      "path": "/workspaces/:workspaceId/files",
+      "kind": "screen",
+      "component": "FilesPageComponent",
+      "access": "protected-workspace",
+      "stateOwners": [
+        "FilesPageComponent",
+        "FilesFacade",
+        "FileFolderStore",
+        "ActiveWorkspaceFacade",
+        "AuthSessionFacade",
+        "RealtimeFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr",
+        "file-io"
+      ]
+    },
+    {
+      "path": "/workspaces/:workspaceId/members",
+      "kind": "screen",
+      "component": "WorkspaceMembersPageComponent",
+      "access": "protected-workspace",
+      "stateOwners": [
+        "WorkspaceMembersPageComponent",
+        "ActiveWorkspaceFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr"
+      ]
+    },
+    {
+      "path": "/workspaces",
+      "kind": "screen",
+      "component": "WorkspaceDashboardPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "WorkspaceDashboardPageComponent",
+        "WorkspacesFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr"
+      ],
+      "demoScope": "november-core"
+    },
+    {
+      "path": "/announcements",
+      "kind": "screen",
+      "component": "AnnouncementsPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "AnnouncementsPageComponent",
+        "AnnouncementsFacade"
+      ],
+      "integrations": [
+        "rest"
+      ]
+    },
+    {
+      "path": "/announcements/:announcementId",
+      "kind": "screen",
+      "component": "AnnouncementsPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "AnnouncementsPageComponent",
+        "AnnouncementsFacade"
+      ],
+      "integrations": [
+        "rest"
+      ]
+    },
+    {
+      "path": "/app/projects/:projectId/tasks/:taskId/reports/:artifactVersionId",
+      "kind": "screen",
+      "component": "ReportReaderPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "ReportReaderPageComponent"
+      ],
+      "integrations": [
+        "rest"
+      ],
+      "compatibilityAlias": true
+    },
+    {
+      "path": "/app/projects/:projectId/reports/:artifactVersionId",
+      "kind": "screen",
+      "component": "ReportReaderPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "ReportReaderPageComponent"
+      ],
+      "integrations": [
+        "rest"
+      ],
+      "compatibilityAlias": true
+    },
+    {
+      "path": "/projects/:projectId/tasks/:taskId/reports/:artifactVersionId",
+      "kind": "screen",
+      "component": "ReportReaderPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "ReportReaderPageComponent"
+      ],
+      "integrations": [
+        "rest"
+      ]
+    },
+    {
+      "path": "/projects/:projectId/reports/:artifactVersionId",
+      "kind": "screen",
+      "component": "ReportReaderPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "ReportReaderPageComponent"
+      ],
+      "integrations": [
+        "rest"
+      ]
+    },
+    {
+      "path": "/projects/:projectId/tasks/new",
+      "kind": "screen",
+      "component": "TaskCreatePageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "TaskCreatePageComponent",
+        "TaskCreateFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr"
+      ],
+      "demoScope": "november-core"
+    },
+    {
+      "path": "/projects/:projectId/tasks/:taskId",
+      "kind": "screen",
+      "component": "TaskDetailPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "TaskDetailPageComponent",
+        "ProjectsFacade",
+        "FilesFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr",
+        "file-io"
+      ],
+      "demoScope": "november-core"
+    },
+    {
+      "path": "/projects/:projectId",
+      "kind": "screen",
+      "component": "ProjectDetailPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "ProjectDetailPageComponent",
+        "ProjectDetailFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr"
+      ],
+      "demoScope": "november-core"
+    },
+    {
+      "path": "/tasks",
+      "kind": "screen",
+      "component": "MyTasksPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "MyTasksPageComponent",
+        "MyTasksFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr"
+      ]
+    },
+    {
+      "path": "/projects",
+      "kind": "screen",
+      "component": "ProjectsOverviewPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "ProjectsOverviewPageComponent",
+        "ProjectsFacade",
+        "ActiveWorkspaceFacade",
+        "WorkspacesFacade",
+        "ProjectCreateFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr"
+      ],
+      "demoScope": "november-core"
+    },
+    {
+      "path": "/artifacts/:artifactId",
+      "kind": "screen",
+      "component": "ArtifactDetailPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "ArtifactDetailPageComponent"
+      ],
+      "integrations": [
+        "rest"
+      ]
+    },
+    {
+      "path": "/files",
+      "kind": "screen",
+      "component": "FilesPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "FilesPageComponent",
+        "FilesFacade",
+        "FileFolderStore",
+        "ActiveWorkspaceFacade",
+        "AuthSessionFacade",
+        "RealtimeFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr",
+        "file-io"
+      ]
+    },
+    {
+      "path": "/account",
+      "kind": "screen",
+      "component": "AccountPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "AccountPageComponent",
+        "AccountFacade"
+      ],
+      "integrations": [
+        "rest"
+      ]
+    },
+    {
+      "path": "/admin/audit/findings",
+      "kind": "screen",
+      "component": "AuditFindingsPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "AuditFindingsPageComponent",
+        "AuditFindingsFacade"
+      ],
+      "integrations": [
+        "rest"
+      ],
+      "demoScope": "post-november-wave-7"
+    },
+    {
+      "path": "/admin/audit/claims-evidence",
+      "kind": "screen",
+      "component": "AuditClaimsEvidencePageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "AuditClaimsEvidencePageComponent",
+        "AuditClaimsEvidenceFacade"
+      ],
+      "integrations": [
+        "rest"
+      ],
+      "demoScope": "post-november-wave-7"
+    },
+    {
+      "path": "/admin/audit/package-export",
+      "kind": "screen",
+      "component": "AuditPackageExportPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "AuditPackageExportPageComponent"
+      ],
+      "integrations": [
+        "rest",
+        "file-io"
+      ],
+      "demoScope": "post-november-wave-7"
+    },
+    {
+      "path": "/admin/audit",
+      "kind": "screen",
+      "component": "AuditLogPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "AuditLogPageComponent",
+        "AdminFacade"
+      ],
+      "integrations": [
+        "rest",
+        "signalr"
+      ],
+      "demoScope": "post-november-wave-7"
+    },
+    {
+      "path": "/admin/invites",
+      "kind": "screen",
+      "component": "InviteAdminPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "InviteAdminPageComponent"
+      ],
+      "integrations": [
+        "rest"
+      ],
+      "demoScope": "post-november-wave-7"
+    },
+    {
+      "path": "/admin/export-diagnostics",
+      "kind": "screen",
+      "component": "ExportDiagnosticsPageComponent",
+      "access": "protected",
+      "stateOwners": [
+        "ExportDiagnosticsPageComponent",
+        "AdminFacade"
+      ],
+      "integrations": [
+        "rest"
+      ],
+      "demoScope": "post-november-wave-7"
+    },
+    {
+      "path": "**",
+      "kind": "fallback",
+      "component": "PagePlaceholderComponent",
+      "access": "fallback",
+      "stateOwners": [
+        "Router"
+      ],
+      "integrations": []
+    }
+  ],
+  "stateOwners": [
+    {
+      "name": "AuthSessionFacade",
+      "kind": "signals",
+      "scope": "cross-cutting",
+      "routes": [
+        "/login",
+        "protected:*"
+      ],
+      "migrationConcern": "Session and identity root; migrate before protected screens.",
+      "sourcePath": "frontend/src/app/core/auth/auth-session.facade.ts"
+    },
+    {
+      "name": "ActiveWorkspaceFacade",
+      "kind": "signals",
+      "scope": "cross-cutting",
+      "routes": [
+        "/workspaces",
+        "/workspaces/:workspaceId/*",
+        "/files",
+        "/projects*",
+        "/tasks"
+      ],
+      "migrationConcern": "Workspace scope is shared across feature state.",
+      "sourcePath": "frontend/src/app/core/workspace/active-workspace.facade.ts"
+    },
+    {
+      "name": "WorkspaceSelectionFacade",
+      "kind": "signals-service-realtime",
+      "scope": "cross-cutting",
+      "routes": [
+        "/workspaces",
+        "/workspaces/:workspaceId/*"
+      ],
+      "migrationConcern": "Selection and authorization invalidation are coupled.",
+      "sourcePath": "frontend/src/app/core/workspace/workspace-selection.facade.ts",
+      "nonRouteStatus": "Cross-cutting, embedded or indirect owner; exhaustive behavioral reconciliation remains open under #765/#766."
+    },
+    {
+      "name": "WorkspacesFacade",
+      "kind": "signals-rest-realtime",
+      "scope": "feature",
+      "routes": [
+        "/workspaces",
+        "/workspaces/:workspaceId/research/new"
+      ],
+      "migrationConcern": "Workspace dashboard state and quick-create capability projection.",
+      "sourcePath": "frontend/src/app/features/workspaces/workspaces.facade.ts"
+    },
+    {
+      "name": "AppShellFacade",
+      "kind": "derived-signals",
+      "scope": "cross-cutting",
+      "routes": [
+        "protected:*"
+      ],
+      "migrationConcern": "Global navigation and shell view model.",
+      "sourcePath": "frontend/src/app/layout/app-shell/app-shell.facade.ts"
+    },
+    {
+      "name": "TenantSwitchFacade",
+      "kind": "signals-rest-realtime",
+      "scope": "cross-cutting",
+      "routes": [
+        "protected:*"
+      ],
+      "migrationConcern": "Tenant transition must clear protected state fail-closed.",
+      "sourcePath": "frontend/src/app/core/tenant/tenant-switch.facade.ts",
+      "nonRouteStatus": "Cross-cutting, embedded or indirect owner; exhaustive behavioral reconciliation remains open under #765/#766."
+    },
+    {
+      "name": "TenantScopedStateFacade",
+      "kind": "signals",
+      "scope": "cross-cutting",
+      "routes": [
+        "protected:*"
+      ],
+      "migrationConcern": "Tenant-scoped state reset boundary.",
+      "sourcePath": "frontend/src/app/core/tenant/tenant-scoped-state.facade.ts",
+      "nonRouteStatus": "Cross-cutting, embedded or indirect owner; exhaustive behavioral reconciliation remains open under #765/#766."
+    },
+    {
+      "name": "RealtimeFacade",
+      "kind": "rxjs-owned-subscriptions",
+      "scope": "cross-cutting",
+      "routes": [
+        "protected:*"
+      ],
+      "migrationConcern": "Durable events, authorization invalidation, scoped subscriptions and stale epochs.",
+      "sourcePath": "frontend/src/app/core/realtime/realtime.facade.ts"
+    },
+    {
+      "name": "MessagingFacade",
+      "kind": "signals-rxjs-rest-realtime",
+      "scope": "feature",
+      "routes": [
+        "/messages",
+        "/conversations/:conversationId",
+        "/workspaces/:workspaceId/channels/:conversationId",
+        "/dm/:conversationId"
+      ],
+      "migrationConcern": "Conversation/message state, paging and route ownership.",
+      "sourcePath": "frontend/src/app/features/messaging/messaging.facade.ts"
+    },
+    {
+      "name": "MessageFollowUpFacade",
+      "kind": "signals-rest-realtime",
+      "scope": "feature",
+      "routes": [
+        "/messages/saved"
+      ],
+      "migrationConcern": "Saved-message projection.",
+      "sourcePath": "frontend/src/app/features/messaging/message-follow-up.facade.ts"
+    },
+    {
+      "name": "ProjectsFacade",
+      "kind": "signals-rest-realtime",
+      "scope": "feature",
+      "routes": [
+        "/projects",
+        "/workspaces/:workspaceId/projects"
+      ],
+      "migrationConcern": "Project collection state.",
+      "sourcePath": "frontend/src/app/features/projects/projects.facade.ts"
+    },
+    {
+      "name": "ProjectDetailFacade",
+      "kind": "signals-rest-realtime",
+      "scope": "feature",
+      "routes": [
+        "/projects/:projectId"
+      ],
+      "migrationConcern": "Project board/detail state.",
+      "sourcePath": "frontend/src/app/features/projects/project-detail.facade.ts"
+    },
+    {
+      "name": "ProjectCreateFacade",
+      "kind": "signals-api-router",
+      "scope": "feature",
+      "routes": [],
+      "migrationConcern": "Feature exists without a dedicated top-level route.",
+      "sourcePath": "frontend/src/app/features/projects/project-create.facade.ts"
+    },
+    {
+      "name": "TaskCreateFacade",
+      "kind": "signals-api-router-realtime",
+      "scope": "feature",
+      "routes": [
+        "/projects/:projectId/tasks/new"
+      ],
+      "migrationConcern": "Authorization-sensitive task creation state.",
+      "sourcePath": "frontend/src/app/features/projects/task-create.facade.ts"
+    },
+    {
+      "name": "MyTasksFacade",
+      "kind": "signals-rest-realtime",
+      "scope": "feature",
+      "routes": [
+        "/tasks"
+      ],
+      "migrationConcern": "Server paging/filter projection.",
+      "sourcePath": "frontend/src/app/features/projects/my-tasks.facade.ts"
+    },
+    {
+      "name": "FilesFacade",
+      "kind": "signals-rxjs-rest-realtime",
+      "scope": "feature-cross-screen",
+      "routes": [
+        "/files",
+        "/workspaces/:workspaceId/files",
+        "/projects/:projectId/tasks/:taskId"
+      ],
+      "migrationConcern": "Independent state epochs, cancellation, stale-result protection, upload/download and task picker.",
+      "sourcePath": "frontend/src/app/features/files/files.facade.ts"
+    },
+    {
+      "name": "FileFolderStore",
+      "kind": "signals-rest-service",
+      "scope": "feature",
+      "routes": [
+        "/files",
+        "/workspaces/:workspaceId/files"
+      ],
+      "migrationConcern": "Not an NgRx Store despite the class name.",
+      "sourcePath": "frontend/src/app/features/files/file-folders.service.ts"
+    },
+    {
+      "name": "AnnouncementsFacade",
+      "kind": "signals-rest",
+      "scope": "feature",
+      "routes": [
+        "/announcements",
+        "/announcements/:announcementId"
+      ],
+      "migrationConcern": "List/detail state.",
+      "sourcePath": "frontend/src/app/features/announcements/announcements.facade.ts"
+    },
+    {
+      "name": "AccountFacade",
+      "kind": "signals-rest",
+      "scope": "feature",
+      "routes": [
+        "/account"
+      ],
+      "migrationConcern": "Account state.",
+      "sourcePath": "frontend/src/app/features/account/account.facade.ts"
+    },
+    {
+      "name": "TaskNotificationPreferencesFacade",
+      "kind": "signals-rest",
+      "scope": "feature",
+      "routes": [
+        "/account"
+      ],
+      "migrationConcern": "Task preference state.",
+      "sourcePath": "frontend/src/app/features/account/task-notification-preferences/task-notification-preferences.facade.ts",
+      "nonRouteStatus": "Cross-cutting, embedded or indirect owner; exhaustive behavioral reconciliation remains open under #765/#766."
+    },
+    {
+      "name": "AdminFacade",
+      "kind": "signals-rest-realtime",
+      "scope": "feature",
+      "routes": [
+        "/admin/audit",
+        "/admin/invites",
+        "/admin/export-diagnostics"
+      ],
+      "migrationConcern": "Admin/audit/diagnostics state.",
+      "sourcePath": "frontend/src/app/features/admin/admin.facade.ts"
+    },
+    {
+      "name": "AuditFindingsFacade",
+      "kind": "signals-rest",
+      "scope": "feature",
+      "routes": [
+        "/admin/audit/findings"
+      ],
+      "migrationConcern": "Audit finding triage state.",
+      "sourcePath": "frontend/src/app/features/admin/audit-findings-page/audit-findings.facade.ts"
+    },
+    {
+      "name": "AuditClaimsEvidenceFacade",
+      "kind": "signals-rest",
+      "scope": "feature",
+      "routes": [
+        "/admin/audit/claims-evidence"
+      ],
+      "migrationConcern": "Claims/evidence state.",
+      "sourcePath": "frontend/src/app/features/admin/audit-claims-evidence-page/audit-claims-evidence.facade.ts"
+    },
+    {
+      "name": "RightPanelFacade",
+      "kind": "signals-rest-realtime-router",
+      "scope": "cross-cutting",
+      "routes": [
+        "protected:*"
+      ],
+      "migrationConcern": "Contextual shell panel.",
+      "sourcePath": "frontend/src/app/shared/right-panel/right-panel.facade.ts",
+      "nonRouteStatus": "Cross-cutting, embedded or indirect owner; exhaustive behavioral reconciliation remains open under #765/#766."
+    },
+    {
+      "name": "ContinueWorkingFacade",
+      "kind": "signals-rest-file-grants",
+      "scope": "cross-cutting",
+      "routes": [
+        "protected:*"
+      ],
+      "migrationConcern": "Recent-work projection and file download grants.",
+      "sourcePath": "frontend/src/app/shared/continue-working/continue-working.facade.ts",
+      "nonRouteStatus": "Cross-cutting, embedded or indirect owner; exhaustive behavioral reconciliation remains open under #765/#766."
+    },
+    {
+      "name": "LoginPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/auth/login-page/login-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "SessionExpiredPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/core/session/session-expired-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "InviteRegistrationPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/auth/invite-registration-page/invite-registration-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "AppPermissionDeniedComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/shared/permission/app-permission-denied/app-permission-denied.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "MessageFollowUpsPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/messaging/message-follow-ups-page/message-follow-ups-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "MessageSettingsPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/messaging/message-settings-page/message-settings-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "MessagesPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/messaging/messages-page/messages-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "ChannelMessagingPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/messaging/channel-messaging-page/channel-messaging-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "DmPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/messaging/dm-page/dm-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "WorkspaceResearchQuickCreatePageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/workspaces/workspace-research-quick-create-page/workspace-research-quick-create-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "ProjectsOverviewPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/projects/projects-overview-page/projects-overview-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "FilesPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/files/files-page/files-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "WorkspaceMembersPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/workspaces/workspace-members-page/workspace-members-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "WorkspaceDashboardPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/workspaces/workspace-dashboard-page/workspace-dashboard-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "AnnouncementsPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/announcements/announcements-page/announcements-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "ReportReaderPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/artifacts/report-reader-page/report-reader-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "TaskCreatePageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/projects/task-create-page/task-create-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "TaskDetailPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/projects/task-detail-page/task-detail-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "ProjectDetailPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/projects/project-detail-page/project-detail-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "MyTasksPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/projects/my-tasks-page/my-tasks-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "ArtifactDetailPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/artifacts/artifact-detail-page/artifact-detail-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "AccountPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/account/account-page/account-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "AuditFindingsPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/admin/audit-findings-page/audit-findings-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "AuditClaimsEvidencePageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/admin/audit-claims-evidence-page/audit-claims-evidence-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "AuditPackageExportPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/admin/audit-package-export-page/audit-package-export-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "AuditLogPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/admin/audit-log-page/audit-log-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "InviteAdminPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/admin/invite-admin-page/invite-admin-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "ExportDiagnosticsPageComponent",
+      "kind": "component-local",
+      "sourcePath": "frontend/src/app/features/admin/export-diagnostics-page/export-diagnostics-page.component.ts",
+      "stateModel": "Component-local presentation state; server remains authoritative."
+    },
+    {
+      "name": "MessageGlobalSettingsService",
+      "kind": "service",
+      "sourcePath": "frontend/src/app/features/messaging/message-global-settings.service.ts",
+      "stateModel": "Signals and persisted UI preferences"
+    },
+    {
+      "name": "Router",
+      "kind": "framework",
+      "sourcePath": "@angular/router",
+      "stateModel": "Redirect/fallback navigation"
+    }
+  ],
+  "integrations": [
+    {
+      "id": "rest",
+      "kind": "REST",
+      "currentClient": "Angular HttpClient",
+      "base": "/api/*",
+      "authentication": [
+        "same-origin cookies",
+        "CSRF token for unsafe requests"
+      ],
+      "migrationConcern": "Preserve server DTO and authorization semantics while replacing browser-specific interceptor/session plumbing."
+    },
+    {
+      "id": "rest-auth",
+      "kind": "REST-authentication",
+      "currentClient": "Angular HttpClient plus auth/session interceptors",
+      "base": "/api/auth/*",
+      "migrationConcern": "Desktop session bootstrap, expiration, logout and CSRF behavior must remain compatible with the backend contract."
+    },
+    {
+      "id": "signalr",
+      "kind": "SignalR",
+      "currentClient": "@microsoft/signalr@10.0.11",
+      "endpoint": "/hubs/app",
+      "events": [
+        "DurableEvent",
+        "AuthorizationInvalidated"
+      ],
+      "statuses": [
+        "connecting",
+        "reconnecting",
+        "reconnected",
+        "closed"
+      ],
+      "subscriptions": [
+        "user",
+        "tenant",
+        "workspace",
+        "conversation",
+        "project"
+      ],
+      "automaticReconnectDelayMs": [
+        0,
+        1000,
+        3000,
+        7000
+      ],
+      "migrationConcern": "Use the .NET SignalR client but preserve CSRF/auth negotiation, subscription authorization, protected-state invalidation and stale-connection isolation."
+    },
+    {
+      "id": "file-io",
+      "kind": "file-and-binary-io",
+      "operations": [
+        "multipart POST /api/files with progress",
+        "GET /api/files inventory and task picker pagination",
+        "/api/search file search",
+        "server-issued file and attachment download grants",
+        "preview and download",
+        "folder and move operations",
+        "sharing and deletion",
+        "version and activity history",
+        "selection snapshot",
+        "task attachment integration",
+        "cancellation and stale-response protection",
+        "realtime inventory refresh"
+      ],
+      "migrationConcern": "Replace browser File/FormData/Blob/object-URL/download primitives with native desktop I/O without weakening grant or cancellation semantics."
+    }
+  ],
+  "dependencies": [
+    {
+      "name": "Angular",
+      "version": "22.1.5",
+      "purpose": "component model, DI, routing, forms and browser runtime",
+      "avaloniaConcern": "Replace with Avalonia controls, navigation, DI/bootstrap and view models."
+    },
+    {
+      "name": "@angular/cdk",
+      "version": "22.1.5",
+      "purpose": "UI primitives and behavior",
+      "avaloniaConcern": "Audit each consumer; there is no direct runtime portability."
+    },
+    {
+      "name": "rxjs",
+      "version": "7.8.2",
+      "purpose": "async composition and subscriptions",
+      "avaloniaConcern": "Preserve cancellation/ordering semantics using .NET async/observable patterns."
+    },
+    {
+      "name": "@microsoft/signalr",
+      "version": "10.0.11",
+      "purpose": "browser SignalR client",
+      "avaloniaConcern": "Replace with .NET SignalR client while preserving the hub contract."
+    },
+    {
+      "name": "NgRx packages",
+      "version": "22.0.0",
+      "purpose": "declared dependencies; no production imports found",
+      "avaloniaConcern": "Do not invent reducer/effect migration work from this snapshot."
+    },
+    {
+      "name": "Syncfusion Angular",
+      "version": "34.2.6",
+      "purpose": "Gantt, grids, inputs and popups",
+      "avaloniaConcern": "Angular wrappers cannot move; migrate behavior and performance contracts."
+    },
+    {
+      "name": "AG Grid Angular/community",
+      "version": "36.1.0",
+      "purpose": "grid UI",
+      "avaloniaConcern": "DOM/Angular renderer cannot move; inventory behavior before replacement."
+    },
+    {
+      "name": "@lucide/angular",
+      "version": "1.39.0",
+      "purpose": "icons",
+      "avaloniaConcern": "Replace wrapper while preserving semantic/accessibility usage."
+    },
+    {
+      "name": "zone.js",
+      "version": "0.16.3",
+      "purpose": "Angular browser runtime support",
+      "avaloniaConcern": "Not required by Avalonia."
+    },
+    {
+      "name": "Storybook Angular",
+      "version": "10.6.0",
+      "purpose": "component catalog and visual development",
+      "avaloniaConcern": "Replace with Avalonia component-gallery/visual-regression workflow."
+    },
+    {
+      "name": "Vitest and jsdom",
+      "version": "4.1.11 / 30.0.1",
+      "purpose": "unit/component tests",
+      "avaloniaConcern": "Move business/view-model tests to .NET tests and renderer tests to Avalonia-specific UI tests."
+    },
+    {
+      "name": "Playwright and axe-core",
+      "version": "1.62.1 / 4.13.0",
+      "purpose": "browser E2E, snapshots and accessibility",
+      "avaloniaConcern": "Retain backend contract scenarios where useful; replace DOM/browser-only desktop UI evidence."
+    }
+  ],
+  "tests": {
+    "frontendScripts": [
+      "npm --prefix frontend test",
+      "npm --prefix frontend run test:architecture",
+      "npm --prefix frontend run analyze:bundle",
+      "npm --prefix frontend run build-storybook"
+    ],
+    "rootFrameworks": [
+      "Playwright",
+      "axe-core",
+      "functional compose harness",
+      "real-backend smoke harness"
+    ],
+    "representativeUiFiles": [
+      "tests/ui/angular-smoke.spec.ts",
+      "tests/ui/real-backend-smoke.spec.ts",
+      "tests/ui/public-https-golden-path.spec.ts",
+      "tests/ui/message-actions.spec.ts",
+      "tests/ui/message-follow-ups.spec.ts",
+      "tests/ui/message-mobile-navigation.spec.ts",
+      "tests/ui/message-search-filters.spec.ts",
+      "tests/ui/message-thread-context.spec.ts",
+      "tests/ui/file-sharing-mainline-regression.spec.ts",
+      "tests/ui/file-activity-version-history.spec.ts",
+      "tests/ui/workspace-needs-attention.spec.ts",
+      "tests/ui/task-execution-source-policy-v2.spec.ts",
+      "tests/ui/audit-accessibility.spec.ts",
+      "tests/ui/audit-claims-evidence.spec.ts",
+      "tests/ui/audit-findings-triage.spec.ts"
+    ],
+    "gaps": [
+      "No Avalonia test harness exists yet.",
+      "The graph surface tracked by #798 has no standalone route in app.routes.ts; current roadmap places its owning daily-work work after the November core preview unless #798 is amended.",
+      "Some deep-link/admin/report surfaces do not have an obviously named dedicated top-level Playwright spec; later issues must cite exact cases rather than infer coverage.",
+      "Browser file primitives require native desktop upload/download/preview/cancel/error-path tests.",
+      "Realtime authorization, protected-state clearing and stale-epoch behavior require dedicated desktop coverage.",
+      "Declared-but-unused NgRx dependencies can mislead migration planning and should be rechecked before dependency cleanup."
+    ],
+    "assertions": {
+      "routeBindingEquivalence": "Machine-enforced for route path, kind, component/loadComponent, redirect target and fallback binding."
+    }
+  },
+  "unresolvedSurfaces": [
+    {
+      "name": "graph",
+      "requiredByIssue": 798,
+      "status": "historical-source-gap-resolved",
+      "historicalSnapshot": true,
+      "sourceSnapshotStatus": "owner-not-yet-identified",
+      "targetOwnerIssue": 816,
+      "novemberRequired": false,
+      "reason": "No standalone graph route exists in frontend/src/app/app.routes.ts at the pinned snapshot, so the source-era inventory had no Angular owner. The current v5.8.1 target owner is #816 (RelationGraph/MSAGL); this entry is retained only as historical source evidence."
+    }
+  ],
+  "recommendedMigrationFoundationOrder": [
+    "auth-session",
+    "tenant-workspace-context",
+    "desktop-http-session-csrf-adapter",
+    "signalr-realtime",
+    "shell-navigation",
+    "feature-screens"
+  ],
+  "platformPolicy": {
+    "authorityIssue": 767,
+    "classificationStatus": "deferred-to-authoritative-issue",
+    "rule": "Do not infer Avalonia platform Tier/support from Angular browser behavior. #767 owns Desktop/Mobile/Browser feasibility and Tier classification."
+  }
+}
