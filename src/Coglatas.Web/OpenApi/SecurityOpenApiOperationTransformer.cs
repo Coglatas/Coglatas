@@ -94,7 +94,8 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
     }
 
     private static bool IsLegacyProjectCreate(OpenApiOperationTransformerContext context) =>
-        HttpMethods.IsPost(context.Description.HttpMethod) &&
+        context.Description.HttpMethod is { } method &&
+        HttpMethods.IsPost(method) &&
         string.Equals(
             context.Description.RelativePath?.TrimEnd('/'),
             "api/projects",
@@ -141,8 +142,8 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
                     continue;
                 }
 
-                formSchema.Required ??= new HashSet<string>();
-                formSchema.Required.Add(propertyName);
+                var required = formSchema.Required ??= new HashSet<string>();
+                required.Add(propertyName);
             }
         }
     }
