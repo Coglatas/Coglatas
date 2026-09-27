@@ -139,7 +139,8 @@ public sealed class AngularSpaFallbackTests : IDisposable
                 .Features
                 .Get<IServerAddressesFeature>()!
                 .Addresses;
-            // ReSharper disable once ShortLivedHttpClient\n            using var client = new HttpClient { BaseAddress = new Uri(addresses.Single()) };
+            // ReSharper disable once ShortLivedHttpClient
+            using var client = new HttpClient { BaseAddress = new Uri(addresses.Single()) };
             using var request = new HttpRequestMessage(new HttpMethod("TRACE"), "/api/example");
 
             using var response = await client.SendAsync(request);
@@ -185,7 +186,8 @@ public sealed class AngularSpaFallbackTests : IDisposable
                 .Features
                 .Get<IServerAddressesFeature>()!
                 .Addresses;
-            // ReSharper disable once ShortLivedHttpClient\n            using var client = new HttpClient { BaseAddress = new Uri(addresses.Single()) };
+            // ReSharper disable once ShortLivedHttpClient
+            using var client = new HttpClient { BaseAddress = new Uri(addresses.Single()) };
             using var unsupportedRequest = new HttpRequestMessage(new HttpMethod("QUERY"), "/api/example");
 
             using var unsupportedResponse = await client.SendAsync(unsupportedRequest);
