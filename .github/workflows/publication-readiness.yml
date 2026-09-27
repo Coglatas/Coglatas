@@ -53,12 +53,17 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          set +e
+          set -euo pipefail
           extra_args=()
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
             merge_base="$(git merge-base "$PR_BASE_SHA" "$PR_HEAD_SHA")"
+            [[ -n "$merge_base" ]] || {
+              echo "::error::Unable to resolve the PR merge base for Gitleaks."
+              exit 1
+            }
             extra_args+=(--log-opts="${merge_base}..${PR_HEAD_SHA}")
           fi
+          set +e
           docker run --rm \
             -v "$PWD:/repo" \
             zricethezav/gitleaks:v8.24.3 \
