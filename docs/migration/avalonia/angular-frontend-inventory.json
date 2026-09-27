@@ -303,9 +303,12 @@
     {
       "name": "graph",
       "requiredByIssue": 798,
-      "status": "owner-not-yet-identified",
+      "status": "historical-source-gap-resolved",
+      "historicalSnapshot": true,
+      "sourceSnapshotStatus": "owner-not-yet-identified",
+      "targetOwnerIssue": 816,
       "novemberRequired": false,
-      "reason": "No standalone graph route exists in frontend/src/app/app.routes.ts at the pinned snapshot; #798 November core preview is Login -> Workspace -> Project -> Task."
+      "reason": "No standalone graph route exists in frontend/src/app/app.routes.ts at the pinned snapshot, so the source-era inventory had no Angular owner. The current v5.8.1 target owner is #816 (RelationGraph/MSAGL); this entry is retained only as historical source evidence."
     }
   ],
   "recommendedMigrationFoundationOrder": [
