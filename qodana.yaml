@@ -25,6 +25,15 @@ profile:
     # Also catch repeated statement sequences inside C# control-flow branches.
     - inspection: DuplicatedStatements
       enabled: true
+    # These integration tests intentionally bind Kestrel to an ephemeral port and
+    # create clients whose BaseAddress and cookie state belong to that single app.
+    # Sharing HttpClient instances across tests would cross those isolation boundaries.
+    - inspection: ShortLivedHttpClient
+      ignore:
+        - "tests/Coglatas.Tests/Auth/HttpSecurityPolicyTests.cs"
+        - "tests/Coglatas.Tests/Auth/Sec13ProductionHttpTests.cs"
+        - "tests/Coglatas.Tests/Auth/SecurityHeadersMiddlewareTests.cs"
+        - "tests/Coglatas.Tests/Web/AngularSpaFallbackTests.cs"
 
 # Prepare the complete .NET project model before inspections start.
 bootstrap: bash scripts/quality/qodana-bootstrap.sh
