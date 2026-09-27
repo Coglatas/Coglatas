@@ -34,6 +34,8 @@ public static class DependencyInjection
                     serviceProvider.GetRequiredService<ProjectGovernanceSaveChangesInterceptor>(),
                     serviceProvider.GetRequiredService<TaskPhaseActivitySaveChangesInterceptor>()));
 
+        services.AddScoped<CoglatasUiCanonicalChangeJournalCoordinator>();
+
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<ICapabilityGrantRepository, CapabilityGrantRepository>();

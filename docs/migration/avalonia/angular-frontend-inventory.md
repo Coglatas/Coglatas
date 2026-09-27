@@ -1,7 +1,7 @@
 # Angular → Avalonia production inventory (AV-MIG-01 / #765)
 
 Pinned source: `4e6a10903a5a472ca89f833aba993a29e1b2cf73` (`main`)  
-UI/Interaction baseline: `AIPsiteNYG_Avalonia_Frontend_Panel_Reorganization_v5_8_1_Review_Closure`
+UI/Interaction baseline: `Coglatas_Avalonia_Frontend_Panel_Reorganization_v5_8_1_Review_Closure`
 
 This document is a human-readable companion to:
 
@@ -111,7 +111,7 @@ Target dependency policy is #804. In particular:
 
 - Dock.Avalonia is allowed only behind #815 mechanics-only adapter.
 - MSAGL Core is allowed only behind #816 compute-only adapter.
-- NYG.UI.Core remains Pure C# and cannot depend on Avalonia, Dock.Avalonia, MSAGL or generated backend DTOs.
+- Coglatas.UI.Core remains Pure C# and cannot depend on Avalonia, Dock.Avalonia, MSAGL or generated backend DTOs.
 - Browser UI libraries do not define target product semantics.
 
 ## Tests and evidence
