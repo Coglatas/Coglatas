@@ -19,7 +19,7 @@ jobs:
 
     env:
       SYNCFUSION_LICENSE: ${{ secrets.SYNCFUSION_LICENSE }}
-      IMAGE_NAME: coglatas-nyg-licensed-audit:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+      IMAGE_NAME: coglatas-licensed-audit:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
       DOCKER_BUILDKIT: "1"
       BUILDKIT_PROGRESS: plain
 

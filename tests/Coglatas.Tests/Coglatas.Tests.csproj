@@ -25,6 +25,7 @@
     <ProjectReference Include="..\..\src\Coglatas.Domain\Coglatas.Domain.csproj" />
     <ProjectReference Include="..\..\src\Coglatas.Infrastructure\Coglatas.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Coglatas.Web\Coglatas.Web.csproj" />
+    <ProjectReference Include="..\..\src\Coglatas.UI.Core\Coglatas.UI.Core.csproj" />
   </ItemGroup>
 
 </Project>
