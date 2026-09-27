@@ -10,7 +10,7 @@ const digest = '@sha256:[a-f0-9]{64}';
 await verifyDockerBase('Dockerfile', new RegExp(`^FROM\\s+node:(\\d+)(?:\\.[^@\\s]*)?${digest}\\s+AS\\s+frontend-build\\s*$`, 'm'), 'production frontend-build');
 await verifyDockerBase('frontend.Dockerfile', new RegExp(`^FROM\\s+node:(\\d+)(?:\\.[^-@\\s]*)?-alpine${digest}\\s*$`, 'm'), 'frontend development container');
 await verifyPinnedDockerBase('Dockerfile', new RegExp(`^FROM\\s+mcr\\.microsoft\\.com/dotnet/sdk:10\\.0\\.401${digest}\\s+AS\\s+build\\s*$`, 'm'), 'production build SDK');
-await verifyPinnedDockerBase('Dockerfile', new RegExp(`^FROM\\s+mcr\\.microsoft\\.com/dotnet/aspnet:10\\.0\\.11${digest}\\s+AS\\s+runtime\\s*$`, 'm'), 'production runtime');
+await verifyPinnedDockerBase('Dockerfile', new RegExp(`^FROM\\s+mcr\\.microsoft\\.com/dotnet/aspnet:10\\.0\\.12${digest}\\s+AS\\s+runtime\\s*$`, 'm'), 'production runtime');
 await verifyPinnedDockerBase('backend.Dockerfile', new RegExp(`^FROM\\s+mcr\\.microsoft\\.com/dotnet/sdk:10\\.0\\.401${digest}\\s*$`, 'm'), 'development SDK');
 await verifyPackageManager('package.json');
 await verifyPackageManager('frontend/package.json');
