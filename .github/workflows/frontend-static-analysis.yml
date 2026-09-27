@@ -3,6 +3,16 @@ name: Frontend Static Analysis
 on:
   workflow_dispatch:
   pull_request:
+    paths:
+      - ".github/workflows/frontend-static-analysis.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "frontend/**"
+      - "tests/**/*.ts"
+      - "*.ts"
+      - "tools/frontend-inspections/**"
+      - "scripts/ci/configure-persistent-caches.sh"
+      - "scripts/ci/npm-ci-retry.sh"
   push:
     branches:
       - main
