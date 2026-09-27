@@ -94,7 +94,8 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
     }
 
     private static bool IsLegacyProjectCreate(OpenApiOperationTransformerContext context) =>
-        HttpMethods.IsPost(context.Description.HttpMethod) &&
+        context.Description.HttpMethod is { } method &&
+        HttpMethods.IsPost(method) &&
         string.Equals(
             context.Description.RelativePath?.TrimEnd('/'),
             "api/projects",
@@ -125,7 +126,9 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
         // ApiExplorer flattens form DTOs and can omit their property-level
         // Required attributes. Preserve those runtime validation rules in
         // the multipart schema used by clients and scanners.
-        if (operation.RequestBody?.Content?.TryGetValue("multipart/form-data", out var multipart) != true ||
+        var content = operation.RequestBody?.Content;
+        if (content is null ||
+            !content.TryGetValue("multipart/form-data", out var multipart) ||
             multipart.Schema is not OpenApiSchema formSchema)
         {
             return;
@@ -141,8 +144,8 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
                     continue;
                 }
 
-                formSchema.Required ??= new HashSet<string>();
-                formSchema.Required.Add(propertyName);
+                var required = formSchema.Required ??= new HashSet<string>();
+                required.Add(propertyName);
             }
         }
     }
