@@ -23,4 +23,6 @@ permissions:
 jobs:
   qodana-dotnet-community:
     name: Qodana Gate
-    uses: NYGsatoshi/Coglatas/.github/workflows/qodana_trusted_gate.yml@a83fc584cb9de79fc08410af6d50b647bb541293 # qodana-debt-ratchet-v2
+    permissions:
+      contents: read
+    uses: NYGsatoshi/Coglatas/.github/workflows/qodana_trusted_gate.yml@e03555c4be3700aa23f6e0bfe86b740b042dd5fa # qodana-debt-ratchet-v2
