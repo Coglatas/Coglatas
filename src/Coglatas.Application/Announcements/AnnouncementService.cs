@@ -288,7 +288,7 @@ public sealed class AnnouncementService(
         if (request.GroupId.HasValue)
         {
             var group = await groups.GetByIdAsync(request.GroupId.Value, cancellationToken);
-            if (group is null || group.DeletedAt.HasValue || !await CanCreateGroupAnnouncementAsync(userId, group.Id, cancellationToken))
+            if (group is null || group.DeletedAt.HasValue || !await AnnouncementScopeAuthorization.CanCreateGroupAsync(groupAuthorization, userId, group.Id, IsTeacherAsync, cancellationToken))
             {
                 return Result<AnnouncementScope>.Failure("You are not allowed to create group announcements.");
             }
@@ -299,7 +299,7 @@ public sealed class AnnouncementService(
         if (request.WorkspaceId.HasValue)
         {
             if (await workspaces.GetByIdAsync(request.WorkspaceId.Value, cancellationToken) is null ||
-                !await CanCreateWorkspaceAnnouncementAsync(userId, request.WorkspaceId.Value, cancellationToken))
+                !await AnnouncementScopeAuthorization.CanCreateWorkspaceAsync(workspaceAuthorization, userId, request.WorkspaceId.Value, IsTeacherAsync, cancellationToken))
             {
                 return Result<AnnouncementScope>.Failure("You are not allowed to create workspace announcements.");
             }
@@ -326,12 +326,22 @@ public sealed class AnnouncementService(
 
         if (announcement.GroupId.HasValue)
         {
-            return await CanCreateGroupAnnouncementAsync(userId, announcement.GroupId.Value, cancellationToken);
+            return await AnnouncementScopeAuthorization.CanCreateGroupAsync(
+                groupAuthorization,
+                userId,
+                announcement.GroupId.Value,
+                IsTeacherAsync,
+                cancellationToken);
         }
 
         if (announcement.WorkspaceId.HasValue)
         {
-            return await CanCreateWorkspaceAnnouncementAsync(userId, announcement.WorkspaceId.Value, cancellationToken);
+            return await AnnouncementScopeAuthorization.CanCreateWorkspaceAsync(
+                workspaceAuthorization,
+                userId,
+                announcement.WorkspaceId.Value,
+                IsTeacherAsync,
+                cancellationToken);
         }
 
         return false;
@@ -342,28 +352,6 @@ public sealed class AnnouncementService(
         return announcement.AuthorUserId == userId ||
             await IsSystemAdminAsync(userId, cancellationToken) ||
             await CanManageAnnouncementAsync(userId, announcement, cancellationToken);
-    }
-
-    private async Task<bool> CanCreateWorkspaceAnnouncementAsync(Guid userId, Guid workspaceId, CancellationToken cancellationToken)
-    {
-        if (await workspaceAuthorization.CanManageWorkspace(userId, workspaceId, cancellationToken))
-        {
-            return true;
-        }
-
-        return await IsTeacherAsync(userId, cancellationToken) &&
-            await workspaceAuthorization.CanViewWorkspace(userId, workspaceId, cancellationToken);
-    }
-
-    private async Task<bool> CanCreateGroupAnnouncementAsync(Guid userId, Guid groupId, CancellationToken cancellationToken)
-    {
-        if (await groupAuthorization.CanManageGroup(userId, groupId, cancellationToken))
-        {
-            return true;
-        }
-
-        return await IsTeacherAsync(userId, cancellationToken) &&
-            await groupAuthorization.CanViewGroup(userId, groupId, cancellationToken);
     }
 
     private async Task<bool> IsSystemAdminAsync(Guid userId, CancellationToken cancellationToken)

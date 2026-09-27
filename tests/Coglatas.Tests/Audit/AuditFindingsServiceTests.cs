@@ -594,12 +594,6 @@ public sealed class AuditFindingsServiceTests
         public Task<AuditCapabilityResponse> GetCapabilitiesAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(new AuditCapabilityResponse(true, canReview, false, false, false));
 
-        public Task<bool> HasCapabilityAsync(
-            string capabilityKey,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(capabilityKey == CapabilityKeys.AuditView ||
-                            (capabilityKey == CapabilityKeys.AuditReview && canReview));
-
         public Task<Result> AuthorizeAsync(
             string capabilityKey,
             string operation,
