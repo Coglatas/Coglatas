@@ -45,7 +45,7 @@ public sealed class Sec13ProductionHttpTests
             var address = app.Services.GetRequiredService<IServer>()
                 .Features.Get<IServerAddressesFeature>()?.Addresses.Single()
                 ?? throw new InvalidOperationException("Test server address was not available.");
-            using var client = new HttpClient { BaseAddress = new Uri(address) };
+            // ReSharper disable once ShortLivedHttpClient\n            using var client = new HttpClient { BaseAddress = new Uri(address) };
             using var response = await client.GetAsync("/secure");
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -125,7 +125,7 @@ public sealed class Sec13ProductionHttpTests
                 UseCookies = true,
                 CookieContainer = new CookieContainer()
             };
-            using var ownerClient = new HttpClient(ownerHandler) { BaseAddress = baseAddress };
+            // ReSharper disable once ShortLivedHttpClient\n            using var ownerClient = new HttpClient(ownerHandler) { BaseAddress = baseAddress };
             using var csrfResponse = await ownerClient.GetAsync("/csrf");
             csrfResponse.EnsureSuccessStatusCode();
             var csrf = await csrfResponse.Content.ReadFromJsonAsync<CsrfPayload>();
@@ -147,7 +147,7 @@ public sealed class Sec13ProductionHttpTests
                 UseCookies = true,
                 CookieContainer = new CookieContainer()
             };
-            using var otherClient = new HttpClient(otherHandler) { BaseAddress = baseAddress };
+            // ReSharper disable once ShortLivedHttpClient\n            using var otherClient = new HttpClient(otherHandler) { BaseAddress = baseAddress };
             using var mismatchRequest = new HttpRequestMessage(HttpMethod.Post, "/api/mutate")
             {
                 Content = JsonContent.Create(new { })
