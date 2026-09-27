@@ -64,7 +64,7 @@ public sealed class SecurityOpenApiSchemaTransformerTests
             ["projectId"] = Guid.NewGuid().ToString(),
             ["parentConversationId"] = null
         };
-        Assert.Single(variants.Where(variant => MatchesVariant(variant, projectChannelPayload)));
+        Assert.Single(variants, variant => MatchesVariant(variant, projectChannelPayload));
         Assert.True(MatchesVariant(FindVariant(variants, "ProjectChannel"), projectChannelPayload));
 
         var invalidDirectMessagePayload = new Dictionary<string, object?>
@@ -74,7 +74,7 @@ public sealed class SecurityOpenApiSchemaTransformerTests
             ["projectId"] = Guid.NewGuid().ToString(),
             ["parentConversationId"] = null
         };
-        Assert.Empty(variants.Where(variant => MatchesVariant(variant, invalidDirectMessagePayload)));
+        Assert.DoesNotContain(variants, variant => MatchesVariant(variant, invalidDirectMessagePayload));
     }
 
     private static OpenApiSchema FindVariant(IEnumerable<OpenApiSchema> variants, string type)
