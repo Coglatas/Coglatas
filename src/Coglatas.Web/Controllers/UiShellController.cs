@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Coglatas.Application.UiShell;
 using Coglatas.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -13,7 +14,7 @@ public sealed class UiShellController(IUiShellService uiShell) : ApiResultContro
     public async Task<IActionResult> Modules(CancellationToken cancellationToken) => ToActionResult(await uiShell.ListModulesAsync(cancellationToken));
 
     [HttpGet("api/ui/panels")]
-    public async Task<IActionResult> Panels([FromQuery] string? moduleKey, CancellationToken cancellationToken) => ToActionResult(await uiShell.ListPanelsAsync(moduleKey, cancellationToken));
+    public async Task<IActionResult> Panels([FromQuery, RegularExpression(@"^[^\u0000]*$", ErrorMessage = "Module key contains unsupported characters.")] string? moduleKey, CancellationToken cancellationToken) => ToActionResult(await uiShell.ListPanelsAsync(moduleKey, cancellationToken));
 
     [HttpGet("api/ui/layouts")]
     public async Task<IActionResult> Layouts(CancellationToken cancellationToken) => ToActionResult(await uiShell.ListLayoutsAsync(cancellationToken));

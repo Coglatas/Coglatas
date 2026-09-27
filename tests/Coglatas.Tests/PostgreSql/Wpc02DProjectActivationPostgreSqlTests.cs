@@ -76,13 +76,13 @@ public sealed class Wpc02DProjectActivationPostgreSqlTests
                 .OrderBy(item => item.UserId)
                 .ToListAsync();
             Assert.Equal(2, participants.Count);
-            var owner = Assert.Single(participants.Where(item => item.UserId == graph.OwnerUserId));
+            var owner = Assert.Single(participants, item => item.UserId == graph.OwnerUserId);
             Assert.Equal(ConversationMemberRole.Admin, owner.Role);
             Assert.True(owner.CanRead);
             Assert.True(owner.CanPost);
             Assert.True(owner.CanManageMembers);
 
-            var viewer = Assert.Single(participants.Where(item => item.UserId == graph.ViewerUserId));
+            var viewer = Assert.Single(participants, item => item.UserId == graph.ViewerUserId);
             Assert.Equal(ConversationMemberRole.ReadOnly, viewer.Role);
             Assert.True(viewer.CanRead);
             Assert.False(viewer.CanPost);
@@ -259,7 +259,7 @@ public sealed class Wpc02DProjectActivationPostgreSqlTests
                 second.Service.ActivateAsync(graph.ProjectId, expectedVersion: 1));
 
             Assert.Equal(1, results.Count(result => result.IsSuccess));
-            var rejected = Assert.Single(results.Where(result => !result.IsSuccess));
+            var rejected = Assert.Single(results, result => !result.IsSuccess);
             Assert.Equal("ConcurrentModification", rejected.ErrorDetail?.Code);
 
             await using var verification = CreateTenantContext(database, graph);

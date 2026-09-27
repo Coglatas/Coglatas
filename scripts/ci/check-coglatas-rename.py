@@ -16,6 +16,17 @@ HISTORICAL_PREFIXES = (
 HISTORICAL_SUFFIXES = (".log",)
 SKIP_PATHS = {"scripts/ci/check-coglatas-rename.py"}
 
+# These files intentionally preserve source-era repository names, browser-storage
+# keys, and UI-baseline identifiers so the Avalonia cutover can identify and
+# safely migrate or retire persisted Angular state. Keep this allowlist exact;
+# active product/runtime assets remain covered by the rename guard.
+LEGACY_MIGRATION_EVIDENCE_PATHS = {
+    "docs/migration/avalonia/angular-frontend-inventory.json",
+    "docs/migration/avalonia/angular-frontend-inventory.md",
+    "docs/migration/avalonia/angular-persisted-state-inventory.json",
+    "docs/migration/avalonia/angular-target-surface-map-v5.8.1.json",
+}
+
 PROTECTED_LITERALS = (
     "NYGsatoshi/AIPsiteNYGspec",
     "AIPsiteNYGspec",
@@ -62,7 +73,7 @@ def main() -> int:
     findings: list[str] = []
 
     for path in tracked_files():
-        if is_historical(path) or path in SKIP_PATHS:
+        if is_historical(path) or path in SKIP_PATHS or path in LEGACY_MIGRATION_EVIDENCE_PATHS:
             continue
 
         if PATH_PATTERN.search(path):

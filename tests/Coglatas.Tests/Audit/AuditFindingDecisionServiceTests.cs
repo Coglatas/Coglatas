@@ -24,7 +24,7 @@ public sealed class AuditFindingDecisionServiceTests
         Assert.Null(result.Value.CurrentDecision);
         Assert.Empty(result.Value.History);
         Assert.True(result.Value.CanReview);
-        var acceptedRisk = Assert.Single(result.Value.Options.Where(option => option.Decision == "AcceptedRisk"));
+        var acceptedRisk = Assert.Single(result.Value.Options, option => option.Decision == "AcceptedRisk");
         Assert.True(acceptedRisk.RationaleRequired);
         Assert.Contains(result.Value.Options, option => option.Decision == "NoIssue" && !option.RationaleRequired);
         Assert.Contains(result.Value.Options, option => option.Decision == "NeedsFix" && !option.RationaleRequired);
