@@ -149,9 +149,9 @@ public sealed class CanonicalTaskCreateServiceTests
         Assert.Equal(fixture.Assignee.Id, replay.Value.PrimaryAssigneeUserId);
         Assert.Equal(TaskCreateSourceScopeMode.TaskOverride, replay.Value.SourceScopeMode);
         Assert.Equal(new TaskExecutionSourcePolicyResponse(false, true), replay.Value.TaskOverridePolicy);
-        Assert.Single(await fixture.Db.TaskItems.Where(item => item.Id == createdTaskId).ToListAsync());
+        Assert.Equal(1, await fixture.Db.TaskItems.CountAsync(item => item.Id == createdTaskId));
         Assert.Single(await fixture.Db.IdempotencyRecords.ToListAsync());
-        Assert.Single(fixture.Audit.Entries.Where(entry => entry.Action == "TaskCreated"));
+        Assert.Single(fixture.Audit.Entries, entry => entry.Action == "TaskCreated");
     }
 
     [Fact]
