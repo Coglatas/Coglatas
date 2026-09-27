@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Coglatas.Application.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,7 @@ public sealed class ConversationsController(IConversationService conversations) 
     public async Task<IActionResult> List([FromQuery] ConversationListQuery query, CancellationToken cancellationToken) => ToActionResult(await conversations.ListAsync(query, cancellationToken));
 
     [HttpGet("api/conversations/recipients")]
-    public async Task<IActionResult> Recipients([FromQuery] string? query, CancellationToken cancellationToken) => ToActionResult(await conversations.ListRecipientsAsync(query, cancellationToken));
+    public async Task<IActionResult> Recipients([FromQuery, RegularExpression(@"^[^\u0000]*$", ErrorMessage = "Query contains unsupported characters.")] string? query, CancellationToken cancellationToken) => ToActionResult(await conversations.ListRecipientsAsync(query, cancellationToken));
 
     [HttpPost("api/conversations")]
     public async Task<IActionResult> Create(CreateConversationRequest request, CancellationToken cancellationToken) => ToActionResult(await conversations.CreateAsync(request, cancellationToken));
