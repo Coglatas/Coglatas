@@ -135,6 +135,7 @@ Require current-head CODEOWNER approval for external pull requests while keeping
     ".github/CODEOWNERS",
     ".github/workflows/ci.yml",
     ".github/workflows/publication-readiness.yml",
+    ".github/workflows/external-pr-auto-sign.yml",
     ".github/workflows/external-pr-approval-evaluator.yml",
     "scripts/ci/check-governance-review-status-invariants.py",
     "scripts/ci/evaluate-governance-pr-review.py",
@@ -193,7 +194,12 @@ Default workflows to read-only and make every write-capable workflow an explicit
   "write_permissions_allowlist": [
     {
       "permissions": [
-        "contents:write",
+        "contents:write"
+      ],
+      "workflow": ".github/workflows/external-pr-auto-sign.yml"
+    },
+    {
+      "permissions": [
         "statuses:write"
       ],
       "workflow": ".github/workflows/external-pr-approval-evaluator.yml"
