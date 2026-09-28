@@ -159,6 +159,33 @@ assert_eq false "$(value_of "$output" backend_pr07b)" "ordinary backend test PR0
 assert_eq false "$(value_of "$output" backend_pr07c)" "ordinary backend test PR07-C"
 assert_eq false "$(value_of "$output" backend_pr07d)" "ordinary backend test PR07-D"
 
+# Production backend changes must also route the authenticated runtime security
+# gate. A scoped unit-test route is not sufficient for OpenAPI/Schemathesis and
+# authorization-contract changes.
+repo="$tmp_root/security-runtime-source"
+init_repo "$repo" Projects
+mkdir -p "$repo/src/Coglatas.Application/Projects"
+printf 'public sealed class ProjectMutationService {}\n' > "$repo/src/Coglatas.Application/Projects/ProjectMutationService.cs"
+base="$(commit_all "$repo" base)"
+printf 'public sealed class ProjectMutationService { public int Version => 2; }\n' > "$repo/src/Coglatas.Application/Projects/ProjectMutationService.cs"
+head="$(commit_all "$repo" head)"
+output="$(route_repo "$repo" "$base" "$head")"
+assert_eq true "$(value_of "$output" security)" "runtime source security"
+assert_eq true "$(value_of "$output" security_dotnet)" "runtime source security dotnet"
+assert_eq true "$(value_of "$output" security_compose)" "runtime source security compose"
+
+# Security harness changes must test the harness itself rather than passing on
+# static routing only.
+repo="$tmp_root/security-runtime-harness"
+init_repo "$repo"
+mkdir -p "$repo/scripts/security"
+printf 'echo base\n' > "$repo/scripts/security/schemathesis-runner.sh"
+base="$(commit_all "$repo" base)"
+printf 'echo changed\n' > "$repo/scripts/security/schemathesis-runner.sh"
+head="$(commit_all "$repo" head)"
+output="$(route_repo "$repo" "$base" "$head")"
+assert_eq true "$(value_of "$output" security_compose)" "security harness compose"
+
 # AV-MIG contract verification depends on the effective .NET SDK/build
 # configuration as well as source files. Each of these inputs must route the
 # client-independent contract gate even when it is the only changed file.
