@@ -26,7 +26,9 @@
   "write_permissions": [
     {
       "workflow": ".github/workflows/external-pr-approval-evaluator.yml",
-      "jobs": [],
+      "jobs": [
+        "approve"
+      ],
       "events": [
         "workflow_dispatch",
         "workflow_run"
@@ -34,7 +36,7 @@
       "permissions": [
         "statuses:write"
       ],
-      "reason": "Canonical GOV-WORKFLOW-PERM-001 compatibility entry only. No job is attached and the compatibility workflow remains read-only."
+      "reason": "After approval by the protected human-merge-approval environment, publish a success commit status only to the authoritative current PR head re-resolved through the GitHub API. The trusted workflow_run evaluator never checks out or executes PR-controlled code."
     },
     {
       "workflow": ".github/workflows/codeql.yml",
