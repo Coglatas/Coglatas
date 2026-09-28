@@ -77,7 +77,7 @@ public sealed class SecurityOpenApiSchemaTransformer : IOpenApiSchemaTransformer
 
     private static void ConfigureRequestShape(OpenApiSchema schema, Type requestType)
     {
-        if (requestType == typeof(Controllers.UploadAttachmentForm))
+        if (requestType == typeof(Coglatas.Web.Controllers.UploadAttachmentForm))
         {
             // The upload endpoints accept only OwnerType, OwnerId, and the File part.
             // Closing the schema keeps positive fuzz cases aligned with the actual
