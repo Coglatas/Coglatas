@@ -121,6 +121,7 @@ def main() -> int:
         postgres_version = run(compose_command(
             args.compose_project,
             args.compose_file,
+            args.compose_override,
             "exec", "-T", "postgres",
             "psql", "-U", "coglatas_performance", "-d", "coglatas_performance",
             "-Atc", "SHOW server_version",
