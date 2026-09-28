@@ -249,7 +249,7 @@ public static class HttpSecurityPolicy
             errors.Add("Security:MaxMultipartBodySizeBytes must be greater than FileStorage:MaxFileSizeBytes so multipart framing fits inside the HTTP limit.");
         }
 
-        foreach (var origin in security.AllowedCorsOrigins ?? [])
+        foreach (var origin in security.AllowedCorsOrigins)
         {
             if (!TryParseOrigin(origin, out var parsedOrigin))
             {
