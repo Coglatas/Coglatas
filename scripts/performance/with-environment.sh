@@ -154,17 +154,6 @@ if [[ -n "$COMPOSE_OVERRIDE" ]]; then
 fi
 python3 "$ROOT/scripts/performance/collect-environment.py" "${collect_args[@]}"
 
-# The invocation above owns fixture/output arguments so source and production
-# modes fingerprint the exact same effective Compose project.
-: <<'PERF02_OLD_COLLECT_INVOCATION'
-python3 "$ROOT/scripts/performance/collect-environment.py" \
-  --compose-project "$PROJECT" \
-  --compose-file "$COMPOSE_FILE" \
-  --profile "$PROFILE" \
-  --fixture-evidence "$EVIDENCE_DIR/fixture.json" \
-  --output "$EVIDENCE_DIR/environment.json"
-PERF02_OLD_COLLECT_INVOCATION
-
 export COGLATAS_PERFORMANCE_BASE_URL="$BASE_URL"
 export COGLATAS_PERFORMANCE_FIXTURE_EVIDENCE="$EVIDENCE_DIR/fixture.json"
 export COGLATAS_PERFORMANCE_PREFLIGHT_EVIDENCE="$EVIDENCE_DIR/preflight.json"
