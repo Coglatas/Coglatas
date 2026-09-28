@@ -1,7 +1,8 @@
 name: External PR approval evaluator
 
-# Trusted default-branch evaluator. It never executes PR-controlled code.
-# A protected Environment releases the signing key only after manual approval.
+# Trusted default-branch evaluator. It never checks out or executes PR-controlled code.
+# The protected Environment is the human authorization boundary; when unsigned
+# commits are present it also releases the dedicated GPG signing key.
 on:
   workflow_run:
     workflows: ["External PR review signal"]
@@ -9,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: Pull request number to sign
+        description: Pull request number to approve/sign
         required: true
         type: string
 
@@ -34,9 +35,10 @@ jobs:
       head_branch: ${{ steps.resolve.outputs.head_branch }}
       base_sha: ${{ steps.resolve.outputs.base_sha }}
       needs_signing: ${{ steps.resolve.outputs.needs_signing }}
+      already_approved: ${{ steps.resolve.outputs.already_approved }}
 
     steps:
-      - name: Resolve PR and signature state through GitHub API
+      - name: Resolve PR, signature state, and approval state
         id: resolve
         shell: bash
         env:
@@ -71,14 +73,15 @@ jobs:
           [[ "$draft" == "false" ]] || { echo "PR #$pr_number is still draft." >&2; exit 1; }
           [[ "$base_ref" == "main" ]] || { echo "PR #$pr_number does not target main." >&2; exit 1; }
           [[ "$head_repo" == "$GITHUB_REPOSITORY" ]] || {
-            echo "Human signing is limited to same-repository PR branches." >&2
+            echo "Human approval/signing is limited to same-repository PR branches." >&2
             exit 1
           }
           [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid PR head SHA." >&2; exit 1; }
           [[ "$base_sha" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid PR base SHA." >&2; exit 1; }
 
           verification_states="$(
-            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$pr_number/commits?per_page=100"               --jq '.[].commit.verification.verified'
+            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$pr_number/commits?per_page=100" \
+              --jq '.[].commit.verification.verified'
           )"
           [[ -n "$verification_states" ]] || {
             echo "PR #$pr_number contains no commits to evaluate." >&2
@@ -90,22 +93,30 @@ jobs:
             needs_signing=true
           fi
 
+          already_approved="$(
+            gh api "repos/$GITHUB_REPOSITORY/commits/$head_sha/status" \
+              --jq '[.statuses[] | select(.context == "External PR approval policy" and .state == "success")] | length > 0'
+          )"
+
           echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
           echo "head_branch=$head_branch" >> "$GITHUB_OUTPUT"
           echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
           echo "needs_signing=$needs_signing" >> "$GITHUB_OUTPUT"
+          echo "already_approved=$already_approved" >> "$GITHUB_OUTPUT"
 
-          if [[ "$needs_signing" == "true" ]]; then
-            echo "PR #$pr_number contains unsigned/unverified commits and requires human-approved signing."
+          if [[ "$already_approved" == "true" ]]; then
+            echo "This exact PR head already has a successful human approval status."
+          elif [[ "$needs_signing" == "true" ]]; then
+            echo "PR #$pr_number requires human approval and GPG signing."
           else
-            echo "All PR commits are already verified; no signing approval is required."
+            echo "PR #$pr_number is already fully verified but still requires human merge approval."
           fi
 
   evaluate:
     name: Human-approved commit signing
     needs: resolve
-    if: ${{ needs.resolve.outputs.needs_signing == 'true' }}
+    if: ${{ needs.resolve.outputs.already_approved != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     environment:
@@ -117,7 +128,6 @@ jobs:
 
     steps:
       - name: Re-resolve exact PR head after human approval
-        id: authoritative
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -154,10 +164,7 @@ jobs:
             exit 1
           }
 
-          # GOV-TRUST-001 proof: authoritative PR/head is always re-read via gh api /pulls/ and .head.sha.
-          echo "head_sha=$current_head_sha" >> "$GITHUB_OUTPUT"
-
-      - name: Recreate approved commits through the GitHub Git database API
+      - name: Apply human approval and GPG-sign unsigned commits
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -165,23 +172,39 @@ jobs:
           EXPECTED_HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
           HEAD_BRANCH: ${{ needs.resolve.outputs.head_branch }}
           BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
+          NEEDS_SIGNING: ${{ needs.resolve.outputs.needs_signing }}
+          HUMAN_SIGNING_GPG_PRIVATE_KEY: ${{ secrets.HUMAN_SIGNING_GPG_PRIVATE_KEY }}
+          HUMAN_SIGNING_GPG_PASSPHRASE: ${{ secrets.HUMAN_SIGNING_GPG_PASSPHRASE }}
+          HUMAN_SIGNING_NAME: ${{ vars.HUMAN_SIGNING_NAME }}
+          HUMAN_SIGNING_EMAIL: ${{ vars.HUMAN_SIGNING_EMAIL }}
         run: |
           set -euo pipefail
 
           python3 - <<'PY'
+          import hashlib
           import json
           import os
           import re
           import subprocess
           import sys
+          import tempfile
+          from datetime import datetime, timezone
+          from pathlib import Path
 
           REPO = os.environ["GITHUB_REPOSITORY"]
           PR_NUMBER = os.environ["PR_NUMBER"]
           EXPECTED_HEAD_SHA = os.environ["EXPECTED_HEAD_SHA"]
           HEAD_BRANCH = os.environ["HEAD_BRANCH"]
           BASE_SHA = os.environ["BASE_SHA"]
+          NEEDS_SIGNING = os.environ["NEEDS_SIGNING"].lower() == "true"
+          SIGNING_KEY = os.environ.get("HUMAN_SIGNING_GPG_PRIVATE_KEY", "")
+          SIGNING_PASSPHRASE = os.environ.get("HUMAN_SIGNING_GPG_PASSPHRASE", "")
+          SIGNING_NAME = os.environ.get("HUMAN_SIGNING_NAME", "")
+          SIGNING_EMAIL = os.environ.get("HUMAN_SIGNING_EMAIL", "")
 
           sha_re = re.compile(r"^[0-9a-f]{40}$")
+          unsafe_ident = re.compile(r"[\r\n<>]")
+
           if not PR_NUMBER.isdigit():
               raise SystemExit("Invalid pull request number.")
           if not sha_re.fullmatch(EXPECTED_HEAD_SHA) or not sha_re.fullmatch(BASE_SHA):
@@ -205,7 +228,7 @@ jobs:
                   return {}
               return json.loads(proc.stdout)
 
-          def authoritative_pr():
+          def authoritative_pr(expected_head):
               pr = gh_json([f"repos/{REPO}/pulls/{PR_NUMBER}"])
               if pr.get("state") != "open" or pr.get("draft") is not False:
                   raise SystemExit("PR is closed or draft.")
@@ -213,7 +236,7 @@ jobs:
                   raise SystemExit("PR no longer targets main.")
               if pr.get("base", {}).get("sha") != BASE_SHA:
                   raise SystemExit("PR base changed; fresh human approval is required.")
-              if pr.get("head", {}).get("sha") != EXPECTED_HEAD_SHA:
+              if pr.get("head", {}).get("sha") != expected_head:
                   raise SystemExit("PR head changed; fresh human approval is required.")
               if pr.get("head", {}).get("ref") != HEAD_BRANCH:
                   raise SystemExit("PR branch changed; fresh human approval is required.")
@@ -221,139 +244,298 @@ jobs:
                   raise SystemExit("Human signing is limited to same-repository PRs.")
               return pr
 
-          # Re-read the authoritative PR after Environment approval.
-          authoritative_pr()
+          def normalize_date(value):
+              if not value:
+                  raise SystemExit("Commit identity date is missing.")
+              parsed = datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
+              parsed = parsed.replace(microsecond=0)
+              iso = parsed.isoformat().replace("+00:00", "Z")
+              git_ident_time = f"{int(parsed.timestamp())} +0000"
+              return iso, git_ident_time
 
-          pages = gh_json([
-              "--paginate",
-              "--slurp",
-              f"repos/{REPO}/pulls/{PR_NUMBER}/commits?per_page=100",
-          ])
-          commits = []
-          for page in pages:
-              if isinstance(page, list):
-                  commits.extend(page)
-              elif isinstance(page, dict):
-                  commits.append(page)
+          def validate_ident(name, email, label):
+              if not name or not email:
+                  raise SystemExit(f"{label} identity is incomplete.")
+              if unsafe_ident.search(name) or unsafe_ident.search(email):
+                  raise SystemExit(f"{label} identity contains characters unsafe for deterministic signing.")
 
-          if not commits:
-              raise SystemExit("PR contains no commits.")
-          if commits[-1].get("sha") != EXPECTED_HEAD_SHA:
-              raise SystemExit("PR commit list does not end at the approved head SHA.")
+          def unsigned_payload(tree_sha, parent_sha, message, author, committer):
+              author_iso, author_git_time = normalize_date(author["date"])
+              committer_iso, committer_git_time = normalize_date(committer["date"])
+              validate_ident(author["name"], author["email"], "Author")
+              validate_ident(committer["name"], committer["email"], "Committer")
 
-          old_parent = BASE_SHA
-          new_parent = BASE_SHA
+              normalized_message = message if message.endswith("\n") else message + "\n"
+              payload = (
+                  f"tree {tree_sha}\n"
+                  f"parent {parent_sha}\n"
+                  f"author {author['name']} <{author['email']}> {author_git_time}\n"
+                  f"committer {committer['name']} <{committer['email']}> {committer_git_time}\n"
+                  f"\n{normalized_message}"
+              ).encode("utf-8")
+              return payload, normalized_message, author_iso, committer_iso
 
-          for listed in commits:
-              old_sha = listed.get("sha", "")
-              if not sha_re.fullmatch(old_sha):
-                  raise SystemExit("PR contains an invalid commit SHA.")
+          def object_sha(payload):
+              header = f"commit {len(payload)}\0".encode("ascii")
+              return hashlib.sha1(header + payload).hexdigest()
 
-              source = gh_json([f"repos/{REPO}/git/commits/{old_sha}"])
-              parents = source.get("parents") or []
-              if len(parents) != 1 or parents[0].get("sha") != old_parent:
-                  raise SystemExit(
-                      f"PR commit {old_sha} is not a single linear child of the approved history."
-                  )
-
-              tree_sha = (source.get("tree") or {}).get("sha", "")
-              author = source.get("author") or {}
-              if not sha_re.fullmatch(tree_sha):
-                  raise SystemExit(f"Invalid tree SHA on {old_sha}.")
-              if not all(author.get(k) for k in ("name", "email", "date")):
-                  raise SystemExit(f"Incomplete author metadata on {old_sha}.")
-
-              create_body = {
-                  "message": source.get("message", ""),
-                  "tree": tree_sha,
-                  "parents": [new_parent],
-                  # Preserve Git author attribution for Insights/Contributors.
-                  # The committer is intentionally omitted so GitHub can use the
-                  # authenticated GitHub App identity and produce its verified signature.
-                  "author": {
-                      "name": author["name"],
-                      "email": author["email"],
-                      "date": author["date"],
-                  },
-              }
-
-              created = gh_json(
-                  ["--method", "POST", f"repos/{REPO}/git/commits", "--input", "-"],
-                  create_body,
+          def import_and_select_key(home):
+              env = {**os.environ, "GNUPGHOME": str(home)}
+              imported = subprocess.run(
+                  ["gpg", "--batch", "--import"],
+                  input=SIGNING_KEY,
+                  text=True,
+                  capture_output=True,
+                  env=env,
+                  check=False,
               )
-              new_sha = created.get("sha", "")
-              verification = created.get("verification") or {}
+              if imported.returncode != 0:
+                  sys.stderr.write(imported.stderr)
+                  raise SystemExit("Failed to import the Environment-protected GPG signing key.")
 
-              if not sha_re.fullmatch(new_sha):
-                  raise SystemExit("GitHub returned an invalid rewritten commit SHA.")
-              if verification.get("verified") is not True:
-                  reason = verification.get("reason", "unknown")
+              listed = subprocess.run(
+                  ["gpg", "--batch", "--with-colons", "--list-secret-keys"],
+                  text=True,
+                  capture_output=True,
+                  env=env,
+                  check=False,
+              )
+              if listed.returncode != 0:
+                  sys.stderr.write(listed.stderr)
+                  raise SystemExit("Failed to list imported GPG secret keys.")
+
+              fingerprints = []
+              expect_primary_fpr = False
+              for line in listed.stdout.splitlines():
+                  fields = line.split(":")
+                  record = fields[0] if fields else ""
+                  if record == "sec":
+                      expect_primary_fpr = True
+                  elif record == "fpr" and expect_primary_fpr:
+                      fingerprints.append(fields[9])
+                      expect_primary_fpr = False
+
+              if len(fingerprints) != 1:
+                  raise SystemExit("Exactly one primary GPG secret key must be supplied.")
+              return env, fingerprints[0]
+
+          def sign_payload(payload, env, fingerprint, workdir, sequence):
+              payload_path = workdir / f"commit-{sequence}.payload"
+              signature_path = workdir / f"commit-{sequence}.asc"
+              payload_path.write_bytes(payload)
+              payload_path.chmod(0o600)
+
+              cmd = [
+                  "gpg", "--batch", "--yes", "--armor",
+                  "--local-user", fingerprint,
+                  "--output", str(signature_path),
+              ]
+              if SIGNING_PASSPHRASE:
+                  cmd += ["--pinentry-mode", "loopback", "--passphrase-fd", "0"]
+              cmd += ["--detach-sign", str(payload_path)]
+
+              signed = subprocess.run(
+                  cmd,
+                  input=(SIGNING_PASSPHRASE + "\n") if SIGNING_PASSPHRASE else None,
+                  text=True,
+                  capture_output=True,
+                  env=env,
+                  check=False,
+              )
+              if signed.returncode != 0:
+                  sys.stderr.write(signed.stderr)
+                  raise SystemExit("GPG signing failed.")
+              return signature_path.read_text(encoding="utf-8")
+
+          # Re-read the exact approved head after the Environment gate.
+          authoritative_pr(EXPECTED_HEAD_SHA)
+
+          if not NEEDS_SIGNING:
+              new_head_sha = EXPECTED_HEAD_SHA
+              print("All PR commits were already Verified; publishing human approval on the existing head.")
+          else:
+              if not SIGNING_KEY:
                   raise SystemExit(
-                      f"GitHub did not verify rewritten commit {new_sha}: {reason}"
+                      "Environment secret HUMAN_SIGNING_GPG_PRIVATE_KEY is required for unsigned commits."
                   )
-              if (created.get("tree") or {}).get("sha") != tree_sha:
-                  raise SystemExit("Rewritten commit tree differs from the approved source tree.")
+              if not SIGNING_NAME or not SIGNING_EMAIL:
+                  raise SystemExit(
+                      "Environment variables HUMAN_SIGNING_NAME and HUMAN_SIGNING_EMAIL are required."
+                  )
+              validate_ident(SIGNING_NAME, SIGNING_EMAIL, "Human signer")
 
-              old_parent = old_sha
-              new_parent = new_sha
+              pages = gh_json([
+                  "--paginate",
+                  "--slurp",
+                  f"repos/{REPO}/pulls/{PR_NUMBER}/commits?per_page=100",
+              ])
+              commits = []
+              for page in pages:
+                  if isinstance(page, list):
+                      commits.extend(page)
+                  elif isinstance(page, dict):
+                      commits.append(page)
 
-          if old_parent != EXPECTED_HEAD_SHA:
-              raise SystemExit("Approved PR history changed during commit recreation.")
+              if not commits:
+                  raise SystemExit("PR contains no commits.")
+              if commits[-1].get("sha") != EXPECTED_HEAD_SHA:
+                  raise SystemExit("PR commit list does not end at the approved head SHA.")
 
-          new_head_sha = new_parent
+              with tempfile.TemporaryDirectory(prefix="coglatas-gpg-") as tmp:
+                  home = Path(tmp) / "gnupg"
+                  workdir = Path(tmp) / "payloads"
+                  home.mkdir(mode=0o700)
+                  workdir.mkdir(mode=0o700)
+                  gpg_env, fingerprint = import_and_select_key(home)
 
-          # Final authoritative read immediately before the atomic ref compare-and-swap.
-          authoritative_pr()
+                  old_parent = BASE_SHA
+                  new_parent = BASE_SHA
 
-          repo_meta = gh_json([f"repos/{REPO}"])
-          repository_id = repo_meta.get("node_id")
-          if not repository_id:
-              raise SystemExit("Repository GraphQL node ID is unavailable.")
+                  for sequence, listed in enumerate(commits, start=1):
+                      old_sha = listed.get("sha", "")
+                      if not sha_re.fullmatch(old_sha):
+                          raise SystemExit("PR contains an invalid commit SHA.")
 
-          mutation = """
-          mutation UpdateApprovedRef(
-            $repositoryId: ID!,
-            $name: GitRefname!,
-            $before: GitObjectID!,
-            $after: GitObjectID!
-          ) {
-            updateRefs(input: {
-              repositoryId: $repositoryId,
-              refUpdates: [{
-                name: $name,
-                beforeOid: $before,
-                afterOid: $after,
-                force: true
-              }]
-            }) {
-              clientMutationId
-            }
-          }
-          """
+                      source = gh_json([f"repos/{REPO}/git/commits/{old_sha}"])
+                      parents = source.get("parents") or []
+                      if len(parents) != 1 or parents[0].get("sha") != old_parent:
+                          raise SystemExit(
+                              f"PR commit {old_sha} is not a single linear child of the approved history."
+                          )
 
-          gh_json(
-              ["graphql", "--input", "-"],
-              {
-                  "query": mutation,
-                  "variables": {
-                      "repositoryId": repository_id,
-                      "name": f"refs/heads/{HEAD_BRANCH}",
-                      "before": EXPECTED_HEAD_SHA,
-                      "after": new_head_sha,
+                      tree_sha = (source.get("tree") or {}).get("sha", "")
+                      author = source.get("author") or {}
+                      if not sha_re.fullmatch(tree_sha):
+                          raise SystemExit(f"Invalid tree SHA on {old_sha}.")
+                      if not all(author.get(k) for k in ("name", "email", "date")):
+                          raise SystemExit(f"Incomplete author metadata on {old_sha}.")
+
+                      # Preserve author attribution; use the human signing identity only
+                      # for the committer/signature identity.
+                      source_committer = source.get("committer") or {}
+                      committer_date_source = source_committer.get("date") or author["date"]
+                      committer = {
+                          "name": SIGNING_NAME,
+                          "email": SIGNING_EMAIL,
+                          "date": committer_date_source,
+                      }
+
+                      payload, message, author_iso, committer_iso = unsigned_payload(
+                          tree_sha,
+                          new_parent,
+                          source.get("message", ""),
+                          author,
+                          committer,
+                      )
+
+                      create_body = {
+                          "message": message,
+                          "tree": tree_sha,
+                          "parents": [new_parent],
+                          "author": {
+                              "name": author["name"],
+                              "email": author["email"],
+                              "date": author_iso,
+                          },
+                          "committer": {
+                              "name": committer["name"],
+                              "email": committer["email"],
+                              "date": committer_iso,
+                          },
+                      }
+
+                      # Fail closed if our canonical payload does not match the exact
+                      # commit object GitHub creates from these fields.
+                      probe = gh_json(
+                          ["--method", "POST", f"repos/{REPO}/git/commits", "--input", "-"],
+                          create_body,
+                      )
+                      expected_probe_sha = object_sha(payload)
+                      if probe.get("sha") != expected_probe_sha:
+                          raise SystemExit(
+                              "GitHub canonical commit payload differed from the locally constructed payload."
+                          )
+
+                      signature = sign_payload(payload, gpg_env, fingerprint, workdir, sequence)
+                      signed_body = {**create_body, "signature": signature}
+                      created = gh_json(
+                          ["--method", "POST", f"repos/{REPO}/git/commits", "--input", "-"],
+                          signed_body,
+                      )
+
+                      new_sha = created.get("sha", "")
+                      verification = created.get("verification") or {}
+                      if not sha_re.fullmatch(new_sha):
+                          raise SystemExit("GitHub returned an invalid signed commit SHA.")
+                      if verification.get("verified") is not True or verification.get("reason") != "valid":
+                          reason = verification.get("reason", "unknown")
+                          raise SystemExit(
+                              f"GitHub rejected the human GPG signature on {new_sha}: {reason}"
+                          )
+                      if verification.get("payload") != payload.decode("utf-8"):
+                          raise SystemExit("GitHub verified a payload different from the approved payload.")
+                      if (created.get("tree") or {}).get("sha") != tree_sha:
+                          raise SystemExit("Signed commit tree differs from the approved source tree.")
+
+                      old_parent = old_sha
+                      new_parent = new_sha
+
+                  if old_parent != EXPECTED_HEAD_SHA:
+                      raise SystemExit("Approved PR history changed during commit signing.")
+                  new_head_sha = new_parent
+
+              # Final authoritative read immediately before the atomic branch update.
+              authoritative_pr(EXPECTED_HEAD_SHA)
+
+              repo_meta = gh_json([f"repos/{REPO}"])
+              repository_id = repo_meta.get("node_id")
+              if not repository_id:
+                  raise SystemExit("Repository GraphQL node ID is unavailable.")
+
+              mutation = """
+              mutation UpdateApprovedRef(
+                $repositoryId: ID!,
+                $name: GitRefname!,
+                $before: GitObjectID!,
+                $after: GitObjectID!
+              ) {
+                updateRefs(input: {
+                  repositoryId: $repositoryId,
+                  refUpdates: [{
+                    name: $name,
+                    beforeOid: $before,
+                    afterOid: $after,
+                    force: true
+                  }]
+                }) {
+                  clientMutationId
+                }
+              }
+              """
+
+              gh_json(
+                  ["graphql", "--input", "-"],
+                  {
+                      "query": mutation,
+                      "variables": {
+                          "repositoryId": repository_id,
+                          "name": f"refs/heads/{HEAD_BRANCH}",
+                          "before": EXPECTED_HEAD_SHA,
+                          "after": new_head_sha,
+                      },
                   },
-              },
-          )
+              )
 
           gh_json(
               ["--method", "POST", f"repos/{REPO}/statuses/{new_head_sha}", "--input", "-"],
               {
                   "state": "success",
                   "context": "External PR approval policy",
-                  "description": "Human-approved GitHub-verified commits created for this PR head",
+                  "description": "Human approval granted; commits are GitHub Verified",
               },
           )
 
-          print(f"Human-approved commit recreation completed for PR #{PR_NUMBER}.")
-          print(f"Old head: {EXPECTED_HEAD_SHA}")
-          print(f"New verified head: {new_head_sha}")
+          print(f"Human approval completed for PR #{PR_NUMBER}.")
+          print(f"Approved old head: {EXPECTED_HEAD_SHA}")
+          print(f"Approved current head: {new_head_sha}")
           PY
