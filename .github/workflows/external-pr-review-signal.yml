@@ -2,9 +2,7 @@ name: External PR review signal
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, converted_to_draft, ready_for_review]
-  pull_request_review:
-    types: [submitted, edited, dismissed]
+    types: [opened, reopened, synchronize, ready_for_review]
 
 permissions: {}
 
@@ -14,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Emit PR state-change signal
+      - name: Emit PR head-change signal
         shell: bash
         run: |
           set -euo pipefail
@@ -23,5 +21,5 @@ jobs:
             echo "No pull request number was present in the event payload." >&2
             exit 1
           fi
-          echo "PR state changed for #$pr_number via $GITHUB_EVENT_NAME."
-          echo "The trusted default-branch evaluator will re-read the authoritative PR and review state."
+          echo "PR head/state changed for #$pr_number."
+          echo "The trusted default-branch evaluator will re-read the authoritative PR head through the GitHub API."
