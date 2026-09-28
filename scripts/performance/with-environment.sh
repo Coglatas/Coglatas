@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="$ROOT/docker-compose.performance.yml"
+RUNTIME_MODE="${COGLATAS_PERFORMANCE_RUNTIME_MODE:-production}"
+COMPOSE_OVERRIDE=""
 PROFILE="${COGLATAS_PERFORMANCE_PROFILE:-small}"
 PORT="${COGLATAS_PERFORMANCE_PORT:-18080}"
 RUN_TOKEN="${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-0}-${BASHPID}"
@@ -25,10 +27,21 @@ if [[ ! "$PORT" =~ ^[0-9]+$ ]] || (( PORT < 1024 || PORT > 65535 )); then
   echo "PERF-02: COGLATAS_PERFORMANCE_PORT must be an unprivileged TCP port" >&2
   exit 2
 fi
-if [[ -z "${SYNCFUSION_LICENSE:-}" ]]; then
-  echo "PERF-02: SYNCFUSION_LICENSE is required to build the production Angular image" >&2
-  exit 2
-fi
+case "$RUNTIME_MODE" in
+  production)
+    if [[ -z "${SYNCFUSION_LICENSE:-}" ]]; then
+      echo "PERF-02: SYNCFUSION_LICENSE is required to build the production Angular image" >&2
+      exit 2
+    fi
+    ;;
+  source)
+    COMPOSE_OVERRIDE="$ROOT/docker-compose.performance.pr.yml"
+    ;;
+  *)
+    echo "PERF-02: COGLATAS_PERFORMANCE_RUNTIME_MODE must be production or source" >&2
+    exit 2
+    ;;
+esac
 if [[ -z "${COGLATAS_PERFORMANCE_PASSWORD:-}" ]]; then
   echo "PERF-02: COGLATAS_PERFORMANCE_PASSWORD is required" >&2
   exit 2
@@ -56,7 +69,11 @@ rm -f \
   "$EVIDENCE_DIR/environment.json"
 
 compose() {
-  docker compose -p "$PROJECT" -f "$COMPOSE_FILE" "$@"
+  if [[ -n "$COMPOSE_OVERRIDE" ]]; then
+    docker compose -p "$PROJECT" -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" "$@"
+  else
+    docker compose -p "$PROJECT" -f "$COMPOSE_FILE" "$@"
+  fi
 }
 
 cleanup() {
@@ -125,12 +142,28 @@ python3 "$ROOT/scripts/performance/warmup.py" \
   --fixture-evidence "$EVIDENCE_DIR/fixture.json" \
   --output "$EVIDENCE_DIR/warmup.json"
 
+collect_args=(
+  --compose-project "$PROJECT"
+  --compose-file "$COMPOSE_FILE"
+  --profile "$PROFILE"
+  --fixture-evidence "$EVIDENCE_DIR/fixture.json"
+  --output "$EVIDENCE_DIR/environment.json"
+)
+if [[ -n "$COMPOSE_OVERRIDE" ]]; then
+  collect_args+=(--compose-override "$COMPOSE_OVERRIDE")
+fi
+python3 "$ROOT/scripts/performance/collect-environment.py" "${collect_args[@]}"
+
+# The invocation above owns fixture/output arguments so source and production
+# modes fingerprint the exact same effective Compose project.
+: <<'PERF02_OLD_COLLECT_INVOCATION'
 python3 "$ROOT/scripts/performance/collect-environment.py" \
   --compose-project "$PROJECT" \
   --compose-file "$COMPOSE_FILE" \
   --profile "$PROFILE" \
   --fixture-evidence "$EVIDENCE_DIR/fixture.json" \
   --output "$EVIDENCE_DIR/environment.json"
+PERF02_OLD_COLLECT_INVOCATION
 
 export COGLATAS_PERFORMANCE_BASE_URL="$BASE_URL"
 export COGLATAS_PERFORMANCE_FIXTURE_EVIDENCE="$EVIDENCE_DIR/fixture.json"
