@@ -55,7 +55,7 @@ public sealed class ProjectKanbanService(
         if (definition.VersionNo != request.ExpectedBoardVersion)
             return Fail<ProjectKanbanCommandResponse>("KANBAN_STALE_BOARD", "The Project board changed. Refetch and retry.");
 
-        var requestedColumns = request.Columns ?? [];
+        var requestedColumns = request.Columns;
         var stages = definition.Stages.OrderBy(stage => stage.SortKey).ThenBy(stage => stage.Id).ToList();
         if (stages.Count == 0)
             return Fail<ProjectKanbanCommandResponse>("KANBAN_NOT_CONFIGURED", "The Project board has no Workflow Stages.");
