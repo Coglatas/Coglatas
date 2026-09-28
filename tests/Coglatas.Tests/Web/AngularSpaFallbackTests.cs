@@ -139,6 +139,7 @@ public sealed class AngularSpaFallbackTests : IDisposable
                 .Features
                 .Get<IServerAddressesFeature>()!
                 .Addresses;
+            // ReSharper disable once ShortLivedHttpClient
             using var client = new HttpClient { BaseAddress = new Uri(addresses.Single()) };
             using var request = new HttpRequestMessage(new HttpMethod("TRACE"), "/api/example");
 
@@ -185,6 +186,7 @@ public sealed class AngularSpaFallbackTests : IDisposable
                 .Features
                 .Get<IServerAddressesFeature>()!
                 .Addresses;
+            // ReSharper disable once ShortLivedHttpClient
             using var client = new HttpClient { BaseAddress = new Uri(addresses.Single()) };
             using var unsupportedRequest = new HttpRequestMessage(new HttpMethod("QUERY"), "/api/example");
 

@@ -106,6 +106,7 @@ public sealed class HttpSecurityPolicyTests
             var address = app.Services.GetRequiredService<IServer>()
                 .Features.Get<IServerAddressesFeature>()?.Addresses.Single()
                 ?? throw new InvalidOperationException("Test server address was not available.");
+            // ReSharper disable once ShortLivedHttpClient
             using var client = new HttpClient { BaseAddress = new Uri(address) };
 
             for (var requestIndex = 0; requestIndex < 10; requestIndex++)
