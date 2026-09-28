@@ -193,6 +193,7 @@ Default workflows to read-only and make every write-capable workflow an explicit
   "write_permissions_allowlist": [
     {
       "permissions": [
+        "contents:write",
         "statuses:write"
       ],
       "workflow": ".github/workflows/external-pr-approval-evaluator.yml"

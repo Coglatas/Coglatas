@@ -204,7 +204,7 @@
       "scope": ["pr", "scheduled"],
       "enforcement": "blocking",
       "owner": "@NYGsatoshi",
-      "expected": {"default": "read-only", "persist_credentials": false, "write_permissions_allowlist": [{"workflow": ".github/workflows/external-pr-approval-evaluator.yml", "permissions": ["statuses:write"]}]},
+      "expected": {"default": "read-only", "persist_credentials": false, "write_permissions_allowlist": [{"workflow": ".github/workflows/external-pr-approval-evaluator.yml", "permissions": ["contents:write", "statuses:write"]}]},
       "evidence": {"kind": "workflow-static", "source": "repository workflow permission inventory"},
       "exception": {"allowed": false},
       "references": {"paths": ["scripts/ci/check-publication-readiness.py"], "workflows": [".github/workflows/ci.yml", ".github/workflows/publication-readiness.yml", ".github/workflows/external-pr-review-signal.yml", ".github/workflows/external-pr-approval-evaluator.yml"], "checks": [], "rulesets": []},
