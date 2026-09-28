@@ -369,7 +369,7 @@ for invariant in \
   'responseCode: 200' \
   '- type: passiveScan-wait' \
   '- type: alertFilter' \
-  'ruleId: 10062' \
+  '- ruleId: 10062' \
   'newRisk: False Positive' \
   'url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/comments"' \
   'urlRegex: false' \
