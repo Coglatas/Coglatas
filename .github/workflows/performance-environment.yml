@@ -12,19 +12,6 @@ on:
           - small
           - medium
           - large
-  pull_request:
-    paths:
-      - ".github/workflows/performance-environment.yml"
-      - "performance/**"
-      - "scripts/performance/**"
-      - "scripts/ci/verify-performance-environment.py"
-      - "docker-compose.performance.yml"
-      - "Dockerfile"
-      - "Dockerfile.playwright"
-      - "src/**"
-      - "frontend/**"
-      - "package-lock.json"
-      - "frontend/package-lock.json"
   push:
     branches: ["main"]
     paths:
