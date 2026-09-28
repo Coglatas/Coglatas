@@ -2,7 +2,7 @@
   "$schema": "./policy.schema.json",
   "version": 1,
   "policy_id": "COGLATAS-GOVERNANCE",
-  "repository": "NYGsatoshi/Coglatas",
+  "repository": "Coglatas/Coglatas",
   "default_branch": "main",
   "owners": [
     "@NYGsatoshi"
