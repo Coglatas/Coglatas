@@ -148,7 +148,14 @@ def main() -> int:
         app_image = image_id(args.compose_project, args.compose_file, args.compose_override, "app")
         postgres_image = image_id(args.compose_project, args.compose_file, args.compose_override, "postgres")
         browser_image = run(compose_command(
-            args.compose_project, args.compose_file, args.compose_override, "images", "-q", "performance-browser"
+            args.compose_project,
+            args.compose_file,
+            args.compose_override,
+            "--profile",
+            "tooling",
+            "images",
+            "-q",
+            "performance-browser",
         ))
 
         output = {
