@@ -29,11 +29,12 @@ def main() -> int:
     environment_path = ROOT / "performance" / "environment.json"
     compose_path = ROOT / "docker-compose.performance.yml"
     harness_path = ROOT / "scripts" / "performance" / "with-environment.sh"
+    warmup_path = ROOT / "scripts" / "performance" / "warmup.py"
     seed_path = ROOT / "src" / "Coglatas.Infrastructure" / "Persistence" / "PerformanceCiFixtureSeed.cs"
     hosting_path = ROOT / "src" / "Coglatas.Web" / "Testing" / "PerformanceCiHostingStartup.cs"
     boundary_path = ROOT / "src" / "Coglatas.Web" / "Testing" / "PerformanceCiTestBoundary.cs"
 
-    for path in (environment_path, compose_path, harness_path, seed_path, hosting_path, boundary_path):
+    for path in (environment_path, compose_path, harness_path, warmup_path, seed_path, hosting_path, boundary_path):
         if not path.is_file():
             fail(f"missing required file: {path.relative_to(ROOT)}")
 
@@ -117,6 +118,14 @@ def main() -> int:
         'timeout "$COMMAND_TIMEOUT"',
     ):
         require_text(harness, token, "with-environment.sh")
+
+    warmup_script = warmup_path.read_text(encoding="utf-8")
+    for token in (
+        "/api/security/csrf-token",
+        "csrf_header: csrf_token",
+        "\"csrfBootstrap\"",
+    ):
+        require_text(warmup_script, token, "warmup.py")
 
     seed = seed_path.read_text(encoding="utf-8")
     for token in (
