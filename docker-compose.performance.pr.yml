@@ -1,0 +1,34 @@
+# PERF-02 public-PR runtime override.
+#
+# The canonical performance stack normally builds the production Dockerfile,
+# which requires the private Syncfusion build credential. Pull requests must not
+# receive that credential, so this overlay runs the same ASP.NET Core project
+# from the pinned .NET SDK image while preserving the dedicated PostgreSQL,
+# tenancy, storage, fixture, CSRF, and evidence configuration.
+#
+# This is CI-only and is not a deployment profile.
+
+services:
+  app:
+    build: !reset null
+    image: mcr.microsoft.com/dotnet/sdk:10.0.401@sha256:35d40304542c8689331f8cab17c65926cdf48fe711e289321d71924b230a7d29
+    working_dir: /src
+    environment:
+      NUGET_PACKAGES: /root/.nuget/packages
+    volumes:
+      - ./:/src
+      - performance_nuget:/root/.nuget/packages
+      - ${COGLATAS_PERFORMANCE_EVIDENCE_DIR:?COGLATAS_PERFORMANCE_EVIDENCE_DIR is required}:/app/performance-evidence
+      - performance_uploads:/app/storage/uploads
+      - performance_data_protection:/app/data/protection-keys
+    healthcheck: !reset null
+    command: >
+      bash -lc "mkdir -p
+      /src/src/Coglatas.Web/wwwroot
+      /app/storage/uploads
+      /app/data/protection-keys &&
+      dotnet restore src/Coglatas.Web/Coglatas.Web.csproj /p:RestoreFallbackFolders= &&
+      dotnet run --project src/Coglatas.Web/Coglatas.Web.csproj
+      --configuration Release
+      --no-restore
+      --no-launch-profile"
