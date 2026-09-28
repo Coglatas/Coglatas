@@ -69,11 +69,42 @@ def main() -> int:
 
         cookie_jar = http.cookiejar.CookieJar()
         opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
+
+        csrf_request = urllib.request.Request(
+            f"{base_url}/api/security/csrf-token",
+            headers={"X-Tenant-Slug": tenant_slug},
+            method="GET",
+        )
+        csrf_started = time.perf_counter()
+        try:
+            with opener.open(csrf_request, timeout=args.timeout_seconds) as response:
+                csrf_body = response.read()
+                csrf_status = response.status
+        except urllib.error.HTTPError as exc:
+            csrf_body = exc.read()
+            csrf_status = exc.code
+        csrf_ms = (time.perf_counter() - csrf_started) * 1000.0
+        if csrf_status != 200:
+            raise PerformanceContractError(f"warm-up CSRF bootstrap failed with HTTP {csrf_status}")
+
+        try:
+            csrf_payload = json.loads(csrf_body)
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise PerformanceContractError("warm-up CSRF bootstrap returned invalid JSON") from exc
+        csrf_token = csrf_payload.get("token")
+        csrf_header = csrf_payload.get("headerName")
+        if not isinstance(csrf_token, str) or not csrf_token or not isinstance(csrf_header, str) or not csrf_header:
+            raise PerformanceContractError("warm-up CSRF bootstrap returned an incomplete token payload")
+
         login_body = json.dumps({"email": operator_email, "password": password}).encode("utf-8")
         login_request = urllib.request.Request(
             f"{base_url}/api/auth/login",
             data=login_body,
-            headers={"Content-Type": "application/json", "X-Tenant-Slug": tenant_slug},
+            headers={
+                "Content-Type": "application/json",
+                "X-Tenant-Slug": tenant_slug,
+                csrf_header: csrf_token,
+            },
             method="POST",
         )
         login_status, login_ms = open_request(opener, login_request, args.timeout_seconds)
@@ -113,6 +144,7 @@ def main() -> int:
             "completedAtUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
             "profile": args.profile,
             "fixtureHash": evidence["fixtureHash"],
+            "csrfBootstrap": {"status": csrf_status, "elapsedMs": round(csrf_ms, 3), "measured": False},
             "login": {"status": login_status, "elapsedMs": round(login_ms, 3), "measured": False},
             "sampleCount": len(samples),
             "samples": samples,
