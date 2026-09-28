@@ -210,7 +210,7 @@ public sealed class TaskSubresourceService(
         if (request.ExpectedTaskVersion <= 0) return Fail<TaskChecklistOrderResponse>("TASK_INVALID_EXPECTED_VERSION", "Expected task version must be a positive integer.");
         if (task.VersionNo != request.ExpectedTaskVersion) return Fail<TaskChecklistOrderResponse>("TASK_STALE_VERSION", "Task has changed. Refetch and retry.");
         var items = await projects.ListChecklistAsync(taskId, ct);
-        var orderedIds = request.OrderedItemIds ?? [];
+        var orderedIds = request.OrderedItemIds;
         if (orderedIds.Count != items.Count || orderedIds.Distinct().Count() != orderedIds.Count || !orderedIds.All(id => items.Any(item => item.Id == id)))
             return Fail<TaskChecklistOrderResponse>("TASK_CHECKLIST_ORDER_INVALID", "Checklist order must contain each current item exactly once.");
         var byId = items.ToDictionary(item => item.Id);
