@@ -101,6 +101,14 @@ def image_id(project: str, compose_file: Path, compose_override: Path | None, se
     return run(["docker", "inspect", "--format", "{{.Image}}", first_line(container_id)])
 
 
+def built_compose_image_id(project: str, service: str) -> str:
+    # Compose only lists images for created containers. performance-browser is
+    # deliberately build-only during PERF-02 environment validation, so inspect
+    # Compose's deterministic default image name instead.
+    image_name = f"{project}-{service}"
+    return run(["docker", "image", "inspect", "--format", "{{.Id}}", image_name])
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Collect machine-readable PERF-02 environment fingerprint.")
     parser.add_argument("--compose-project", required=True)
@@ -147,16 +155,7 @@ def main() -> int:
 
         app_image = image_id(args.compose_project, args.compose_file, args.compose_override, "app")
         postgres_image = image_id(args.compose_project, args.compose_file, args.compose_override, "postgres")
-        browser_image = run(compose_command(
-            args.compose_project,
-            args.compose_file,
-            args.compose_override,
-            "--profile",
-            "tooling",
-            "images",
-            "-q",
-            "performance-browser",
-        ))
+        browser_image = built_compose_image_id(args.compose_project, "performance-browser")
 
         output = {
             "schemaVersion": 1,
