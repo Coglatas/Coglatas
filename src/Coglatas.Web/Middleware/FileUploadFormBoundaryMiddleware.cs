@@ -60,8 +60,8 @@ public sealed class FileUploadFormBoundaryMiddleware(RequestDelegate next)
 
     private static bool IsFileUploadRequest(HttpRequest request) =>
         HttpMethods.IsPost(request.Method) &&
-        (request.Path.Equals("/api/files", StringComparison.OrdinalIgnoreCase) ||
-         request.Path.Equals("/api/attachments", StringComparison.OrdinalIgnoreCase));
+        (string.Equals(request.Path.Value, "/api/files", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(request.Path.Value, "/api/attachments", StringComparison.OrdinalIgnoreCase));
 
     private static Task WriteInvalidRequestAsync(HttpContext context)
     {
