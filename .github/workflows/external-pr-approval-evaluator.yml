@@ -107,7 +107,7 @@ jobs:
     needs: resolve
     if: ${{ needs.resolve.outputs.needs_signing == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 12
     environment:
       name: human-merge-approval
     permissions:
