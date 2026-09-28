@@ -45,10 +45,10 @@ def live_ruleset() -> dict[str, Any]:
 def success_api(*, missing_context: str | None = None, missing_parent_live: bool = False) -> FakeApi:
     checks: list[dict[str, Any]] = []
     responses: dict[str, Any] = {
-        "repos/NYGsatoshi/Coglatas/pulls/42": {
+        "repos/Coglatas/Coglatas/pulls/42": {
             "state": "open", "head": {"sha": HEAD}, "base": {"ref": "main"}
         },
-        "repos/NYGsatoshi/Coglatas/rulesets": [
+        "repos/Coglatas/Coglatas/rulesets": [
             {"id": 123, "name": REGISTRY["ruleset"]["name"]}
         ],
     }
@@ -56,7 +56,7 @@ def success_api(*, missing_context: str | None = None, missing_parent_live: bool
     if missing_parent_live:
         values = live["rules"][0]["parameters"]["required_status_checks"]
         values[:] = [v for v in values if v["context"] != "External PR approval policy"]
-    responses["repos/NYGsatoshi/Coglatas/rulesets/123"] = live
+    responses["repos/Coglatas/Coglatas/rulesets/123"] = live
     for i, item in enumerate(guard.exact_entries(REGISTRY), start=1):
         if item["gate_id"] == PARENT or item["context"] == missing_context:
             continue
@@ -71,22 +71,22 @@ def success_api(*, missing_context: str | None = None, missing_parent_live: bool
             "conclusion": "success",
             "completed_at": "2026-09-04T05:20:00Z",
             "app": {"id": item["producer"]["integration_id"], "slug": item["producer"]["app_slug"]},
-            "details_url": f"https://github.com/NYGsatoshi/Coglatas/actions/runs/{run_id}/job/{i}",
+            "details_url": f"https://github.com/Coglatas/Coglatas/actions/runs/{run_id}/job/{i}",
         })
-        responses[f"repos/NYGsatoshi/Coglatas/actions/runs/{run_id}"] = {
+        responses[f"repos/Coglatas/Coglatas/actions/runs/{run_id}"] = {
             "path": item["workflow"], "event": "pull_request", "head_sha": HEAD, "head_branch": "feature"
         }
-    responses[f"repos/NYGsatoshi/Coglatas/commits/{HEAD}/check-runs?filter=latest&per_page=100"] = {
+    responses[f"repos/Coglatas/Coglatas/commits/{HEAD}/check-runs?filter=latest&per_page=100"] = {
         "total_count": len(checks), "check_runs": checks
     }
-    responses[f"repos/NYGsatoshi/Coglatas/commits/{HEAD}/statuses?per_page=100"] = []
+    responses[f"repos/Coglatas/Coglatas/commits/{HEAD}/statuses?per_page=100"] = []
     return FakeApi(responses)
 
 
 class TrustedParentTests(unittest.TestCase):
     def test_parent_status_does_not_create_self_dependency(self) -> None:
         report = parent.evaluate_from_trusted_parent(
-            success_api(), "NYGsatoshi/Coglatas", 42, REGISTRY, PARENT
+            success_api(), "Coglatas/Coglatas", 42, REGISTRY, PARENT
         )
         self.assertEqual("pass", report["decision"])
         gate = next(g for g in report["exact_head"]["gates"] if g["gate_id"] == PARENT)
@@ -95,14 +95,14 @@ class TrustedParentTests(unittest.TestCase):
     def test_other_required_check_still_blocks(self) -> None:
         report = parent.evaluate_from_trusted_parent(
             success_api(missing_context="build-test"),
-            "NYGsatoshi/Coglatas", 42, REGISTRY, PARENT,
+            "Coglatas/Coglatas", 42, REGISTRY, PARENT,
         )
         self.assertEqual("fail", report["decision"])
 
     def test_live_ruleset_still_requires_parent_context(self) -> None:
         report = parent.evaluate_from_trusted_parent(
             success_api(missing_parent_live=True),
-            "NYGsatoshi/Coglatas", 42, REGISTRY, PARENT,
+            "Coglatas/Coglatas", 42, REGISTRY, PARENT,
         )
         self.assertEqual("fail", report["decision"])
         self.assertTrue(any("External PR approval policy" in e for e in report["live_ruleset"]["errors"]))
@@ -110,7 +110,7 @@ class TrustedParentTests(unittest.TestCase):
     def test_parent_must_be_commit_status(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "commit-status"):
             parent.evaluate_from_trusted_parent(
-                success_api(), "NYGsatoshi/Coglatas", 42, REGISTRY, "GOV-GATE-BUILD-001"
+                success_api(), "Coglatas/Coglatas", 42, REGISTRY, "GOV-GATE-BUILD-001"
             )
 
 
