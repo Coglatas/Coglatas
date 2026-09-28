@@ -77,6 +77,15 @@ public sealed class SecurityOpenApiSchemaTransformer : IOpenApiSchemaTransformer
 
     private static void ConfigureRequestShape(OpenApiSchema schema, Type requestType)
     {
+        if (requestType == typeof(Controllers.UploadAttachmentForm))
+        {
+            // The upload endpoints accept only OwnerType, OwnerId, and the File part.
+            // Closing the schema keeps positive fuzz cases aligned with the actual
+            // multipart contract; negative fuzzing still exercises extra fields.
+            schema.AdditionalPropertiesAllowed = false;
+            return;
+        }
+
         if (requestType == typeof(UpdateTenantSettingsRequest))
         {
             // PATCH semantics permit every field to be omitted. The generated
