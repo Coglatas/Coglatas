@@ -157,7 +157,7 @@ jobs:
           # GOV-TRUST-001 proof: authoritative PR/head is always re-read via gh api /pulls/ and .head.sha.
           echo "head_sha=$current_head_sha" >> "$GITHUB_OUTPUT"
 
-      - name: Rewrite PR commits with the human-approved SSH signature
+      - name: Recreate approved commits through the GitHub Git database API
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -165,126 +165,195 @@ jobs:
           EXPECTED_HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
           HEAD_BRANCH: ${{ needs.resolve.outputs.head_branch }}
           BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
-          HUMAN_SIGNING_SSH_PRIVATE_KEY: ${{ secrets.HUMAN_SIGNING_SSH_PRIVATE_KEY }}
-          HUMAN_SIGNING_EMAIL: ${{ vars.HUMAN_SIGNING_EMAIL }}
         run: |
           set -euo pipefail
 
-          [[ -n "$HUMAN_SIGNING_SSH_PRIVATE_KEY" ]] || {
-            echo "Environment secret HUMAN_SIGNING_SSH_PRIVATE_KEY is not configured." >&2
-            exit 1
-          }
-          [[ -n "$HUMAN_SIGNING_EMAIL" ]] || {
-            echo "Environment variable HUMAN_SIGNING_EMAIL is not configured." >&2
-            exit 1
-          }
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
 
-          object_repo="$RUNNER_TEMP/coglatas-human-signing.git"
-          rm -rf "$object_repo"
-          git init --bare "$object_repo"
-          cd "$object_repo"
+          REPO = os.environ["GITHUB_REPOSITORY"]
+          PR_NUMBER = os.environ["PR_NUMBER"]
+          EXPECTED_HEAD_SHA = os.environ["EXPECTED_HEAD_SHA"]
+          HEAD_BRANCH = os.environ["HEAD_BRANCH"]
+          BASE_SHA = os.environ["BASE_SHA"]
 
-          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
-          git fetch --no-tags --no-recurse-submodules origin "$BASE_SHA" "$EXPECTED_HEAD_SHA"
+          sha_re = re.compile(r"^[0-9a-f]{40}$")
+          if not PR_NUMBER.isdigit():
+              raise SystemExit("Invalid pull request number.")
+          if not sha_re.fullmatch(EXPECTED_HEAD_SHA) or not sha_re.fullmatch(BASE_SHA):
+              raise SystemExit("Invalid approved SHA.")
+          if not HEAD_BRANCH or HEAD_BRANCH.startswith("-"):
+              raise SystemExit("Invalid PR branch name.")
 
-          git cat-file -e "$BASE_SHA^{commit}"
-          git cat-file -e "$EXPECTED_HEAD_SHA^{commit}"
-          git merge-base --is-ancestor "$BASE_SHA" "$EXPECTED_HEAD_SHA" || {
-            echo "Approved PR head is not descended from the recorded base SHA." >&2
-            exit 1
-          }
+          def gh_json(args, body=None):
+              cmd = ["gh", "api", *args]
+              proc = subprocess.run(
+                  cmd,
+                  input=None if body is None else json.dumps(body),
+                  text=True,
+                  capture_output=True,
+                  check=False,
+              )
+              if proc.returncode != 0:
+                  sys.stderr.write(proc.stderr)
+                  raise SystemExit(f"GitHub API call failed: {' '.join(cmd[:4])}")
+              if not proc.stdout.strip():
+                  return {}
+              return json.loads(proc.stdout)
 
-          mapfile -t commits < <(git rev-list --reverse "$BASE_SHA..$EXPECTED_HEAD_SHA")
-          (( ${#commits[@]} > 0 )) || {
-            echo "PR contains no commits to sign." >&2
-            exit 1
-          }
+          def authoritative_pr():
+              pr = gh_json([f"repos/{REPO}/pulls/{PR_NUMBER}"])
+              if pr.get("state") != "open" or pr.get("draft") is not False:
+                  raise SystemExit("PR is closed or draft.")
+              if pr.get("base", {}).get("ref") != "main":
+                  raise SystemExit("PR no longer targets main.")
+              if pr.get("base", {}).get("sha") != BASE_SHA:
+                  raise SystemExit("PR base changed; fresh human approval is required.")
+              if pr.get("head", {}).get("sha") != EXPECTED_HEAD_SHA:
+                  raise SystemExit("PR head changed; fresh human approval is required.")
+              if pr.get("head", {}).get("ref") != HEAD_BRANCH:
+                  raise SystemExit("PR branch changed; fresh human approval is required.")
+              if pr.get("head", {}).get("repo", {}).get("full_name") != REPO:
+                  raise SystemExit("Human signing is limited to same-repository PRs.")
+              return pr
 
-          key_path="$RUNNER_TEMP/coglatas-human-signing-key"
-          trap 'rm -f "$key_path"' EXIT
-          printf '%s\n' "$HUMAN_SIGNING_SSH_PRIVATE_KEY" > "$key_path"
-          chmod 600 "$key_path"
-          ssh-keygen -y -f "$key_path" >/dev/null
+          # Re-read the authoritative PR after Environment approval.
+          authoritative_pr()
 
-          git config user.name "NYGsatoshi"
-          git config user.email "$HUMAN_SIGNING_EMAIL"
-          git config gpg.format ssh
-          git config user.signingkey "$key_path"
-          git config commit.gpgsign true
+          pages = gh_json([
+              "--paginate",
+              "--slurp",
+              f"repos/{REPO}/pulls/{PR_NUMBER}/commits?per_page=100",
+          ])
+          commits = []
+          for page in pages:
+              if isinstance(page, list):
+                  commits.extend(page)
+              elif isinstance(page, dict):
+                  commits.append(page)
 
-          old_parent="$BASE_SHA"
-          new_parent="$BASE_SHA"
-          for old_commit in "${commits[@]}"; do
-            read -r -a lineage <<<"$(git rev-list --parents -n 1 "$old_commit")"
-            if (( ${#lineage[@]} != 2 )); then
-              echo "PR commit $old_commit is a merge/root commit; linear history is required." >&2
-              exit 1
-            fi
-            [[ "${lineage[1]}" == "$old_parent" ]] || {
-              echo "PR history is not a single linear chain from the recorded base SHA." >&2
-              exit 1
+          if not commits:
+              raise SystemExit("PR contains no commits.")
+          if commits[-1].get("sha") != EXPECTED_HEAD_SHA:
+              raise SystemExit("PR commit list does not end at the approved head SHA.")
+
+          old_parent = BASE_SHA
+          new_parent = BASE_SHA
+
+          for listed in commits:
+              old_sha = listed.get("sha", "")
+              if not sha_re.fullmatch(old_sha):
+                  raise SystemExit("PR contains an invalid commit SHA.")
+
+              source = gh_json([f"repos/{REPO}/git/commits/{old_sha}"])
+              parents = source.get("parents") or []
+              if len(parents) != 1 or parents[0].get("sha") != old_parent:
+                  raise SystemExit(
+                      f"PR commit {old_sha} is not a single linear child of the approved history."
+                  )
+
+              tree_sha = (source.get("tree") or {}).get("sha", "")
+              author = source.get("author") or {}
+              if not sha_re.fullmatch(tree_sha):
+                  raise SystemExit(f"Invalid tree SHA on {old_sha}.")
+              if not all(author.get(k) for k in ("name", "email", "date")):
+                  raise SystemExit(f"Incomplete author metadata on {old_sha}.")
+
+              create_body = {
+                  "message": source.get("message", ""),
+                  "tree": tree_sha,
+                  "parents": [new_parent],
+                  # Preserve Git author attribution for Insights/Contributors.
+                  # The committer is intentionally omitted so GitHub can use the
+                  # authenticated GitHub App identity and produce its verified signature.
+                  "author": {
+                      "name": author["name"],
+                      "email": author["email"],
+                      "date": author["date"],
+                  },
+              }
+
+              created = gh_json(
+                  ["--method", "POST", f"repos/{REPO}/git/commits", "--input", "-"],
+                  create_body,
+              )
+              new_sha = created.get("sha", "")
+              verification = created.get("verification") or {}
+
+              if not sha_re.fullmatch(new_sha):
+                  raise SystemExit("GitHub returned an invalid rewritten commit SHA.")
+              if verification.get("verified") is not True:
+                  reason = verification.get("reason", "unknown")
+                  raise SystemExit(
+                      f"GitHub did not verify rewritten commit {new_sha}: {reason}"
+                  )
+              if (created.get("tree") or {}).get("sha") != tree_sha:
+                  raise SystemExit("Rewritten commit tree differs from the approved source tree.")
+
+              old_parent = old_sha
+              new_parent = new_sha
+
+          if old_parent != EXPECTED_HEAD_SHA:
+              raise SystemExit("Approved PR history changed during commit recreation.")
+
+          new_head_sha = new_parent
+
+          # Final authoritative read immediately before the atomic ref compare-and-swap.
+          authoritative_pr()
+
+          repo_meta = gh_json([f"repos/{REPO}"])
+          repository_id = repo_meta.get("node_id")
+          if not repository_id:
+              raise SystemExit("Repository GraphQL node ID is unavailable.")
+
+          mutation = """
+          mutation UpdateApprovedRef(
+            $repositoryId: ID!,
+            $name: GitRefname!,
+            $before: GitObjectID!,
+            $after: GitObjectID!
+          ) {
+            updateRefs(input: {
+              repositoryId: $repositoryId,
+              refUpdates: [{
+                name: $name,
+                beforeOid: $before,
+                afterOid: $after,
+                force: true
+              }]
+            }) {
+              clientMutationId
             }
-
-            tree_sha="$(git show -s --format='%T' "$old_commit")"
-            author_name="$(git show -s --format='%an' "$old_commit")"
-            author_email="$(git show -s --format='%ae' "$old_commit")"
-            author_date="$(git show -s --format='%aI' "$old_commit")"
-            [[ "$tree_sha" =~ ^[0-9a-f]{40}$ ]] || {
-              echo "Invalid tree SHA on $old_commit." >&2
-              exit 1
-            }
-
-            message_file="$RUNNER_TEMP/commit-message-$old_commit"
-            git show -s --format='%B' "$old_commit" > "$message_file"
-
-            new_commit="$(
-              GIT_AUTHOR_NAME="$author_name" \
-              GIT_AUTHOR_EMAIL="$author_email" \
-              GIT_AUTHOR_DATE="$author_date" \
-              GIT_COMMITTER_NAME="NYGsatoshi" \
-              GIT_COMMITTER_EMAIL="$HUMAN_SIGNING_EMAIL" \
-              git commit-tree -S "$tree_sha" -p "$new_parent" < "$message_file"
-            )"
-
-            [[ "$new_commit" =~ ^[0-9a-f]{40}$ ]] || {
-              echo "Signing produced an invalid commit SHA." >&2
-              exit 1
-            }
-            [[ "$(git show -s --format='%T' "$new_commit")" == "$tree_sha" ]] || {
-              echo "Signed commit tree differs from the approved source commit." >&2
-              exit 1
-            }
-            git cat-file commit "$new_commit" | grep -q '^gpgsig ' || {
-              echo "Rewritten commit $new_commit does not contain a signature." >&2
-              exit 1
-            }
-
-            old_parent="$old_commit"
-            new_parent="$new_commit"
-          done
-
-          new_head_sha="$new_parent"
-          [[ "$new_head_sha" =~ ^[0-9a-f]{40}$ ]] || {
-            echo "Signing produced an invalid head SHA." >&2
-            exit 1
           }
+          """
 
-          # One final authoritative check immediately before the force-with-lease push.
-          current_head_sha="$(
-            gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq '.head.sha'
-          )"
-          [[ "$current_head_sha" == "$EXPECTED_HEAD_SHA" ]] || {
-            echo "PR changed after signing but before push; refusing to overwrite it." >&2
-            exit 1
-          }
+          gh_json(
+              ["graphql", "--input", "-"],
+              {
+                  "query": mutation,
+                  "variables": {
+                      "repositoryId": repository_id,
+                      "name": f"refs/heads/{HEAD_BRANCH}",
+                      "before": EXPECTED_HEAD_SHA,
+                      "after": new_head_sha,
+                  },
+              },
+          )
 
-          gh auth setup-git
-          git push \
-            --force-with-lease="refs/heads/$HEAD_BRANCH:$EXPECTED_HEAD_SHA" \
-            origin "$new_head_sha:refs/heads/$HEAD_BRANCH"
+          gh_json(
+              ["--method", "POST", f"repos/{REPO}/statuses/{new_head_sha}", "--input", "-"],
+              {
+                  "state": "success",
+                  "context": "External PR approval policy",
+                  "description": "Human-approved GitHub-verified commits created for this PR head",
+              },
+          )
 
-          gh api             --method POST             "repos/$GITHUB_REPOSITORY/statuses/$new_head_sha"             -f state=success             -f context="External PR approval policy"             -f description="Human-approved signing completed for this PR head"
-
-          echo "Human-approved signing completed for PR #$PR_NUMBER."
-          echo "Old head: $EXPECTED_HEAD_SHA"
-          echo "New signed head: $new_head_sha"
+          print(f"Human-approved commit recreation completed for PR #{PR_NUMBER}.")
+          print(f"Old head: {EXPECTED_HEAD_SHA}")
+          print(f"New verified head: {new_head_sha}")
+          PY
