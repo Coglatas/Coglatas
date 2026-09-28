@@ -130,3 +130,31 @@ jobs:
       uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
       with:
         category: "/language:${{matrix.language}}"
+
+    - name: Summarize Actions CodeQL SARIF
+      if: matrix.language == 'actions'
+      shell: bash
+      run: |
+        python3 - <<'PY'
+        import json
+        from pathlib import Path
+
+        sarif_files = sorted((Path.cwd().parent / "results").glob("*.sarif"))
+        if not sarif_files:
+            raise SystemExit("No CodeQL SARIF files found.")
+
+        for sarif_file in sarif_files:
+            data = json.loads(sarif_file.read_text(encoding="utf-8"))
+            for run in data.get("runs", []):
+                for result in run.get("results", []):
+                    rule_id = result.get("ruleId", "<unknown>")
+                    message = result.get("message", {}).get("text", "")
+                    locations = []
+                    for loc in result.get("locations", []):
+                        physical = loc.get("physicalLocation", {})
+                        artifact = physical.get("artifactLocation", {}).get("uri", "")
+                        region = physical.get("region", {})
+                        line = region.get("startLine")
+                        locations.append(f"{artifact}:{line}" if line else artifact)
+                    print(f"CODEQL_RESULT rule={rule_id} locations={locations} message={message}")
+        PY
