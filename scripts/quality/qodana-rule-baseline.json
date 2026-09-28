@@ -41,7 +41,7 @@
     "NotAccessedPositionalProperty.Global": 1173,
     "NotAccessedPositionalProperty.Local": 58,
     "NotAccessedPrimaryConstructorParameterCompiler": 1,
-    "NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract": 5,
+    "NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract": 0,
     "ParameterHidesMember": 1,
     "ParameterHidesPrimaryConstructorParameter": 4,
     "ParameterOnlyUsedForPreconditionCheck.Local": 18,
