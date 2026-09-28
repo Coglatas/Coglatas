@@ -1,5 +1,12 @@
 # Security policy
 
+>[!IMPORTANT]
+>We will not be accepting reports related to Angular, JavaScript, TypeScript or something which is related to the current frontend
+>due to deprecation.
+>We will be migrating to Avalonia, C# and XAML based frontend. If you find any issues about frontend which is related to codes
+>written with C# or xAML using .NET and Avalonia framework, we'll accept and review those. Anything other than that which will be
+>deprecated will not be maintained.
+
 ## Private reporting only
 
 Do not report suspected vulnerabilities through a public issue, pull request,
