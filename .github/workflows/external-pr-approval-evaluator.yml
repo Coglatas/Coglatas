@@ -157,14 +157,6 @@ jobs:
           # GOV-TRUST-001 proof: authoritative PR/head is always re-read via gh api /pulls/ and .head.sha.
           echo "head_sha=$current_head_sha" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout approved PR branch without persisted credentials
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          repository: ${{ github.repository }}
-          ref: ${{ needs.resolve.outputs.head_branch }}
-          fetch-depth: 0
-          persist-credentials: false
-
       - name: Rewrite PR commits with the human-approved SSH signature
         shell: bash
         env:
@@ -186,11 +178,22 @@ jobs:
             echo "Environment variable HUMAN_SIGNING_EMAIL is not configured." >&2
             exit 1
           }
+
+          worktree="$RUNNER_TEMP/coglatas-human-signing-worktree"
+          rm -rf "$worktree"
+          mkdir -p "$worktree"
+          cd "$worktree"
+
+          git init
+          git config core.hooksPath /dev/null
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git fetch --no-tags --no-recurse-submodules origin "$BASE_SHA" "$EXPECTED_HEAD_SHA"
+          git checkout --detach "$EXPECTED_HEAD_SHA"
+
           [[ "$(git rev-parse HEAD)" == "$EXPECTED_HEAD_SHA" ]] || {
-            echo "Checked-out branch does not match the approved PR head." >&2
+            echo "Fetched commit does not match the approved PR head." >&2
             exit 1
           }
-
           git cat-file -e "$BASE_SHA^{commit}"
           if git rev-list --merges "$BASE_SHA..HEAD" | grep -q .; then
             echo "PR contains merge commits. Rebase to a linear history before human signing." >&2
@@ -203,7 +206,6 @@ jobs:
           chmod 600 "$key_path"
           ssh-keygen -y -f "$key_path" >/dev/null
 
-          git config core.hooksPath /dev/null
           git config user.name "NYGsatoshi"
           git config user.email "$HUMAN_SIGNING_EMAIL"
           git config gpg.format ssh
