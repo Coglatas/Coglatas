@@ -25,6 +25,10 @@ profile:
     # Also catch repeated statement sequences inside C# control-flow branches.
     - inspection: DuplicatedStatements
       enabled: true
+    # Keep short-lived HttpClient detection enabled repository-wide. The intentional
+    # per-test Kestrel clients are excluded explicitly below from this inspection only.
+    - inspection: ShortLivedHttpClient
+      enabled: true
 
 # Prepare the complete .NET project model before inspections start.
 bootstrap: bash scripts/quality/qodana-bootstrap.sh

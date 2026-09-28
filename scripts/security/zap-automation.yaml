@@ -26,6 +26,21 @@ jobs:
       enableTags: false
       disableAllRules: false
 
+  # POST /api/comments returns the caller's newly submitted comment body.
+  # ZAP can therefore rediscover its own Luhn-valid active-scan payload as
+  # passive PII rule 10062. Scope the false-positive override to this write
+  # response only; read paths and every other endpoint remain unfiltered.
+  - type: alertFilter
+    alertFilters:
+      - ruleId: 10062
+        ruleName: PII Disclosure
+        newRisk: False Positive
+        context: sec06-api
+        url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/comments"
+        urlRegex: false
+        methods:
+          - POST
+
   - type: replacer
     parameters:
       deleteAllRules: true
