@@ -40,4 +40,4 @@ jobs:
     name: Qodana Gate
     permissions:
       contents: read
-    uses: NYGsatoshi/Coglatas/.github/workflows/qodana_trusted_gate.yml@e03555c4be3700aa23f6e0bfe86b740b042dd5fa # qodana-debt-ratchet-v2
+    uses: Coglatas/Coglatas/.github/workflows/qodana_trusted_gate.yml@e03555c4be3700aa23f6e0bfe86b740b042dd5fa # qodana-debt-ratchet-v2

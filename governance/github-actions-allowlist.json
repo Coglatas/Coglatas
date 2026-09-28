@@ -62,7 +62,7 @@
       "purpose": "Trusted NuGet dependency snapshot submission",
       "privilegedAllowed": true
     },
-    "NYGsatoshi/Coglatas": {
+    "Coglatas/Coglatas": {
       "sha": "e03555c4be3700aa23f6e0bfe86b740b042dd5fa",
       "version": "qodana-debt-ratchet-v2",
       "purpose": "Immutable same-repository reusable Qodana gate with non-increasing inspection debt ratchet",
