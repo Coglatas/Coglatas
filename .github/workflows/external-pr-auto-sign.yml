@@ -110,6 +110,8 @@ jobs:
     if: ${{ needs.resolve.outputs.needs_signing == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    environment:
+      name: pr-auto-sign
     permissions:
       contents: write
       pull-requests: read
@@ -353,11 +355,11 @@ jobs:
           else:
               if not SIGNING_KEY:
                   raise SystemExit(
-                      "Repository secret COGLATAS_AUTOSIGN_GPG_PRIVATE_KEY is required for unsigned commits."
+                      "pr-auto-sign Environment secret COGLATAS_AUTOSIGN_GPG_PRIVATE_KEY is required for unsigned commits."
                   )
               if not SIGNING_NAME or not SIGNING_EMAIL:
                   raise SystemExit(
-                      "Repository variables COGLATAS_AUTOSIGN_NAME and COGLATAS_AUTOSIGN_EMAIL are required."
+                      "pr-auto-sign Environment variables COGLATAS_AUTOSIGN_NAME and COGLATAS_AUTOSIGN_EMAIL are required."
                   )
               validate_ident(SIGNING_NAME, SIGNING_EMAIL, "Automation signer")
 
@@ -567,7 +569,7 @@ jobs:
 
               if not REF_UPDATE_TOKEN:
                   raise SystemExit(
-                      "Repository secret COGLATAS_PR_REF_UPDATE_TOKEN is required to update the signed PR ref "
+                      "pr-auto-sign Environment secret COGLATAS_PR_REF_UPDATE_TOKEN is required to update the signed PR ref "
                       "without creating approval-required pull_request workflow runs."
                   )
 
