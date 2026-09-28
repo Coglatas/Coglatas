@@ -27,16 +27,17 @@
     {
       "workflow": ".github/workflows/external-pr-approval-evaluator.yml",
       "jobs": [
-        "approve"
+        "evaluate"
       ],
       "events": [
         "workflow_dispatch",
         "workflow_run"
       ],
       "permissions": [
+        "contents:write",
         "statuses:write"
       ],
-      "reason": "After approval by the protected human-merge-approval environment, publish a success commit status only to the authoritative current PR head re-resolved through the GitHub API. The trusted workflow_run evaluator never checks out or executes PR-controlled code."
+      "reason": "After protected human approval, rewrite only the authoritative current same-repository PR commits with the environment-held SSH signing key, force-push with an exact-SHA lease, and publish the compatibility approval status. The trusted workflow_run evaluator never executes PR-controlled code."
     },
     {
       "workflow": ".github/workflows/codeql.yml",
