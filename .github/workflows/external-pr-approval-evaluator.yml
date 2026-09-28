@@ -259,16 +259,19 @@ jobs:
               if unsafe_ident.search(name) or unsafe_ident.search(email):
                   raise SystemExit(f"{label} identity contains characters unsafe for deterministic signing.")
 
-          def unsigned_payload(tree_sha, parent_sha, message, author, committer):
+          def unsigned_payload(tree_sha, parent_shas, message, author, committer):
               author_iso, author_git_time = normalize_date(author["date"])
               committer_iso, committer_git_time = normalize_date(committer["date"])
               validate_ident(author["name"], author["email"], "Author")
               validate_ident(committer["name"], committer["email"], "Committer")
+              if not parent_shas or not all(sha_re.fullmatch(parent) for parent in parent_shas):
+                  raise SystemExit("Commit contains an invalid parent SHA.")
 
               normalized_message = message if message.endswith("\n") else message + "\n"
+              parent_lines = "".join(f"parent {parent}\n" for parent in parent_shas)
               payload = (
                   f"tree {tree_sha}\n"
-                  f"parent {parent_sha}\n"
+                  f"{parent_lines}"
                   f"author {author['name']} <{author['email']}> {author_git_time}\n"
                   f"committer {committer['name']} <{committer['email']}> {committer_git_time}\n"
                   f"\n{normalized_message}"
@@ -388,101 +391,182 @@ jobs:
                   workdir.mkdir(mode=0o700)
                   gpg_env, fingerprint = import_and_select_key(home)
 
-                  old_parent = BASE_SHA
-                  new_parent = BASE_SHA
+                  listed_order = []
+                  listed_set = set()
+                  sources = {}
 
-                  for sequence, listed in enumerate(commits, start=1):
+                  for listed in commits:
                       old_sha = listed.get("sha", "")
                       if not sha_re.fullmatch(old_sha):
                           raise SystemExit("PR contains an invalid commit SHA.")
+                      if old_sha in listed_set:
+                          raise SystemExit(f"PR commit list contains duplicate SHA {old_sha}.")
+                      listed_order.append(old_sha)
+                      listed_set.add(old_sha)
 
+                  if EXPECTED_HEAD_SHA not in listed_set:
+                      raise SystemExit("Approved PR head is missing from the PR commit set.")
+
+                  # Fetch the approved commit graph exclusively through the Git database API.
+                  # Parent order is significant for merge commits and must be preserved.
+                  for old_sha in listed_order:
                       source = gh_json([f"repos/{REPO}/git/commits/{old_sha}"])
                       parents = source.get("parents") or []
-                      if len(parents) != 1 or parents[0].get("sha") != old_parent:
-                          raise SystemExit(
-                              f"PR commit {old_sha} is not a single linear child of the approved history."
-                          )
+                      parent_shas = [parent.get("sha", "") for parent in parents]
+                      if not parent_shas or not all(sha_re.fullmatch(parent) for parent in parent_shas):
+                          raise SystemExit(f"Commit {old_sha} contains an invalid parent list.")
+                      source["_approved_parent_shas"] = parent_shas
+                      sources[old_sha] = source
 
-                      tree_sha = (source.get("tree") or {}).get("sha", "")
-                      author = source.get("author") or {}
-                      if not sha_re.fullmatch(tree_sha):
-                          raise SystemExit(f"Invalid tree SHA on {old_sha}.")
-                      if not all(author.get(k) for k in ("name", "email", "date")):
-                          raise SystemExit(f"Incomplete author metadata on {old_sha}.")
+                  # Every PR-listed commit must be reachable from the exact approved head
+                  # through other PR-listed parents. This rejects detached/orphan material.
+                  reachable = set()
+                  stack = [EXPECTED_HEAD_SHA]
+                  while stack:
+                      current = stack.pop()
+                      if current in reachable:
+                          continue
+                      reachable.add(current)
+                      for parent in sources[current]["_approved_parent_shas"]:
+                          if parent in listed_set:
+                              stack.append(parent)
 
-                      # Preserve author attribution; use the human signing identity only
-                      # for the committer/signature identity.
-                      source_committer = source.get("committer") or {}
-                      committer_date_source = source_committer.get("date") or author["date"]
-                      committer = {
-                          "name": SIGNING_NAME,
-                          "email": SIGNING_EMAIL,
-                          "date": committer_date_source,
-                      }
-
-                      payload, message, author_iso, committer_iso = unsigned_payload(
-                          tree_sha,
-                          new_parent,
-                          source.get("message", ""),
-                          author,
-                          committer,
+                  if reachable != listed_set:
+                      unreachable = sorted(listed_set - reachable)
+                      raise SystemExit(
+                          "PR commit set contains commits not reachable from the approved head: "
+                          + ", ".join(unreachable)
                       )
 
-                      create_body = {
-                          "message": message,
-                          "tree": tree_sha,
-                          "parents": [new_parent],
-                          "author": {
-                              "name": author["name"],
-                              "email": author["email"],
-                              "date": author_iso,
-                          },
-                          "committer": {
-                              "name": committer["name"],
-                              "email": committer["email"],
-                              "date": committer_iso,
-                          },
-                      }
-
-                      # Fail closed if our canonical payload does not match the exact
-                      # commit object GitHub creates from these fields.
-                      probe = gh_json(
-                          ["--method", "POST", f"repos/{REPO}/git/commits", "--input", "-"],
-                          create_body,
-                      )
-                      expected_probe_sha = object_sha(payload)
-                      if probe.get("sha") != expected_probe_sha:
+                  # Parents outside the PR commit set are graph boundaries. They must
+                  # already be ancestors of the approved base commit; otherwise a PR
+                  # could smuggle an unrelated external history into the signed graph.
+                  external_parents = sorted({
+                      parent
+                      for source in sources.values()
+                      for parent in source["_approved_parent_shas"]
+                      if parent not in listed_set
+                  })
+                  for parent in external_parents:
+                      comparison = gh_json([f"repos/{REPO}/compare/{parent}...{BASE_SHA}"])
+                      if comparison.get("status") not in ("ahead", "identical"):
                           raise SystemExit(
-                              "GitHub canonical commit payload differed from the locally constructed payload."
+                              f"External parent {parent} is not an ancestor of the approved base {BASE_SHA}."
                           )
 
-                      signature = sign_payload(payload, gpg_env, fingerprint, workdir, sequence)
-                      signed_body = {**create_body, "signature": signature}
-                      created = gh_json(
-                          ["--method", "POST", f"repos/{REPO}/git/commits", "--input", "-"],
-                          signed_body,
-                      )
+                  rewritten = {}
+                  sequence = 0
+                  remaining = list(listed_order)
 
-                      new_sha = created.get("sha", "")
-                      verification = created.get("verification") or {}
-                      if not sha_re.fullmatch(new_sha):
-                          raise SystemExit("GitHub returned an invalid signed commit SHA.")
-                      if verification.get("verified") is not True or verification.get("reason") != "valid":
-                          reason = verification.get("reason", "unknown")
-                          raise SystemExit(
-                              f"GitHub rejected the human GPG signature on {new_sha}: {reason}"
+                  # Recreate the approved DAG in topological order. Internal parents are
+                  # replaced by their signed counterparts; external base ancestors remain
+                  # unchanged. This supports normal merge commits without executing code.
+                  while remaining:
+                      next_remaining = []
+                      progressed = False
+
+                      for old_sha in remaining:
+                          source = sources[old_sha]
+                          parent_shas = source["_approved_parent_shas"]
+                          internal_parents = [parent for parent in parent_shas if parent in listed_set]
+                          if any(parent not in rewritten for parent in internal_parents):
+                              next_remaining.append(old_sha)
+                              continue
+
+                          new_parents = [
+                              rewritten[parent] if parent in rewritten else parent
+                              for parent in parent_shas
+                          ]
+                          tree_sha = (source.get("tree") or {}).get("sha", "")
+                          author = source.get("author") or {}
+                          if not sha_re.fullmatch(tree_sha):
+                              raise SystemExit(f"Invalid tree SHA on {old_sha}.")
+                          if not all(author.get(k) for k in ("name", "email", "date")):
+                              raise SystemExit(f"Incomplete author metadata on {old_sha}.")
+
+                          # Preserve author attribution; use the human signing identity only
+                          # for the committer/signature identity.
+                          source_committer = source.get("committer") or {}
+                          committer_date_source = source_committer.get("date") or author["date"]
+                          committer = {
+                              "name": SIGNING_NAME,
+                              "email": SIGNING_EMAIL,
+                              "date": committer_date_source,
+                          }
+
+                          payload, message, author_iso, committer_iso = unsigned_payload(
+                              tree_sha,
+                              new_parents,
+                              source.get("message", ""),
+                              author,
+                              committer,
                           )
-                      if verification.get("payload") != payload.decode("utf-8"):
-                          raise SystemExit("GitHub verified a payload different from the approved payload.")
-                      if (created.get("tree") or {}).get("sha") != tree_sha:
-                          raise SystemExit("Signed commit tree differs from the approved source tree.")
 
-                      old_parent = old_sha
-                      new_parent = new_sha
+                          create_body = {
+                              "message": message,
+                              "tree": tree_sha,
+                              "parents": new_parents,
+                              "author": {
+                                  "name": author["name"],
+                                  "email": author["email"],
+                                  "date": author_iso,
+                              },
+                              "committer": {
+                                  "name": committer["name"],
+                                  "email": committer["email"],
+                                  "date": committer_iso,
+                              },
+                          }
 
-                  if old_parent != EXPECTED_HEAD_SHA:
-                      raise SystemExit("Approved PR history changed during commit signing.")
-                  new_head_sha = new_parent
+                          # Fail closed if our canonical payload does not match the exact
+                          # commit object GitHub creates from these fields.
+                          probe = gh_json(
+                              ["--method", "POST", f"repos/{REPO}/git/commits", "--input", "-"],
+                              create_body,
+                          )
+                          expected_probe_sha = object_sha(payload)
+                          if probe.get("sha") != expected_probe_sha:
+                              raise SystemExit(
+                                  "GitHub canonical commit payload differed from the locally constructed payload."
+                              )
+
+                          sequence += 1
+                          signature = sign_payload(payload, gpg_env, fingerprint, workdir, sequence)
+                          signed_body = {**create_body, "signature": signature}
+                          created = gh_json(
+                              ["--method", "POST", f"repos/{REPO}/git/commits", "--input", "-"],
+                              signed_body,
+                          )
+
+                          new_sha = created.get("sha", "")
+                          verification = created.get("verification") or {}
+                          if not sha_re.fullmatch(new_sha):
+                              raise SystemExit("GitHub returned an invalid signed commit SHA.")
+                          if verification.get("verified") is not True or verification.get("reason") != "valid":
+                              reason = verification.get("reason", "unknown")
+                              raise SystemExit(
+                                  f"GitHub rejected the human GPG signature on {new_sha}: {reason}"
+                              )
+                          if verification.get("payload") != payload.decode("utf-8"):
+                              raise SystemExit("GitHub verified a payload different from the approved payload.")
+                          if (created.get("tree") or {}).get("sha") != tree_sha:
+                              raise SystemExit("Signed commit tree differs from the approved source tree.")
+                          created_parents = [
+                              parent.get("sha", "") for parent in (created.get("parents") or [])
+                          ]
+                          if created_parents != new_parents:
+                              raise SystemExit("Signed commit parent order differs from the approved graph.")
+
+                          rewritten[old_sha] = new_sha
+                          progressed = True
+
+                      if not progressed:
+                          raise SystemExit(
+                              "Approved PR commit graph could not be topologically recreated."
+                          )
+                      remaining = next_remaining
+
+                  new_head_sha = rewritten[EXPECTED_HEAD_SHA]
 
               # Final authoritative read immediately before the atomic branch update.
               authoritative_pr(EXPECTED_HEAD_SHA)
