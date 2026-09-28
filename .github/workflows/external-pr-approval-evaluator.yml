@@ -1,6 +1,8 @@
 name: External PR approval evaluator
 
-# Compatibility workflow only. External approval is no longer a PR merge gate.
+# Trusted default-branch evaluator. It never checks out or executes PR code.
+# Human approval is enforced by the protected environment before a success
+# status is written to the current PR head.
 on:
   workflow_run:
     workflows: ["External PR review signal"]
@@ -8,24 +10,100 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: Compatibility input; no approval status is published
-        required: false
+        description: Pull request number to evaluate
+        required: true
         type: string
 
 permissions: {}
 
 concurrency:
-  group: external-pr-approval-compat-${{ github.event.workflow_run.id || inputs.pr_number || github.run_id }}
+  group: human-merge-approval-${{ github.event.workflow_run.pull_requests[0].number || inputs.pr_number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  evaluate:
-    name: External PR approval evaluator
+  resolve:
+    name: Resolve authoritative PR head
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      pr_number: ${{ steps.resolve.outputs.pr_number }}
+      head_sha: ${{ steps.resolve.outputs.head_sha }}
+
     steps:
-      - name: Governance approval gate retired
+      - name: Resolve PR through GitHub API
+        id: resolve
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          RUN_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
         run: |
-          echo "External PR approval is no longer a required merge status."
-          echo "Default-branch write authority is enforced by native GitHub repository permissions and owner-only rulesets."
-          echo "This workflow remains temporarily for required-check registry compatibility and publishes no commit status."
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            pr_number="$INPUT_PR_NUMBER"
+          else
+            pr_number="$RUN_PR_NUMBER"
+          fi
+
+          if [[ -z "$pr_number" || "$pr_number" == "null" ]]; then
+            echo "No pull request is associated with the triggering workflow run." >&2
+            exit 1
+          fi
+
+          pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr_number")"
+          state="$(jq -r '.state' <<<"$pr_json")"
+          draft="$(jq -r '.draft' <<<"$pr_json")"
+          base_ref="$(jq -r '.base.ref' <<<"$pr_json")"
+          head_sha="$(jq -r '.head.sha' <<<"$pr_json")"
+
+          [[ "$state" == "open" ]] || { echo "PR #$pr_number is not open." >&2; exit 1; }
+          [[ "$draft" == "false" ]] || { echo "PR #$pr_number is still draft." >&2; exit 1; }
+          [[ "$base_ref" == "main" ]] || { echo "PR #$pr_number does not target main." >&2; exit 1; }
+          [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid PR head SHA." >&2; exit 1; }
+
+          echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+
+  approve:
+    name: Human Merge Approval
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: human-merge-approval
+    permissions:
+      pull-requests: read
+      statuses: write
+
+    steps:
+      - name: Re-resolve PR head and publish approval status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+
+          pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
+          state="$(jq -r '.state' <<<"$pr_json")"
+          draft="$(jq -r '.draft' <<<"$pr_json")"
+          base_ref="$(jq -r '.base.ref' <<<"$pr_json")"
+          current_head_sha="$(jq -r '.head.sha' <<<"$pr_json")"
+
+          [[ "$state" == "open" ]] || { echo "PR #$PR_NUMBER is not open." >&2; exit 1; }
+          [[ "$draft" == "false" ]] || { echo "PR #$PR_NUMBER is draft." >&2; exit 1; }
+          [[ "$base_ref" == "main" ]] || { echo "PR #$PR_NUMBER no longer targets main." >&2; exit 1; }
+          if [[ "$current_head_sha" != "$EXPECTED_HEAD_SHA" ]]; then
+            echo "PR head changed while approval was pending; a fresh approval is required." >&2
+            exit 1
+          fi
+
+          gh api             --method POST             "repos/$GITHUB_REPOSITORY/statuses/$current_head_sha"             -f state=success             -f context=human-merge-approval             -f description="Human environment approval granted for this PR head"
+
+          echo "Human approval status published for PR #$PR_NUMBER at $current_head_sha."
