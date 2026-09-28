@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   refresh-mobile-baseline:
-    if: github.repository == 'NYGsatoshi/Coglatas'
+    if: github.repository == 'Coglatas/Coglatas'
     runs-on: ubuntu-latest
     environment: syncfusion-licensed-build
     timeout-minutes: 45
