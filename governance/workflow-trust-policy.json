@@ -25,6 +25,20 @@
   },
   "write_permissions": [
     {
+      "workflow": ".github/workflows/external-pr-auto-sign.yml",
+      "jobs": [
+        "sign"
+      ],
+      "events": [
+        "workflow_dispatch",
+        "workflow_run"
+      ],
+      "permissions": [
+        "contents:write"
+      ],
+      "reason": "From the trusted default-branch workflow_run path, re-read same-repository PR metadata only through the GitHub API, recreate unsigned PR commits as GPG-signed Git objects while preserving source trees, authors, merge-parent order, and approved graph boundaries, require GitHub verification.reason=valid, then atomically replace the PR ref with updateRefs beforeOid compare-and-swap. The final ref mutation uses a narrowly scoped repository PAT so the resulting pull_request synchronize event starts ordinary CI without GitHub's GITHUB_TOKEN approval gate. The signer never checks out, fetches, or executes PR-controlled code."
+    },
+    {
       "workflow": ".github/workflows/external-pr-approval-evaluator.yml",
       "jobs": [
         "evaluate"
@@ -34,10 +48,9 @@
         "workflow_run"
       ],
       "permissions": [
-        "contents:write",
         "statuses:write"
       ],
-      "reason": "After protected human approval, re-read authoritative same-repository PR metadata only through the GitHub API. If commits are unsigned, use the Environment-protected dedicated GPG key to sign a canonical commit payload while preserving each source tree and author identity, require GitHub verification.reason=valid on every recreated commit, atomically replace the PR ref with updateRefs beforeOid compare-and-swap, then publish the exact-head human approval status. The trusted workflow_run evaluator never checks out, fetches, or executes PR-controlled code."
+      "reason": "After required CI succeeds on the exact GitHub-Verified PR head, wait on the protected human-merge-approval Environment, re-read authoritative same-repository PR metadata and required check-runs, then publish only the External PR approval policy status on that unchanged head. The evaluator never rewrites the PR ref and never checks out, fetches, or executes PR-controlled code."
     },
     {
       "workflow": ".github/workflows/codeql.yml",
