@@ -5,7 +5,7 @@ name: External PR approval evaluator
 # the final merge-authorization boundary and never rewrites the approved PR head.
 on:
   workflow_run:
-    workflows: ["CI", "Publication Readiness"]
+    workflows: ["External PR review signal", "CI", "Publication Readiness"]
     types: [completed]
   workflow_dispatch:
     inputs:
