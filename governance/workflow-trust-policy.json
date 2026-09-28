@@ -37,7 +37,7 @@
         "contents:write",
         "statuses:write"
       ],
-      "reason": "After protected human approval, rewrite only the authoritative current same-repository PR commits with the environment-held SSH signing key, force-push with an exact-SHA lease, and publish the compatibility approval status. The trusted workflow_run evaluator never executes PR-controlled code."
+      "reason": "After protected human approval, re-read only authoritative same-repository PR metadata through the GitHub API, recreate the approved linear commit chain through the Git database API while preserving author/tree data, require GitHub verification on every recreated commit, atomically replace the PR ref with updateRefs beforeOid compare-and-swap, and publish the compatibility approval status. The trusted workflow_run evaluator never checks out, fetches, or executes PR-controlled code."
     },
     {
       "workflow": ".github/workflows/codeql.yml",
