@@ -119,6 +119,19 @@ unless jobs.any? { |job| job["type"] == "passiveScan-wait" }
   fail!("Automation plan passiveScan-wait invariant is missing")
 end
 
+alert_filter = only_job(jobs, "alertFilter")
+alert_filters = hash_array(alert_filter["alertFilters"], "alertFilter rules must be an array of mappings")
+pii_filters = alert_filters.select { |item| item["ruleId"].to_s == "10062" }
+fail!("Automation plan must contain exactly one scoped PII Disclosure false-positive filter") unless pii_filters.length == 1
+pii_filter = pii_filters.first
+unless pii_filter["newRisk"] == "False Positive" &&
+       pii_filter["context"] == "sec06-api" &&
+       pii_filter["url"] == "${COGLATAS_SECURITY_ZAP_TARGET}/api/comments" &&
+       pii_filter["urlRegex"] == false &&
+       pii_filter["methods"] == ["POST"]
+  fail!("PII Disclosure filter must remain scoped to POST /api/comments")
+end
+
 policy_job = only_job(jobs, "activeScan-policy")
 policy_definition = policy_job["policyDefinition"]
 fail!("Automation plan activeScan policyDefinition is missing") unless policy_definition.is_a?(Hash)
@@ -284,7 +297,7 @@ if not re.search(r"@sha256:[0-9a-f]{64}$", image):
     raise SystemExit("ZAP image must be digest pinned")
 if ":latest" in image or image.endswith(":stable"):
     raise SystemExit("moving ZAP image tags are forbidden")
-required = {"automation", "openapi", "pscan", "pscanrules", "ascanrules", "reports", "replacer"}
+required = {"automation", "openapi", "pscan", "pscanrules", "ascanrules", "reports", "replacer", "alertFilters"}
 if not required.issubset(set(scanner["requiredAddons"])):
     raise SystemExit("required ZAP add-on inventory is incomplete")
 active_rules = policy.get("activeRules")
@@ -303,6 +316,15 @@ if (
     )
 if policy["roles"] != ["alpha-owner", "alpha-restricted", "beta-owner"]:
     raise SystemExit("SEC-06 role matrix drifted")
+expected_alert_filter = [{
+    "ruleId": 10062,
+    "method": "POST",
+    "path": "/api/comments",
+    "newRisk": "False Positive",
+    "reason": "POST /api/comments returns the caller-controlled comment body that was just submitted, so ZAP can passively rediscover its own Luhn-valid scan value. Read paths and all other endpoints remain unfiltered.",
+}]
+if policy.get("alertFilters") != expected_alert_filter:
+    raise SystemExit("SEC-06 PII false-positive filter must remain narrowly scoped to POST /api/comments")
 blocking = policy["blockingPolicy"]
 if blocking["high"] != "block" or blocking["medium"] != "report":
     raise SystemExit("High must block while Medium remains visible/report-only")
@@ -346,6 +368,12 @@ for invariant in \
   '- "X-CSRF-Token:${COGLATAS_SECURITY_ZAP_CSRF_TOKEN}"' \
   'responseCode: 200' \
   '- type: passiveScan-wait' \
+  '- type: alertFilter' \
+  'ruleId: 10062' \
+  'newRisk: False Positive' \
+  'url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/comments"' \
+  'urlRegex: false' \
+  '- POST' \
   '- type: activeScan-policy' \
   'defaultThreshold: "Off"' \
   '- type: activeScan' \
@@ -387,6 +415,9 @@ runner_container_name_pattern='^[[:space:]]*container_name="sec06-zap-[$][{]role
 runner_docker_name_pattern='^[[:space:]]*--name[[:space:]]+"[$]container_name"[[:space:]]+\\[[:space:]]*$'
 runner_cleanup_pattern='^[[:space:]]*docker[[:space:]]+rm[[:space:]]+-f[[:space:]]+"[$]container_name"[[:space:]]+>/dev/null[[:space:]]+2>&1[[:space:]]+\|\|[[:space:]]+true[[:space:]]*$'
 runner_forbidden_container_pattern='^[[:space:]]*-e[[:space:]]+COGLATAS_SECURITY_ZAP_FORBIDDEN_VALUES([[:space:]\\]|$)'
+
+grep -Fq 'for required in automation openapi pscan pscanrules ascanrules reports replacer alertFilters; do' "$runner" ||
+  test_fail "Alert Filters add-on is not fail-closed in the pinned ZAP toolchain check"
 
 grep -Eq -- "$runner_export_pattern" "$runner" || test_fail "full forbidden-value set is not exported for host-side redaction"
 grep -Eq -- "$runner_cookie_pair_pattern" "$runner" || test_fail "cookie name=value pairs are missing from the forbidden-value set"

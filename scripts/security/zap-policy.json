@@ -13,7 +13,8 @@
       "pscanrules",
       "ascanrules",
       "reports",
-      "replacer"
+      "replacer",
+      "alertFilters"
     ]
   },
   "roles": [
@@ -104,5 +105,14 @@
     "medium": "report",
     "low": "report",
     "informational": "report"
-  }
+  },
+  "alertFilters": [
+    {
+      "ruleId": 10062,
+      "method": "POST",
+      "path": "/api/comments",
+      "newRisk": "False Positive",
+      "reason": "POST /api/comments returns the caller-controlled comment body that was just submitted, so ZAP can passively rediscover its own Luhn-valid scan value. Read paths and all other endpoints remain unfiltered."
+    }
+  ]
 }

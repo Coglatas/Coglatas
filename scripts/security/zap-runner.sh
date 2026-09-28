@@ -185,7 +185,7 @@ security_zap_verify_toolchain() {
 
   addon_list="$(docker run --rm --platform "$ZAP_PLATFORM" --entrypoint /zap/zap.sh "$ZAP_IMAGE" -cmd -silent -addonlist 2>&1 | tr -d '\r')" ||
     security_zap_fail "pinned image could not enumerate its add-ons" || return 1
-  for required in automation openapi pscan pscanrules ascanrules reports replacer; do
+  for required in automation openapi pscan pscanrules ascanrules reports replacer alertFilters; do
     grep -Eiq "(^|[^[:alnum:]_-])${required}([^[:alnum:]_-]|$)" <<<"$addon_list" ||
       security_zap_fail "immutable image is missing required add-on '$required'" || return 1
   done
