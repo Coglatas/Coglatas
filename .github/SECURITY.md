@@ -1,11 +1,11 @@
 # Security policy
 
 >[!IMPORTANT]
->We will not be accepting reports related to Angular, JavaScript, TypeScript or something which is related to the current frontend
->due to deprecation.
->We will be migrating to Avalonia, C# and XAML based frontend. If you find any issues about frontend which is related to codes
->written with C# or xAML using .NET and Avalonia framework, we'll accept and review those. Anything other than that which will be
->deprecated will not be maintained.
+>The frontend is being migrated from Angular, JavaScript, and TypeScript to an Avalonia-based frontend using C# and XAML.
+>Security reports for frontend code that is still present on the current `main` branch or in an explicitly supported deployment
+>remain in scope until that code is removed or explicitly declared unsupported.
+>Once legacy frontend code has been removed or declared unsupported, reports that apply only to that retired code may be closed
+>as out of scope. Security reports affecting the supported Avalonia/.NET frontend remain in scope.
 
 ## Private reporting only
 
