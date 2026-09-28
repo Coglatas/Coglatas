@@ -1,8 +1,7 @@
 name: External PR approval evaluator
 
-# Trusted default-branch evaluator. It never checks out or executes PR code.
-# Human approval is enforced by the protected environment before a success
-# status is written to the current PR head.
+# Trusted default-branch evaluator. It never executes PR-controlled code.
+# A protected Environment releases the signing key only after manual approval.
 on:
   workflow_run:
     workflows: ["External PR review signal"]
@@ -10,14 +9,14 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: Pull request number to evaluate
+        description: Pull request number to sign
         required: true
         type: string
 
 permissions: {}
 
 concurrency:
-  group: human-merge-approval-${{ github.event.workflow_run.pull_requests[0].number || inputs.pr_number || github.run_id }}
+  group: human-signing-${{ github.event.workflow_run.pull_requests[0].number || inputs.pr_number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -28,12 +27,16 @@ jobs:
     timeout-minutes: 5
     permissions:
       pull-requests: read
+      contents: read
     outputs:
       pr_number: ${{ steps.resolve.outputs.pr_number }}
       head_sha: ${{ steps.resolve.outputs.head_sha }}
+      head_branch: ${{ steps.resolve.outputs.head_branch }}
+      base_sha: ${{ steps.resolve.outputs.base_sha }}
+      needs_signing: ${{ steps.resolve.outputs.needs_signing }}
 
     steps:
-      - name: Resolve PR through GitHub API
+      - name: Resolve PR and signature state through GitHub API
         id: resolve
         shell: bash
         env:
@@ -59,34 +62,69 @@ jobs:
           state="$(jq -r '.state' <<<"$pr_json")"
           draft="$(jq -r '.draft' <<<"$pr_json")"
           base_ref="$(jq -r '.base.ref' <<<"$pr_json")"
+          base_sha="$(jq -r '.base.sha' <<<"$pr_json")"
           head_sha="$(jq -r '.head.sha' <<<"$pr_json")"
+          head_branch="$(jq -r '.head.ref' <<<"$pr_json")"
+          head_repo="$(jq -r '.head.repo.full_name // empty' <<<"$pr_json")"
 
           [[ "$state" == "open" ]] || { echo "PR #$pr_number is not open." >&2; exit 1; }
           [[ "$draft" == "false" ]] || { echo "PR #$pr_number is still draft." >&2; exit 1; }
           [[ "$base_ref" == "main" ]] || { echo "PR #$pr_number does not target main." >&2; exit 1; }
+          [[ "$head_repo" == "$GITHUB_REPOSITORY" ]] || {
+            echo "Human signing is limited to same-repository PR branches." >&2
+            exit 1
+          }
           [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid PR head SHA." >&2; exit 1; }
+          [[ "$base_sha" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid PR base SHA." >&2; exit 1; }
+
+          verification_states="$(
+            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$pr_number/commits?per_page=100"               --jq '.[].commit.verification.verified'
+          )"
+          [[ -n "$verification_states" ]] || {
+            echo "PR #$pr_number contains no commits to evaluate." >&2
+            exit 1
+          }
+
+          needs_signing=false
+          if grep -qx 'false' <<<"$verification_states"; then
+            needs_signing=true
+          fi
 
           echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
           echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+          echo "head_branch=$head_branch" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+          echo "needs_signing=$needs_signing" >> "$GITHUB_OUTPUT"
 
-  approve:
-    name: Human Merge Approval
+          if [[ "$needs_signing" == "true" ]]; then
+            echo "PR #$pr_number contains unsigned/unverified commits and requires human-approved signing."
+          else
+            echo "All PR commits are already verified; no signing approval is required."
+          fi
+
+  evaluate:
+    name: Human-approved commit signing
     needs: resolve
+    if: ${{ needs.resolve.outputs.needs_signing == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     environment:
       name: human-merge-approval
     permissions:
+      contents: write
       pull-requests: read
       statuses: write
 
     steps:
-      - name: Re-resolve PR head and publish approval status
+      - name: Re-resolve exact PR head after human approval
+        id: authoritative
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
           EXPECTED_HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+          EXPECTED_HEAD_BRANCH: ${{ needs.resolve.outputs.head_branch }}
+          EXPECTED_BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
         run: |
           set -euo pipefail
 
@@ -94,16 +132,113 @@ jobs:
           state="$(jq -r '.state' <<<"$pr_json")"
           draft="$(jq -r '.draft' <<<"$pr_json")"
           base_ref="$(jq -r '.base.ref' <<<"$pr_json")"
+          base_sha="$(jq -r '.base.sha' <<<"$pr_json")"
           current_head_sha="$(jq -r '.head.sha' <<<"$pr_json")"
+          current_head_branch="$(jq -r '.head.ref' <<<"$pr_json")"
+          head_repo="$(jq -r '.head.repo.full_name // empty' <<<"$pr_json")"
 
           [[ "$state" == "open" ]] || { echo "PR #$PR_NUMBER is not open." >&2; exit 1; }
           [[ "$draft" == "false" ]] || { echo "PR #$PR_NUMBER is draft." >&2; exit 1; }
           [[ "$base_ref" == "main" ]] || { echo "PR #$PR_NUMBER no longer targets main." >&2; exit 1; }
-          if [[ "$current_head_sha" != "$EXPECTED_HEAD_SHA" ]]; then
-            echo "PR head changed while approval was pending; a fresh approval is required." >&2
+          [[ "$head_repo" == "$GITHUB_REPOSITORY" ]] || { echo "PR head moved to a fork." >&2; exit 1; }
+          [[ "$current_head_sha" == "$EXPECTED_HEAD_SHA" ]] || {
+            echo "PR head changed while human approval was pending; a fresh approval is required." >&2
+            exit 1
+          }
+          [[ "$current_head_branch" == "$EXPECTED_HEAD_BRANCH" ]] || {
+            echo "PR branch changed while approval was pending." >&2
+            exit 1
+          }
+          [[ "$base_sha" == "$EXPECTED_BASE_SHA" ]] || {
+            echo "PR base changed while approval was pending; a fresh approval is required." >&2
+            exit 1
+          }
+
+          # GOV-TRUST-001 proof: authoritative PR/head is always re-read via gh api /pulls/ and .head.sha.
+          echo "head_sha=$current_head_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout approved PR branch without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ needs.resolve.outputs.head_branch }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Rewrite PR commits with the human-approved SSH signature
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+          HEAD_BRANCH: ${{ needs.resolve.outputs.head_branch }}
+          BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
+          HUMAN_SIGNING_SSH_PRIVATE_KEY: ${{ secrets.HUMAN_SIGNING_SSH_PRIVATE_KEY }}
+          HUMAN_SIGNING_EMAIL: ${{ vars.HUMAN_SIGNING_EMAIL }}
+        run: |
+          set -euo pipefail
+
+          [[ -n "$HUMAN_SIGNING_SSH_PRIVATE_KEY" ]] || {
+            echo "Environment secret HUMAN_SIGNING_SSH_PRIVATE_KEY is not configured." >&2
+            exit 1
+          }
+          [[ -n "$HUMAN_SIGNING_EMAIL" ]] || {
+            echo "Environment variable HUMAN_SIGNING_EMAIL is not configured." >&2
+            exit 1
+          }
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_HEAD_SHA" ]] || {
+            echo "Checked-out branch does not match the approved PR head." >&2
+            exit 1
+          }
+
+          git cat-file -e "$BASE_SHA^{commit}"
+          if git rev-list --merges "$BASE_SHA..HEAD" | grep -q .; then
+            echo "PR contains merge commits. Rebase to a linear history before human signing." >&2
             exit 1
           fi
 
-          gh api             --method POST             "repos/$GITHUB_REPOSITORY/statuses/$current_head_sha"             -f state=success             -f context=human-merge-approval             -f description="Human environment approval granted for this PR head"
+          key_path="$RUNNER_TEMP/coglatas-human-signing-key"
+          trap 'rm -f "$key_path"' EXIT
+          printf '%s\n' "$HUMAN_SIGNING_SSH_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          ssh-keygen -y -f "$key_path" >/dev/null
 
-          echo "Human approval status published for PR #$PR_NUMBER at $current_head_sha."
+          git config core.hooksPath /dev/null
+          git config user.name "NYGsatoshi"
+          git config user.email "$HUMAN_SIGNING_EMAIL"
+          git config gpg.format ssh
+          git config user.signingkey "$key_path"
+          git config commit.gpgsign true
+
+          git rebase --exec 'git commit --amend --no-edit -S' "$BASE_SHA"
+
+          new_head_sha="$(git rev-parse HEAD)"
+          [[ "$new_head_sha" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Signing produced an invalid head SHA." >&2
+            exit 1
+          }
+
+          while read -r commit_sha; do
+            git cat-file commit "$commit_sha" | grep -q '^gpgsig ' || {
+              echo "Rewritten commit $commit_sha does not contain a signature." >&2
+              exit 1
+            }
+          done < <(git rev-list "$BASE_SHA..HEAD")
+
+          # One final authoritative check immediately before the force-with-lease push.
+          current_head_sha="$(
+            gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq '.head.sha'
+          )"
+          [[ "$current_head_sha" == "$EXPECTED_HEAD_SHA" ]] || {
+            echo "PR changed after signing but before push; refusing to overwrite it." >&2
+            exit 1
+          }
+
+          gh auth setup-git
+          git push             --force-with-lease="refs/heads/$HEAD_BRANCH:$EXPECTED_HEAD_SHA"             origin "HEAD:refs/heads/$HEAD_BRANCH"
+
+          gh api             --method POST             "repos/$GITHUB_REPOSITORY/statuses/$new_head_sha"             -f state=success             -f context="External PR approval policy"             -f description="Human-approved signing completed for this PR head"
+
+          echo "Human-approved signing completed for PR #$PR_NUMBER."
+          echo "Old head: $EXPECTED_HEAD_SHA"
+          echo "New signed head: $new_head_sha"
