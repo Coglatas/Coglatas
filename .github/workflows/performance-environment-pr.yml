@@ -1,0 +1,101 @@
+name: Performance environment PR
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/performance-environment-pr.yml"
+      - "performance/**"
+      - "scripts/performance/**"
+      - "scripts/ci/verify-performance-environment.py"
+      - "docker-compose.performance.yml"
+      - "docker-compose.performance.pr.yml"
+      - "Dockerfile.playwright"
+      - "src/**"
+      - "package-lock.json"
+
+concurrency:
+  group: performance-environment-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  environment-smoke:
+    name: performance-environment-small
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      COGLATAS_PERFORMANCE_PROFILE: small
+      COGLATAS_PERFORMANCE_RUNTIME_MODE: source
+      COGLATAS_PERFORMANCE_PORT: "18080"
+      COGLATAS_PERFORMANCE_COMPOSE_PROJECT: coglatas-performance-${{ github.run_id }}-${{ github.run_attempt }}
+
+    steps:
+      - name: Checkout pull request merge
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Generate isolated synthetic fixture credential
+        shell: bash
+        run: |
+          password="$(python3 - <<'PY'
+          import secrets
+          print('PerfCi-' + secrets.token_urlsafe(24))
+          PY
+          )"
+          echo "::add-mask::$password"
+          echo "COGLATAS_PERFORMANCE_PASSWORD=$password" >> "$GITHUB_ENV"
+
+      - name: Validate PERF-02 contract
+        run: |
+          python3 scripts/ci/verify-performance-contract.py
+          python3 scripts/ci/verify-performance-environment.py
+          python3 -m unittest discover -s tests/ci -p 'test_performance_environment.py'
+
+      - name: Start, preflight, warm up, fingerprint, and teardown
+        run: bash scripts/performance/with-environment.sh
+
+      - name: Preserve first deterministic fixture evidence
+        run: cp "artifacts/performance/${COGLATAS_PERFORMANCE_PROFILE}/fixture.json" /tmp/perf02-fixture-first.json
+
+      - name: Assert first teardown is clean
+        shell: bash
+        run: |
+          test -z "$(docker ps -aq --filter "label=com.docker.compose.project=${COGLATAS_PERFORMANCE_COMPOSE_PROJECT}")"
+          test -z "$(docker volume ls -q --filter "label=com.docker.compose.project=${COGLATAS_PERFORMANCE_COMPOSE_PROJECT}")"
+
+      - name: Repeat environment startup without stale state
+        run: bash scripts/performance/with-environment.sh
+
+      - name: Compare deterministic fixture identity and cardinality
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          first = json.loads(Path('/tmp/perf02-fixture-first.json').read_text(encoding='utf-8'))
+          second = json.loads(Path(f"artifacts/performance/{first['profile']}/fixture.json").read_text(encoding='utf-8'))
+          for key in ('fixtureVersion', 'seedManifestVersion', 'profile', 'seed', 'fixtureHash', 'cardinalities', 'focus', 'identities'):
+              if first[key] != second[key]:
+                  raise SystemExit(f'PERF-02 repeat-start drift in {key}')
+          print(f"repeat-start deterministic fixture verified: {first['fixtureHash']}")
+          PY
+
+      - name: Assert final teardown is clean
+        shell: bash
+        run: |
+          test -z "$(docker ps -aq --filter "label=com.docker.compose.project=${COGLATAS_PERFORMANCE_COMPOSE_PROJECT}")"
+          test -z "$(docker volume ls -q --filter "label=com.docker.compose.project=${COGLATAS_PERFORMANCE_COMPOSE_PROJECT}")"
+
+      - name: Upload PERF-02 machine-readable evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: perf02-pr-small-${{ github.sha }}
+          path: artifacts/performance/small/
+          if-no-files-found: warn
+          retention-days: 14
