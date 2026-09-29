@@ -56,7 +56,7 @@
     "RedundantCast": 23,
     "RedundantExplicitParamsArrayCreation": 0,
     "RedundantExtendsListEntry": 1,
-    "RedundantNameQualifier": 38,
+    "RedundantNameQualifier": 11,
     "RedundantSuppressNullableWarningExpression": 15,
     "RedundantSwitchExpressionArms": 7,
     "RedundantTypeArgumentsOfMethod": 11,

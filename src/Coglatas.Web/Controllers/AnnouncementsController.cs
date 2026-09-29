@@ -164,7 +164,7 @@ public sealed class AnnouncementsController(
         return result.IsSuccess ? Ok(new { status = "OK" }) : ToFailureResult(result.Error);
     }
 
-    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result)
+    private IActionResult ToActionResult<T>(Application.Common.Result<T> result)
     {
         return result.IsSuccess ? Ok(result.Value) : ToFailureResult(result.Error);
     }
@@ -190,7 +190,7 @@ public sealed class AnnouncementsController(
         return StatusCode(status, new { error });
     }
 
-    private IActionResult ToWorkflowActionResult<T>(Coglatas.Application.Common.Result<T> result)
+    private IActionResult ToWorkflowActionResult<T>(Application.Common.Result<T> result)
     {
         if (result.IsSuccess)
         {

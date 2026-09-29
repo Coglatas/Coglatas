@@ -88,7 +88,7 @@ public sealed class AuditFindingsController(
     }
 
     private IActionResult Error(
-        Coglatas.Application.Common.ApplicationErrorDetail? detail,
+        Application.Common.ApplicationErrorDetail? detail,
         string? fallback,
         string canonicalCode)
     {
