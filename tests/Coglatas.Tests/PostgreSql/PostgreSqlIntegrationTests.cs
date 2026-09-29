@@ -162,19 +162,6 @@ public sealed class PostgreSqlIntegrationTests
         var tenantBData = await SeedSearchGraphAsync(dbContext, currentTenant, tenantB, userB, runId, "TenantB", now.AddMinutes(1));
 
         currentTenant.SetTenant(tenantA.Id, tenantA.Slug);
-        var users = new UserRepository(dbContext);
-        var workspaces = new WorkspaceRepository(dbContext);
-        var groups = new GroupRepository(dbContext);
-        var projectRepository = new ProjectRepository(dbContext);
-        var workspaceAuthorization = new WorkspaceAuthorizationService(
-            users,
-            workspaces,
-            new TenantAuthorizationService(new TenantRepository(dbContext)));
-        var projectAuthorization = new ProjectAuthorizationService(
-            projectRepository,
-            workspaceAuthorization,
-            new GroupAuthorizationService(groups, workspaces, workspaceAuthorization),
-            groups);
         var search = new DbSearchService(
             dbContext,
             new TestCurrentUser(userA),

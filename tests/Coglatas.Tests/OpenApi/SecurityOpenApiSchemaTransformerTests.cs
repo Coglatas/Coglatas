@@ -62,7 +62,7 @@ public sealed class SecurityOpenApiSchemaTransformerTests
     {
         var schema = await Transform(typeof(CreateConversationRequest));
         var variants = Assert.IsAssignableFrom<IList<IOpenApiSchema>>(schema.OneOf)
-            .Select(variant => Assert.IsType<OpenApiSchema>(variant))
+            .Select(Assert.IsType<OpenApiSchema>)
             .ToArray();
         Assert.Equal(3, variants.Length);
 

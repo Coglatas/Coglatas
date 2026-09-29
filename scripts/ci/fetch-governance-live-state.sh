@@ -123,7 +123,7 @@ fi
 mkdir -p "$(dirname "$output")"
 tmp_output="$workdir/live-state.json"
 jq -n \
-  --argjson repository "$(jq '{full_name, default_branch}' "$repo_json")" \
+  --argjson repository "$(jq '{id, full_name, default_branch}' "$repo_json")" \
   --argjson branch "$(jq '{name, protected, protection}' "$branch_json")" \
   --argjson rulesets "$(cat "$rulesets_json")" \
   --argjson classic "$(cat "$classic_json")" \

@@ -92,7 +92,7 @@ public sealed class HttpSecurityPolicyTests
         });
         builder.WebHost.UseKestrel().UseUrls("http://127.0.0.1:0");
         builder.Logging.ClearProviders();
-        builder.Services.AddRateLimiter(options => HttpSecurityPolicy.ConfigureRateLimiting(options));
+        builder.Services.AddRateLimiter(HttpSecurityPolicy.ConfigureRateLimiting);
 
         var app = builder.Build();
         app.UseRouting();

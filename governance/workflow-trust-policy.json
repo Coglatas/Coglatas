@@ -25,21 +25,6 @@
   },
   "write_permissions": [
     {
-      "workflow": ".github/workflows/external-pr-approval-evaluator.yml",
-      "jobs": [
-        "evaluate"
-      ],
-      "events": [
-        "workflow_dispatch",
-        "workflow_run"
-      ],
-      "permissions": [
-        "contents:write",
-        "statuses:write"
-      ],
-      "reason": "After protected human approval, re-read authoritative same-repository PR metadata only through the GitHub API. If commits are unsigned, use the Environment-protected dedicated GPG key to sign a canonical commit payload while preserving each source tree and author identity, require GitHub verification.reason=valid on every recreated commit, atomically replace the PR ref with updateRefs beforeOid compare-and-swap, then publish the exact-head human approval status. The trusted workflow_run evaluator never checks out, fetches, or executes PR-controlled code."
-    },
-    {
       "workflow": ".github/workflows/codeql.yml",
       "jobs": [
         "analyze"

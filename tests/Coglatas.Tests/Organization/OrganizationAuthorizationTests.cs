@@ -160,19 +160,19 @@ public sealed class OrganizationAuthorizationTests
             GroupService = new GroupService(Groups, Workspaces, Users, GroupAuthorization, Current, Clock, Audit, UnitOfWork);
         }
 
-        public FakeUsers Users { get; } = new();
-        public FakeWorkspaces Workspaces { get; } = new();
-        public FakeGroups Groups { get; } = new();
-        public FakeChannels Channels { get; } = new();
+        private FakeUsers Users { get; } = new();
+        private FakeWorkspaces Workspaces { get; } = new();
+        private FakeGroups Groups { get; } = new();
+        private FakeChannels Channels { get; } = new();
         public FakeCurrentUser Current { get; } = new();
-        public FakeClock Clock { get; } = new();
-        public FakeAuditLogger Audit { get; } = new();
-        public FakeUnitOfWork UnitOfWork { get; } = new();
-        public WorkspaceAuthorizationService WorkspaceAuthorization { get; }
+        private FakeClock Clock { get; } = new();
+        private FakeAuditLogger Audit { get; } = new();
+        private FakeUnitOfWork UnitOfWork { get; } = new();
+        private WorkspaceAuthorizationService WorkspaceAuthorization { get; }
         public GroupAuthorizationService GroupAuthorization { get; }
         public ChannelAuthorizationService ChannelAuthorization { get; }
         public GroupService GroupService { get; }
-        public Workspace Workspace { get; } = new() { Name = "Workspace", Slug = "workspace", CreatedByUserId = Guid.NewGuid() };
+        private Workspace Workspace { get; } = new() { Name = "Workspace", Slug = "workspace", CreatedByUserId = Guid.NewGuid() };
         public Group Group { get; } = new() { Name = "Group", Slug = "group", WorkspaceId = Guid.Empty, CreatedByUserId = Guid.NewGuid() };
         public Channel Channel { get; } = new() { Name = "General", Slug = "general", WorkspaceId = Guid.Empty, GroupId = Guid.Empty, CreatedByUserId = Guid.NewGuid() };
         public List<GroupMember> GroupMembers => Groups.Members;
@@ -279,9 +279,9 @@ public sealed class OrganizationAuthorizationTests
     private sealed class FakeChannels : IChannelRepository
     {
         public Dictionary<Guid, Channel> Items { get; } = [];
-        public List<ChannelMember> Members { get; } = [];
+        private List<ChannelMember> Members { get; } = [];
         public List<Post> Posts { get; } = [];
-        public List<PostThread> Threads { get; } = [];
+        private List<PostThread> Threads { get; } = [];
         public Task<IReadOnlyList<Channel>> ListByGroupAsync(Guid groupId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Channel>>(Items.Values.Where(channel => channel.GroupId == groupId).ToList());
         public Task<Channel?> GetByIdAsync(Guid channelId, CancellationToken cancellationToken = default) => Task.FromResult(Items.GetValueOrDefault(channelId));
         public Task<ChannelMember?> GetMemberAsync(Guid channelId, Guid userId, CancellationToken cancellationToken = default) => Task.FromResult(Members.FirstOrDefault(member => member.ChannelId == channelId && member.UserId == userId));

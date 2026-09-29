@@ -246,7 +246,7 @@ public sealed class AnnouncementDraftMultiAudienceTests
             CancellationToken cancellationToken = default) =>
             Task.FromResult(Result<bool>.Success(actorUserId != Guid.Empty && Next()));
 
-        private bool Next() => Outcomes.TryDequeue(out var value) ? value : true;
+        private bool Next() => !Outcomes.TryDequeue(out var value) || value;
     }
 
     private sealed class TestScheduleTimeZoneResolver : IAnnouncementScheduleTimeZoneResolver

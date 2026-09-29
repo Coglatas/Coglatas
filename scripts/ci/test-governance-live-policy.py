@@ -18,7 +18,9 @@ def policy_fixture():
     return {
         "version": 1,
         "policy_id": "COGLATAS-GOVERNANCE",
-        "repository": "Coglatas/Coglatas",
+        "repository": "NYGsatoshi/Coglatas",
+        "repository_id": 1261244608,
+        "repository_aliases": ["Coglatas/Coglatas", "NYGsatoshi/Coglatas"],
         "default_branch": "main",
         "controls": [
             {
@@ -41,7 +43,6 @@ def policy_fixture():
                 "expected": {
                     "strict": True,
                     "required": [
-                        {"context": "External PR approval policy"},
                         {"context": "build-test"},
                         {"context": "frontend-test"},
                         {"context": "security-scan"},
@@ -52,7 +53,7 @@ def policy_fixture():
             {
                 "id": "GOV-SIGNATURE-001",
                 "enforcement": "blocking",
-                "expected": {"required": True},
+                "expected": {"required": False},
             },
             {
                 "id": "GOV-REVIEW-001",
@@ -82,7 +83,6 @@ def policy_fixture():
 
 def live_fixture():
     required_checks = [
-        {"context": "External PR approval policy"},
         {"context": "build-test", "integration_id": 15368},
         {"context": "frontend-test", "integration_id": 15368},
         {"context": "security-scan", "integration_id": 15368},
@@ -90,6 +90,7 @@ def live_fixture():
     ]
     return {
         "repository": {
+            "id": 1261244608,
             "full_name": "Coglatas/Coglatas",
             "default_branch": "main",
         },
@@ -119,7 +120,6 @@ def live_fixture():
                             "required_status_checks": required_checks,
                         },
                     },
-                    {"type": "required_signatures"},
                 ],
                 "bypass_actors": [],
             },
@@ -194,6 +194,28 @@ class GovernanceLivePolicyTests(unittest.TestCase):
         self.assertEqual([], report["findings"])
         self.assertEqual(64, len(report["snapshot_sha256"]))
 
+    def test_post_transfer_repository_name_passes_with_same_id(self):
+        live = live_fixture()
+        live["repository"]["full_name"] = "NYGsatoshi/Coglatas"
+        for ruleset in live["rulesets"]:
+            if ruleset.get("source") == "Coglatas/Coglatas":
+                ruleset["source"] = "NYGsatoshi/Coglatas"
+        self.assertEqual("PASS", self.evaluate(live)["status"])
+
+    def test_wrong_repository_id_fails(self):
+        live = live_fixture()
+        live["repository"]["id"] = 999999999
+        self.assertIn(
+            "REPOSITORY_ID_MISMATCH", self.codes(self.evaluate(live))
+        )
+
+    def test_unrecognized_repository_name_fails(self):
+        live = live_fixture()
+        live["repository"]["full_name"] = "someone-else/Coglatas"
+        self.assertIn(
+            "REPOSITORY_NAME_NOT_ALLOWED", self.codes(self.evaluate(live))
+        )
+
     def test_required_ruleset_disabled_fails(self):
         live = live_fixture()
         live["rulesets"][0]["enforcement"] = "disabled"
@@ -218,15 +240,11 @@ class GovernanceLivePolicyTests(unittest.TestCase):
         ] = 0
         self.assertIn("APPROVAL_COUNT_DRIFT", self.codes(self.evaluate(live)))
 
-    def test_required_signatures_removed_fails(self):
+    def test_unexpected_required_signatures_fails(self):
         live = live_fixture()
-        live["rulesets"][0]["rules"] = [
-            rule
-            for rule in live["rulesets"][0]["rules"]
-            if rule["type"] != "required_signatures"
-        ]
+        live["rulesets"][0]["rules"].append({"type": "required_signatures"})
         self.assertIn(
-            "REQUIRED_SIGNATURES_MISSING", self.codes(self.evaluate(live))
+            "UNEXPECTED_REQUIRED_SIGNATURES", self.codes(self.evaluate(live))
         )
 
     def test_unexpected_bypass_actor_fails(self):
