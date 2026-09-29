@@ -110,7 +110,8 @@ public sealed class HttpSecurityPolicyTests
                 .Features.Get<IServerAddressesFeature>()?.Addresses.Single()
                 ?? throw new InvalidOperationException("Test server address was not available.");
             // ReSharper disable once ShortLivedHttpClient
-            using var client = new HttpClient { BaseAddress = new Uri(address) };
+            using var client = new HttpClient();
+            client.BaseAddress = new Uri(address);
 
             for (var requestIndex = 0; requestIndex < 10; requestIndex++)
             {

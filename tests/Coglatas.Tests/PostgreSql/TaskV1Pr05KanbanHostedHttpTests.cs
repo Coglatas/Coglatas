@@ -1319,10 +1319,8 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
         public async Task LoginAsync(string email, string password)
         {
             var token = await GetCsrfTokenAsync();
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
-            {
-                Content = JsonContent.Create(new LoginRequest(email, password))
-            };
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login");
+            request.Content = JsonContent.Create(new LoginRequest(email, password));
             request.Headers.TryAddWithoutValidation("X-Tenant-Slug", tenantSlug);
             request.Headers.TryAddWithoutValidation(SecurityOptions.CsrfHeaderName, token);
             using var response = await client.SendAsync(request);
@@ -1352,7 +1350,8 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
             HttpContent? content,
             bool includeCsrf)
         {
-            using var request = new HttpRequestMessage(method, path) { Content = content };
+            using var request = new HttpRequestMessage(method, path);
+            request.Content = content;
             request.Headers.TryAddWithoutValidation("X-Tenant-Slug", tenantSlug);
             if (includeCsrf)
             {
