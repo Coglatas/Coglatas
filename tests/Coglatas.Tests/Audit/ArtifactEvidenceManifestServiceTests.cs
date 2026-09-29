@@ -451,7 +451,7 @@ public sealed class ArtifactEvidenceManifestServiceTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "evidence-manifest-test";
+        public string TenantSlug => "evidence-manifest-test";
         public bool IsPlatformScope => false;
     }
 
@@ -459,7 +459,7 @@ public sealed class ArtifactEvidenceManifestServiceTests
     {
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "audit-reviewer@example.invalid";
+        public string Email => "audit-reviewer@example.invalid";
         public SystemRole? SystemRole => global::Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }

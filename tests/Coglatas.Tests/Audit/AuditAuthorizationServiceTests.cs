@@ -108,7 +108,7 @@ public sealed class AuditAuthorizationServiceTests
     {
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "audit-test@example.invalid";
+        public string Email => "audit-test@example.invalid";
         public SystemRole? SystemRole { get; } = systemRole;
         public bool IsAuthenticated => true;
     }
@@ -117,7 +117,7 @@ public sealed class AuditAuthorizationServiceTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "audit-test";
+        public string TenantSlug => "audit-test";
         public bool IsPlatformScope => false;
     }
 
@@ -159,7 +159,7 @@ public sealed class AuditAuthorizationServiceTests
         }
     }
 
-    public sealed class CapturingAuditLogger : IAuditLogger
+    private sealed class CapturingAuditLogger : IAuditLogger
     {
         public List<AuditLogEntry> Entries { get; } = [];
 
@@ -170,7 +170,7 @@ public sealed class AuditAuthorizationServiceTests
         }
     }
 
-    public sealed class CapturingUnitOfWork : IUnitOfWork
+    private sealed class CapturingUnitOfWork : IUnitOfWork
     {
         public int SaveCount { get; private set; }
 

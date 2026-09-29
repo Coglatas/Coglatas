@@ -329,7 +329,7 @@ public sealed class AuditClaimsEvidenceServiceTests
     {
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "audit@example.invalid";
+        public string Email => "audit@example.invalid";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }
