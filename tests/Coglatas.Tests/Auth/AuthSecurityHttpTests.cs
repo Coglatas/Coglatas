@@ -80,7 +80,7 @@ public sealed class AuthSecurityHttpTests
         response.EnsureSuccessStatusCode();
         var payload = await response.Content.ReadFromJsonAsync<CsrfTokenResponse>();
         Assert.False(string.IsNullOrWhiteSpace(payload?.Token));
-        Assert.Equal(SecurityOptions.CsrfHeaderName, payload?.HeaderName);
+        Assert.Equal(SecurityOptions.CsrfHeaderName, payload.HeaderName);
         Assert.True(
             response.Headers.TryGetValues("Set-Cookie", out var cookies) &&
             cookies.Any(cookie => cookie.Contains(".Coglatas.Csrf=", StringComparison.Ordinal) &&
