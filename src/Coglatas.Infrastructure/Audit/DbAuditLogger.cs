@@ -50,7 +50,7 @@ public sealed class DbAuditLogger(AppDbContext dbContext, IClock clock, ICurrent
     {
         try
         {
-            var tenantId = entry.TenantId ?? (currentTenant.IsAvailable ? currentTenant.TenantId : (Guid?)null);
+            var tenantId = entry.TenantId ?? (currentTenant.IsAvailable ? currentTenant.TenantId : null);
             if (!tenantId.HasValue)
             {
                 return;

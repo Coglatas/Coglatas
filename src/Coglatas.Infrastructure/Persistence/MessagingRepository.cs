@@ -16,7 +16,7 @@ public sealed class MessagingRepository(AppDbContext dbContext) : IMessagingRepo
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
-        var skip = (int)Math.Min(((long)page - 1L) * pageSize, int.MaxValue);
+        var skip = (int)Math.Min((page - 1L) * pageSize, int.MaxValue);
         var candidates = ReadableConversationCandidates(userId);
 
         if (UsesPostgreSql())
@@ -45,7 +45,7 @@ public sealed class MessagingRepository(AppDbContext dbContext) : IMessagingRepo
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
-        var skip = (int)Math.Min(((long)page - 1L) * pageSize, int.MaxValue);
+        var skip = (int)Math.Min((page - 1L) * pageSize, int.MaxValue);
         var candidates = ReadableConversationCandidates(userId);
         IQueryable<Conversation> all;
 
@@ -373,7 +373,7 @@ public sealed class MessagingRepository(AppDbContext dbContext) : IMessagingRepo
         IQueryable<Conversation> candidates,
         CancellationToken cancellationToken)
     {
-        var skip = (int)Math.Min(((long)page - 1L) * pageSize, int.MaxValue);
+        var skip = (int)Math.Min((page - 1L) * pageSize, int.MaxValue);
         var readableIds = await ListReadableConversationIdsNonPostgreSqlAsync(
             userId,
             candidates,
