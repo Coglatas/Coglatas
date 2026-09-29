@@ -279,6 +279,7 @@ if (securityOptions.EnableCsrfProtection)
     app.UseMiddleware<CsrfProtectionMiddleware>();
 }
 app.UseAuthorization();
+app.UseMiddleware<FileUploadFormBoundaryMiddleware>();
 if (browserSmokeResponseGateEnabled)
 {
     app.UseMiddleware<BrowserSmokeResponseGateMiddleware>();

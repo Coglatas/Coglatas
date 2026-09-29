@@ -243,9 +243,10 @@ public sealed class TenantService(
 
     public async Task<Result<IReadOnlyList<TenantUserResponse>>> ListCurrentTenantUsersAsync(CancellationToken cancellationToken = default)
     {
-        if (!await CanManageCurrentTenantAsync(cancellationToken))
+        var authorization = await RequireCurrentTenantManagementAsync(cancellationToken);
+        if (!authorization.IsSuccess)
         {
-            return Result<IReadOnlyList<TenantUserResponse>>.Failure("Tenant Owner or Admin access is required.");
+            return ForwardFailure<IReadOnlyList<TenantUserResponse>>(authorization);
         }
 
         var users = await tenantRepository.ListTenantUsersAsync(currentTenant.TenantId, cancellationToken);
@@ -254,9 +255,10 @@ public sealed class TenantService(
 
     public async Task<Result<TenantUserResponse>> AddCurrentTenantUserAsync(AddTenantUserRequest request, CancellationToken cancellationToken = default)
     {
-        if (!await CanManageCurrentTenantAsync(cancellationToken))
+        var authorization = await RequireCurrentTenantManagementAsync(cancellationToken);
+        if (!authorization.IsSuccess)
         {
-            return Result<TenantUserResponse>.Failure("Tenant Owner or Admin access is required.");
+            return ForwardFailure<TenantUserResponse>(authorization);
         }
 
         var user = await tenantRepository.GetUserAsync(request.UserId, cancellationToken);
@@ -306,9 +308,10 @@ public sealed class TenantService(
 
     public async Task<Result<TenantUserResponse>> UpdateCurrentTenantUserAsync(Guid userId, UpdateTenantUserRequest request, CancellationToken cancellationToken = default)
     {
-        if (!await CanManageCurrentTenantAsync(cancellationToken))
+        var authorization = await RequireCurrentTenantManagementAsync(cancellationToken);
+        if (!authorization.IsSuccess)
         {
-            return Result<TenantUserResponse>.Failure("Tenant Owner or Admin access is required.");
+            return ForwardFailure<TenantUserResponse>(authorization);
         }
 
         var tenantUser = await tenantRepository.GetTenantUserAsync(currentTenant.TenantId, userId, cancellationToken);
@@ -372,9 +375,10 @@ public sealed class TenantService(
 
     public async Task<Result> RemoveCurrentTenantUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        if (!await CanManageCurrentTenantAsync(cancellationToken))
+        var authorization = await RequireCurrentTenantManagementAsync(cancellationToken);
+        if (!authorization.IsSuccess)
         {
-            return Result.Failure("Tenant Owner or Admin access is required.");
+            return authorization;
         }
 
         var tenantUser = await tenantRepository.GetTenantUserAsync(currentTenant.TenantId, userId, cancellationToken);
@@ -433,11 +437,35 @@ public sealed class TenantService(
         return Result.Success();
     }
 
-    private async Task<bool> CanManageCurrentTenantAsync(CancellationToken cancellationToken)
+    private async Task<Result> RequireCurrentTenantManagementAsync(CancellationToken cancellationToken)
     {
-        return currentTenant.IsAvailable &&
-               TryGetUserId(out var userId) &&
-               await tenantAuthorization.CanManageTenantAsync(userId, currentTenant.TenantId, cancellationToken);
+        if (!currentTenant.IsAvailable)
+        {
+            const string message = "Tenant is not available for this request.";
+            return Result.Failure(message, new ApplicationErrorDetail("ValidationFailed", message));
+        }
+
+        if (!TryGetUserId(out var userId))
+        {
+            const string message = "Authentication is required.";
+            return Result.Failure(message, new ApplicationErrorDetail("AuthenticationRequired", message));
+        }
+
+        if (!await tenantAuthorization.CanManageTenantAsync(userId, currentTenant.TenantId, cancellationToken))
+        {
+            const string message = "Tenant Owner or Admin access is required.";
+            return Result.Failure(message, new ApplicationErrorDetail("Forbidden", message));
+        }
+
+        return Result.Success();
+    }
+
+    private static Result<T> ForwardFailure<T>(Result result)
+    {
+        var message = result.Error ?? result.ErrorDetail?.Message ?? "Request failed.";
+        return result.ErrorDetail is null
+            ? Result<T>.Failure(message)
+            : Result<T>.Failure(message, result.ErrorDetail);
     }
 
     private Task<bool> IsPlatformAdminAsync(CancellationToken cancellationToken)
