@@ -3,7 +3,6 @@ using Coglatas.Application.Common.Tenancy;
 using Coglatas.Domain.Enums;
 using Coglatas.Infrastructure.Files;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 
 namespace Coglatas.Web.Configuration;

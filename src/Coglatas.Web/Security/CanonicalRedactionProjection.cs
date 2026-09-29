@@ -1,6 +1,5 @@
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Security.Redaction;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Coglatas.Web.Security;
 
