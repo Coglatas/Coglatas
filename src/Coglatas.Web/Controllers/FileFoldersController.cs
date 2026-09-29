@@ -1,7 +1,6 @@
 using Coglatas.Application.Common;
 using Coglatas.Application.Files;
 using Coglatas.Application.Security.Redaction;
-using Coglatas.Web.Models;
 using Coglatas.Web.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
