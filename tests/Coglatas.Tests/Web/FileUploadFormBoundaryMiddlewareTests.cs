@@ -1,3 +1,4 @@
+using System.Text;
 using Coglatas.Web.Middleware;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -156,6 +157,84 @@ public sealed class FileUploadFormBoundaryMiddlewareTests
         var context = CreateContext(
             new Dictionary<string, StringValues> { ["file"] = "not-a-file-part" },
             "/api/artifacts/596b2ae6-e11c-4d12-a072-a80dc4deab19/versions");
+
+        await middleware.InvokeAsync(context);
+
+        Assert.False(nextCalled);
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ArtifactVersionRejectsUnexpectedRawMultipartBeforeMvcBinding()
+    {
+        var nextCalled = false;
+        var middleware = new FileUploadFormBoundaryMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+        const string boundary = "security-test-boundary";
+        var body = string.Join("\r\n",
+            $"--{boundary}",
+            "Content-Disposition: form-data; name=\"unexpected\"",
+            "",
+            "value",
+            $"--{boundary}",
+            "Content-Disposition: form-data; name=\"file\"",
+            "",
+            "not-a-file-part",
+            $"--{boundary}",
+            "Content-Disposition: form-data; name=\"File\"; filename=\"sample.txt\"",
+            "Content-Type: text/plain",
+            "",
+            "payload",
+            $"--{boundary}--",
+            "");
+        var context = new DefaultHttpContext();
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Path = $"/api/artifacts/{Guid.NewGuid():D}/versions";
+        context.Request.ContentType = $"multipart/form-data; boundary={boundary}";
+        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+        context.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(context);
+
+        Assert.False(nextCalled);
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ArtifactVersionLeavesUnsupportedFormMediaTypeToMvc()
+    {
+        var nextCalled = false;
+        var middleware = new FileUploadFormBoundaryMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+        var context = CreateContext(
+            new Dictionary<string, StringValues> { ["ChangeNote"] = "Revised" },
+            $"/api/artifacts/{Guid.NewGuid():D}/versions");
+        context.Request.ContentType = "application/x-www-form-urlencoded";
+
+        await middleware.InvokeAsync(context);
+
+        Assert.True(nextCalled);
+    }
+
+    [Fact]
+    public async Task ArtifactVersionRejectsDuplicateChangeNotes()
+    {
+        var nextCalled = false;
+        var middleware = new FileUploadFormBoundaryMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+        var context = CreateContext(
+            new Dictionary<string, StringValues> { ["ChangeNote"] = new StringValues(new[] { "one", "two" }) },
+            $"/api/artifacts/{Guid.NewGuid():D}/versions",
+            ("File", "sample.txt", "text/plain", "payload"u8.ToArray()));
 
         await middleware.InvokeAsync(context);
 
