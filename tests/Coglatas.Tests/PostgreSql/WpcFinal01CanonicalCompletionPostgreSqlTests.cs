@@ -591,7 +591,6 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
             }
         }
 
-        var taskId = Guid.Empty;
         var taskNotificationId = Guid.Empty;
         var operationalProject =
             activationState == ProjectActivationState.Activated &&
@@ -621,7 +620,6 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
                 StateVersion = 1
             };
             db.AddRange(task, notification);
-            taskId = task.Id;
             taskNotificationId = notification.Id;
         }
         await db.SaveChangesAsync();
