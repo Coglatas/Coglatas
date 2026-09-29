@@ -73,4 +73,42 @@ public sealed class InvalidModelStateResponseFactoryTests
             System.Text.Json.JsonSerializer.Serialize(details),
             StringComparison.Ordinal);
     }
+    [Fact]
+    public void TenantSwitchValidationDoesNotReflectAttackerControlledValues()
+    {
+        var services = new ServiceCollection();
+        services.AddWebServices(new ConfigurationBuilder().Build());
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<ApiBehaviorOptions>>().Value;
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = provider,
+            Request =
+            {
+                Method = HttpMethods.Post,
+                Path = "/api/tenants/switch"
+            }
+        };
+        var actionContext = new ActionContext(
+            httpContext,
+            new RouteData(),
+            new ActionDescriptor(),
+            new ModelStateDictionary());
+
+        const string scannerPayload = "4111111111111111";
+        actionContext.ModelState.AddModelError(
+            "TenantId",
+            $"The value '{scannerPayload}' is not valid for TenantId.");
+
+        var result = options.InvalidModelStateResponseFactory(actionContext);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var details = Assert.IsType<ValidationProblemDetails>(badRequest.Value);
+        Assert.Equal("The supplied value is invalid.", Assert.Single(details.Errors["TenantId"]));
+        Assert.DoesNotContain(
+            scannerPayload,
+            System.Text.Json.JsonSerializer.Serialize(details),
+            StringComparison.Ordinal);
+    }
+
 }
