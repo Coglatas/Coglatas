@@ -406,13 +406,13 @@ public sealed class TaskExecutionScopeServiceTests
         }
 
         public AppDbContext Db { get; }
-        public CurrentTenantService CurrentTenant { get; }
+        private CurrentTenantService CurrentTenant { get; }
         public Tenant Tenant { get; }
         public Workspace Workspace { get; }
         public User Actor { get; }
         public Project Project { get; }
         public TaskItem TaskItem { get; }
-        public ControllableProjectAuthorization Authorization { get; }
+        private ControllableProjectAuthorization Authorization { get; }
         public RecordingAuditLogger Audit { get; }
         public TaskExecutionScopeService Service { get; }
 
@@ -580,7 +580,7 @@ public sealed class TaskExecutionScopeServiceTests
 
     private sealed class ControllableProjectAuthorization : IProjectAuthorizationService
     {
-        public bool CanView { get; set; } = true;
+        private bool CanView { get; set; } = true;
         public bool CanManage { get; set; } = true;
 
         public Task<bool> CanViewProject(Guid userId, Guid projectId, CancellationToken cancellationToken = default) =>
