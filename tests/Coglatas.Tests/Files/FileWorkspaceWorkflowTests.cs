@@ -253,7 +253,7 @@ public sealed class FileWorkspaceWorkflowTests
         }
 
         public Task<Stream> OpenReadAsync(string storageKey, CancellationToken cancellationToken = default) =>
-            Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("file content")));
+            Task.FromResult<Stream>(new MemoryStream("file content"u8.ToArray()));
 
         public Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default)
         {

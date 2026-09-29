@@ -1,4 +1,3 @@
-using System.Text;
 using Coglatas.Infrastructure.Files;
 using Microsoft.Extensions.Options;
 
@@ -36,7 +35,7 @@ public sealed class LocalFileStorageServiceTests : IDisposable
     public async Task StorageKeyControlsStoredPathInsideRoot()
     {
         var storage = CreateStorage();
-        await using var content = new MemoryStream(Encoding.UTF8.GetBytes("hello"));
+        await using var content = new MemoryStream("hello"u8.ToArray());
 
         var result = await storage.SaveAsync("tenants/tenant-a/files/file-a", content, "text/plain");
 
@@ -48,7 +47,7 @@ public sealed class LocalFileStorageServiceTests : IDisposable
     public async Task StorageKeyCannotEscapeRootPath()
     {
         var storage = CreateStorage();
-        await using var content = new MemoryStream(Encoding.UTF8.GetBytes("bad"));
+        await using var content = new MemoryStream("bad"u8.ToArray());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => storage.SaveAsync("../escape.txt", content, "text/plain"));
     }

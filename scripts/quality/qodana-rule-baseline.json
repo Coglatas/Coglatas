@@ -83,7 +83,7 @@
     "UseCollectionExpression": 39,
     "UseNameOfInsteadOfToString": 25,
     "UseObjectOrCollectionInitializer": 25,
-    "UseUtf8StringLiteral": 8,
+    "UseUtf8StringLiteral": 0,
     "UsingStatementResourceInitialization": 25,
     "VariableHidesOuterVariable": 1,
     "WithExpressionInsteadOfInitializer": 0,

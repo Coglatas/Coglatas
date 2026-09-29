@@ -1,4 +1,3 @@
-using System.Text;
 using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
@@ -128,7 +127,7 @@ public sealed class TaskExecutionResultPostgreSqlTests
                 var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(database).Options;
                 await using var context = new AppDbContext(options, currentTenant);
 
-                var bytes = Encoding.UTF8.GetBytes("alpha beta\ngamma");
+                var bytes = "alpha beta\ngamma"u8.ToArray();
                 var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant();
                 var fileObject = new FileObject
                 {

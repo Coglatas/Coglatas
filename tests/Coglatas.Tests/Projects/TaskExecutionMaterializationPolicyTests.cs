@@ -24,7 +24,7 @@ public sealed class TaskExecutionMaterializationPolicyTests
     [Trait("Scope", "Issue462")]
     public async Task Utf8MaterializationIsBoundedAndHashesTheConsumedBytes()
     {
-        var bytes = Encoding.UTF8.GetBytes("Contest project file\nsecond line");
+        var bytes = "Contest project file\nsecond line"u8.ToArray();
         await using var stream = new MemoryStream(bytes);
 
         var materialized = await FirstPartyProjectFilesMaterializationV1.ReadUtf8Async(
