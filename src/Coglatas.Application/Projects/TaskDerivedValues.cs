@@ -97,8 +97,8 @@ public interface ITaskWorkspaceTimeZoneResolver
 /// setting only when the Workspace candidate is absent or invalid.
 /// </summary>
 public sealed class TaskWorkspaceTimeZoneResolver(
-    Coglatas.Application.Common.Interfaces.IWorkspaceRepository workspaces,
-    Coglatas.Application.Common.Interfaces.ITenantPlanRepository tenantPlans) : ITaskWorkspaceTimeZoneResolver
+    Common.Interfaces.IWorkspaceRepository workspaces,
+    Common.Interfaces.ITenantPlanRepository tenantPlans) : ITaskWorkspaceTimeZoneResolver
 {
     public async Task<TimeZoneInfo> ResolveAsync(Guid tenantId, Guid workspaceId, CancellationToken cancellationToken = default)
     {
