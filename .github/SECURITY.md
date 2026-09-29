@@ -5,7 +5,7 @@
 >Security reports for frontend code that is still present on the current `main` branch or in an explicitly supported deployment
 >remain in scope until that code is removed or explicitly declared unsupported.
 >Once legacy frontend code has been removed or declared unsupported, reports that apply only to that retired code may be closed
->as out of scope. Security reports affecting the supported Avalonia/.NET frontend remain in scope.
+>as out of scope. Security reports affecting the supported Avalonia/.NET frontend remain fully in scope.
 
 ## Private reporting only
 
