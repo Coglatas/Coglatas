@@ -15,7 +15,7 @@ runner services, allowing up to four self-hosted jobs to execute concurrently.
 Usage:
   sudo RUNNER_TOKEN='<registration-token>' \
     ./scripts/ci/install-self-hosted-runner-pool.sh \
-    --url https://github.com/Coglatas/Coglatas
+    --url https://github.com/NYGsatoshi/Coglatas
 
 Options:
   --url URL               GitHub.com repository or organization URL. Required.
