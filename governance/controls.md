@@ -6,7 +6,9 @@
 ## Policy semantics
 
 - Policy ID: `COGLATAS-GOVERNANCE` v1
-- Repository: `Coglatas/Coglatas`
+- Repository: `NYGsatoshi/Coglatas`
+- Repository ID: `1261244608`
+- Transfer aliases: `Coglatas/Coglatas`, `NYGsatoshi/Coglatas`
 - Default branch: `main`
 - Live GitHub state is evidence, **not** the baseline.
 - Unknown controls/fields are rejected; invalid policy blocks.
