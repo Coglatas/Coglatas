@@ -343,7 +343,7 @@ public sealed class AuditFindingsServiceTests
 
     private sealed class Fixture : IAsyncDisposable
     {
-        private readonly Tenant tenant;
+        private readonly Tenant _tenant;
 
         private Fixture(
             Guid tenantId,
@@ -361,7 +361,7 @@ public sealed class AuditFindingsServiceTests
             TenantId = tenantId;
             UserId = userId;
             ArtifactVersionId = artifactVersionId;
-            this.tenant = tenant;
+            _tenant = tenant;
             Context = context;
             Claims = claims;
             Authorization = authorization;
@@ -534,11 +534,11 @@ public sealed class AuditFindingsServiceTests
     private sealed class StubClaimsEvidenceService(Guid artifactVersionId) : IAuditClaimsEvidenceService
     {
         public static readonly Guid ArtifactId = Guid.Parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
-        private readonly Dictionary<Guid, AuditClaimEvidenceResponse> claims = new();
+        private readonly Dictionary<Guid, AuditClaimEvidenceResponse> _claims = new();
 
         public void AddClaim(ArtifactClaim claim)
         {
-            claims[claim.Id] = new AuditClaimEvidenceResponse(
+            _claims[claim.Id] = new AuditClaimEvidenceResponse(
                 claim.Id,
                 claim.Ordinal,
                 claim.Text,
@@ -550,8 +550,8 @@ public sealed class AuditFindingsServiceTests
 
         public void SetEvidence(Guid claimId, Guid evidenceId, Guid eventId)
         {
-            var claim = claims[claimId];
-            claims[claimId] = claim with
+            var claim = _claims[claimId];
+            _claims[claimId] = claim with
             {
                 Evidence = new[]
                 {
@@ -583,7 +583,7 @@ public sealed class AuditFindingsServiceTests
                 artifactVersionId,
                 1,
                 "Audit report",
-                claims.Values.OrderBy(claim => claim.Ordinal).ToArray())));
+                _claims.Values.OrderBy(claim => claim.Ordinal).ToArray())));
         }
     }
 
@@ -609,9 +609,9 @@ public sealed class AuditFindingsServiceTests
 
     private sealed class StubCapabilityGrantEvaluator : ICapabilityGrantEvaluator
     {
-        private readonly HashSet<Guid> grantedUsers = new();
+        private readonly HashSet<Guid> _grantedUsers = new();
 
-        public void Grant(Guid userId) => grantedUsers.Add(userId);
+        public void Grant(Guid userId) => _grantedUsers.Add(userId);
 
         public Task<bool> HasActiveGrantAsync(
             Guid subjectUserId,
@@ -621,7 +621,7 @@ public sealed class AuditFindingsServiceTests
             Guid? scopeId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(
-                grantedUsers.Contains(subjectUserId) &&
+                _grantedUsers.Contains(subjectUserId) &&
                 (capabilityKey == CapabilityKeys.AuditView || capabilityKey == CapabilityKeys.AuditReview) &&
                 scopeType == CapabilityScopeType.Tenant &&
                 scopeId == tenantId);
