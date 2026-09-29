@@ -184,7 +184,7 @@ public sealed class TaskExecutionControllerTests
     private sealed class StubTaskExecutionScopeService : ITaskExecutionScopeService
     {
         public Result<ProjectExecutionScopeResponse> ProjectResult { get; set; } = Failure<ProjectExecutionScopeResponse>("TASK_EXECUTION_NOT_FOUND");
-        public Result<TaskExecutionScopeResponse> TaskResult { get; set; } = Failure<TaskExecutionScopeResponse>("TASK_EXECUTION_NOT_FOUND");
+        private Result<TaskExecutionScopeResponse> TaskResult { get; set; } = Failure<TaskExecutionScopeResponse>("TASK_EXECUTION_NOT_FOUND");
         public Result<TaskExecutionRunResponse> RunResult { get; set; } = Failure<TaskExecutionRunResponse>("TASK_EXECUTION_NOT_FOUND");
         public Result<TaskExecutionScopeResponse> UpdateOverrideResult { get; set; } = Failure<TaskExecutionScopeResponse>("TASK_EXECUTION_NOT_FOUND");
 

@@ -446,9 +446,9 @@ public sealed class TaskNotificationRecipientPolicyTests
 
         public TaskItem Task { get; }
         public FakeProjects Projects { get; } = new();
-        public FakeUsers Users { get; } = new();
+        private FakeUsers Users { get; } = new();
         public FakeProjectAuthorization Authorization { get; } = new();
-        public TaskNotificationRecipientPolicy Policy { get; }
+        private TaskNotificationRecipientPolicy Policy { get; }
 
         public Guid AddActiveUser() => AddUser(UserStatus.Active);
 
