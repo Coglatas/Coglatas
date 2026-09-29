@@ -73,6 +73,7 @@ public sealed class InvalidModelStateResponseFactoryTests
             System.Text.Json.JsonSerializer.Serialize(details),
             StringComparison.Ordinal);
     }
+
     [Fact]
     public void TenantSwitchValidationDoesNotReflectAttackerControlledValues()
     {
