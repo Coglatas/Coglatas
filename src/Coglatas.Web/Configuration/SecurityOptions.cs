@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http;
 
 namespace Coglatas.Web.Configuration;
 
