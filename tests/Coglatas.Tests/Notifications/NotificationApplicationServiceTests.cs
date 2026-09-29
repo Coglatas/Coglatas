@@ -63,12 +63,12 @@ public sealed class NotificationApplicationServiceTests
         }
 
         public FakeCurrentUser Current { get; } = new();
-        public FakeClock Clock { get; } = new();
-        public FakeCurrentTenant Tenant { get; } = new();
+        private FakeClock Clock { get; } = new();
+        private FakeCurrentTenant Tenant { get; } = new();
         public FakeNotifications Notifications { get; } = new();
         public FakeNotificationOpenService OpenService { get; } = new();
-        public FakeAuditLogger Audit { get; } = new();
-        public FakeUnitOfWork UnitOfWork { get; } = new();
+        private FakeAuditLogger Audit { get; } = new();
+        private FakeUnitOfWork UnitOfWork { get; } = new();
         public NotificationApplicationService Service { get; }
 
         public static NotificationFixture Create() => new();
