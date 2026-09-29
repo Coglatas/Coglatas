@@ -911,7 +911,7 @@ public sealed class HttpTenantIsolationTests
         var data = app.Data;
 
         using var content = new MultipartFormDataContent();
-        content.Add(new StringContent(AttachmentOwnerType.TaskItem.ToString()), "OwnerType");
+        content.Add(new StringContent(nameof(AttachmentOwnerType.TaskItem)), "OwnerType");
         content.Add(new StringContent(data.TaskB.Id.ToString("D")), "OwnerId");
         var file = new ByteArrayContent("hello"u8.ToArray());
         file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
@@ -940,7 +940,7 @@ public sealed class HttpTenantIsolationTests
 
         using (var upload = new MultipartFormDataContent())
         {
-            upload.Add(new StringContent(AttachmentOwnerType.Workspace.ToString()), "OwnerType");
+            upload.Add(new StringContent(nameof(AttachmentOwnerType.Workspace)), "OwnerType");
             upload.Add(new StringContent(data.WorkspaceB.Id.ToString("D")), "OwnerId");
             var file = new ByteArrayContent("file"u8.ToArray());
             file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
@@ -1062,7 +1062,7 @@ public sealed class HttpTenantIsolationTests
 
         using (var upload = new MultipartFormDataContent())
         {
-            upload.Add(new StringContent(AttachmentOwnerType.Workspace.ToString()), "OwnerType");
+            upload.Add(new StringContent(nameof(AttachmentOwnerType.Workspace)), "OwnerType");
             upload.Add(new StringContent(data.WorkspaceB.Id.ToString("D")), "OwnerId");
             var file = new ByteArrayContent("batch-selection"u8.ToArray());
             file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
@@ -1134,7 +1134,7 @@ public sealed class HttpTenantIsolationTests
 
         using (var upload = new MultipartFormDataContent())
         {
-            upload.Add(new StringContent(AttachmentOwnerType.Workspace.ToString()), "OwnerType");
+            upload.Add(new StringContent(nameof(AttachmentOwnerType.Workspace)), "OwnerType");
             upload.Add(new StringContent(data.WorkspaceB.Id.ToString("D")), "OwnerId");
             var file = new ByteArrayContent("sharing boundary"u8.ToArray());
             file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
