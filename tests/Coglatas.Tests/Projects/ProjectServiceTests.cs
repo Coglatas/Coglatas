@@ -2605,17 +2605,17 @@ public sealed class ProjectServiceTests
         public List<Comment> Comments { get; } = [];
         public List<WorkItemCollaborator> Collaborators { get; } = [];
         public List<WorkItemWatchState> Watches { get; } = [];
-        private readonly object memberLookupSync = new();
-        private readonly TaskCompletionSource firstMemberLookupEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly TaskCompletionSource releaseMemberLookups = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private int activeMemberLookups;
+        private readonly object _memberLookupSync = new();
+        private readonly TaskCompletionSource _firstMemberLookupEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _releaseMemberLookups = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _activeMemberLookups;
         public bool BlockMemberLookups { get; set; }
-        public Task FirstMemberLookupEntered => firstMemberLookupEntered.Task;
+        public Task FirstMemberLookupEntered => _firstMemberLookupEntered.Task;
         public int MaxConcurrentMemberLookups { get; private set; }
         public int ListTaskIdsWithArtifactsCallCount { get; private set; }
         public int ListActivatableProjectIdsCallCount { get; private set; }
         public Func<Guid, Project, bool>? ActivationEligibility { get; set; }
-        public void ReleaseMemberLookups() => releaseMemberLookups.TrySetResult();
+        public void ReleaseMemberLookups() => _releaseMemberLookups.TrySetResult();
 
         public Task<IReadOnlyList<Project>> ListVisibleAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Project>>(ProjectItems.Values.Where(project => Members.Any(member => member.ProjectId == project.Id && member.UserId == userId)).ToList());
         public Task<IReadOnlyList<Guid>> ListActivatableProjectIdsAsync(Guid userId, IReadOnlyCollection<Guid> projectIds, CancellationToken cancellationToken = default)
@@ -2642,21 +2642,21 @@ public sealed class ProjectServiceTests
                 return Members.FirstOrDefault(member => member.ProjectId == projectId && member.UserId == userId);
             }
 
-            var active = Interlocked.Increment(ref activeMemberLookups);
-            lock (memberLookupSync)
+            var active = Interlocked.Increment(ref _activeMemberLookups);
+            lock (_memberLookupSync)
             {
                 MaxConcurrentMemberLookups = Math.Max(MaxConcurrentMemberLookups, active);
             }
 
-            firstMemberLookupEntered.TrySetResult();
+            _firstMemberLookupEntered.TrySetResult();
             try
             {
-                await releaseMemberLookups.Task.WaitAsync(cancellationToken);
+                await _releaseMemberLookups.Task.WaitAsync(cancellationToken);
                 return Members.FirstOrDefault(member => member.ProjectId == projectId && member.UserId == userId);
             }
             finally
             {
-                Interlocked.Decrement(ref activeMemberLookups);
+                Interlocked.Decrement(ref _activeMemberLookups);
             }
         }
         public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ProjectMember>>(Members.Where(member => member.ProjectId == projectId).ToList());
