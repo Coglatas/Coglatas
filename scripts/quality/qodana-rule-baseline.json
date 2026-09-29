@@ -61,7 +61,7 @@
     "RedundantSwitchExpressionArms": 7,
     "RedundantTypeArgumentsOfMethod": 11,
     "RedundantTypeDeclarationBody": 3,
-    "RedundantUsingDirective": 70,
+    "RedundantUsingDirective": 62,
     "ReplaceWithFieldKeyword": 3,
     "ReturnTypeCanBeNotNullable": 59,
     "ShortLivedHttpClient": 0,
