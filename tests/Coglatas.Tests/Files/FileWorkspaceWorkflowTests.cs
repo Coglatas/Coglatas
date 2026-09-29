@@ -117,11 +117,11 @@ public sealed class FileWorkspaceWorkflowTests
                 UnitOfWork);
         }
 
-        public Guid TenantId { get; } = Guid.NewGuid();
+        private Guid TenantId { get; } = Guid.NewGuid();
         public Guid WorkspaceId { get; } = Guid.NewGuid();
-        public Guid UserId { get; } = Guid.NewGuid();
+        private Guid UserId { get; } = Guid.NewGuid();
         public FakeFileRepository Files { get; } = new();
-        public FakeFileDownloadGrantRepository Grants { get; } = new();
+        private FakeFileDownloadGrantRepository Grants { get; } = new();
         public FakeStorage Storage { get; } = new();
         public FakeAuthorization Authorization { get; } = new();
         public FakeUnitOfWork UnitOfWork { get; } = new();
