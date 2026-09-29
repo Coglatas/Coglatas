@@ -20,7 +20,7 @@ test('COMPAT-01 defines opt-in Chromium, Firefox, and WebKit desktop projects', 
   assert.match(config, /\.\.\.compatOnlyDesktopProjects/u);
 });
 
-test('COMPAT-01 PR matrix isolates every engine and uses one critical profile', () => {
+test('COMPAT-01 main matrix isolates every engine and uses one critical profile', () => {
   const entries = [
     ['chromium', 'chromium-desktop', 'chromium'],
     ['firefox', 'firefox-desktop', 'firefox'],
@@ -35,6 +35,10 @@ test('COMPAT-01 PR matrix isolates every engine and uses one critical profile', 
     assert.match(workflow, entry);
   }
 
+  assert.match(
+    workflow,
+    /compat-browser-engine:\s+if: github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/u
+  );
   assert.match(workflow, /fail-fast: false/u);
   assert.match(workflow, /name: compat-\$\{\{ matrix\.engine \}\}/u);
   assert.match(
