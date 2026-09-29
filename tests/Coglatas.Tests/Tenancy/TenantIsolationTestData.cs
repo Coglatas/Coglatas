@@ -39,7 +39,6 @@ internal sealed class TenantIsolationTestData
     public Message MessageB { get; private init; } = null!;
     public Announcement AnnouncementA { get; private init; } = null!;
     public Announcement AnnouncementB { get; private init; } = null!;
-    public Notification NotificationA { get; private init; } = null!;
     public Notification NotificationB { get; private init; } = null!;
 
     public static async Task<TenantIsolationTestData> SeedAsync(AppDbContext dbContext, CurrentTenantService currentTenant)
@@ -208,7 +207,6 @@ internal sealed class TenantIsolationTestData
             MessageB = messageB,
             AnnouncementA = announcementA,
             AnnouncementB = announcementB,
-            NotificationA = notificationA,
             NotificationB = notificationB
         };
     }
