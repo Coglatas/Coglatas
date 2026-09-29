@@ -889,7 +889,7 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
             var gate = new CandidateFenceGate();
             var generation = GenerateClaimAsync(database, graph.Tenant, claim, gate);
             await gate.WaitForArrivalAsync();
-            var mutationCommittedBeforeGeneration = false;
+            bool mutationCommittedBeforeGeneration;
             try
             {
                 mutationCommittedBeforeGeneration = await TryMutateWithLockTimeoutAsync(
@@ -1014,7 +1014,7 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
             var gate = new CandidateFenceGate();
             var generation = GenerateClaimAsync(database, graph.Tenant, claim, gate);
             await gate.WaitForArrivalAsync();
-            var mutationCommittedBeforeGeneration = false;
+            bool mutationCommittedBeforeGeneration;
             try
             {
                 mutationCommittedBeforeGeneration = await TryMutateWithLockTimeoutAsync(
@@ -1447,7 +1447,7 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
         var generation = GenerateClaimAsync(database, graph.Tenant, claim, gate);
         await gate.WaitForArrivalAsync();
 
-        var mutationCommittedBeforeGeneration = false;
+        bool mutationCommittedBeforeGeneration;
         try
         {
             mutationCommittedBeforeGeneration = await TryMutateWithLockTimeoutAsync(
@@ -1756,15 +1756,15 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
                 secondFence);
 
             var expiryProbeClaimCounts = new List<int>(expiryProbeCount);
-            TaskDeadlineDigestJobStatus secondJobStatusDuringProbe = default;
-            TaskDeadlineDigestAttemptStatus secondAttemptStatusDuringProbe = default;
-            Guid? secondClaimTokenDuringProbe = null;
-            var secondAttemptCountDuringProbe = 0;
-            var secondAutomaticAttemptCountDuringProbe = 0;
-            var secondAttemptRowCountDuringProbe = 0;
-            var expiredAttemptCountDuringProbe = 0;
-            var secondClaimExpiresBeforeProbe = false;
-            var secondGenerationCompletedBeforeFirstRelease = false;
+            TaskDeadlineDigestJobStatus secondJobStatusDuringProbe;
+            TaskDeadlineDigestAttemptStatus secondAttemptStatusDuringProbe;
+            Guid? secondClaimTokenDuringProbe;
+            int secondAttemptCountDuringProbe;
+            int secondAutomaticAttemptCountDuringProbe;
+            int secondAttemptRowCountDuringProbe;
+            int expiredAttemptCountDuringProbe;
+            bool secondClaimExpiresBeforeProbe;
+            bool secondGenerationCompletedBeforeFirstRelease;
             var probeNow = Now.AddSeconds(2);
 
             try
@@ -1841,7 +1841,7 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
                 .Where(attempt => attempt.JobId == secondJob.Id)
                 .ToListAsync();
             var allAttempts = await verification.TaskDeadlineDigestAttempts.AsNoTracking()
-                .Where(attempt => jobIds.Contains(attempt.JobId))
+                .Where(attempt => Enumerable.Contains(jobIds, attempt.JobId))
                 .ToListAsync();
             var notifications = await verification.Notifications.AsNoTracking()
                 .OrderBy(notification => notification.StateVersion)
@@ -1887,10 +1887,10 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
         var jobIds = claims.Select(claim => claim.JobId).ToArray();
         await using var verification = CreateTenantContext(database, tenant);
         var jobs = await verification.TaskDeadlineDigestJobs.AsNoTracking()
-            .Where(job => jobIds.Contains(job.Id))
+            .Where(job => Enumerable.Contains(jobIds, job.Id))
             .ToListAsync();
         var attempts = await verification.TaskDeadlineDigestAttempts.AsNoTracking()
-            .Where(attempt => jobIds.Contains(attempt.JobId))
+            .Where(attempt => Enumerable.Contains(jobIds, attempt.JobId))
             .ToListAsync();
 
         Assert.Equal(claims.Count, jobs.Count);
@@ -1935,7 +1935,7 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
             gate,
             usePersistedFeatureFlags: true);
         await gate.WaitForArrivalAsync();
-        var mutationCommittedBeforeGeneration = false;
+        bool mutationCommittedBeforeGeneration;
         try
         {
             mutationCommittedBeforeGeneration = await TryMutateWithLockTimeoutAsync(

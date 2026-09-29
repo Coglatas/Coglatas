@@ -965,7 +965,7 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
                 await LegacyCandidateConversationIds().Take(100).ToListAsync());
             var tiedMessageIds = tiedMessages.Select(message => message.Id).ToArray();
             var expectedTiedOrder = await db.Messages
-                .Where(message => tiedMessageIds.Contains(message.Id))
+                .Where(message => Enumerable.Contains(tiedMessageIds, message.Id))
                 .OrderBy(message => message.Id)
                 .Select(message => message.Id)
                 .ToListAsync();

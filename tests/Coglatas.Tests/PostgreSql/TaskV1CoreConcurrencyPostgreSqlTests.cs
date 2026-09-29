@@ -668,7 +668,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
                 await AssertDeltaAsync(verify.Db, before, graph.Task.Id, "TaskCommentDeleted", 1, 1);
             }
             var commentActions = new[] { "TaskCommentCreated", "TaskCommentUpdated", "TaskCommentDeleted" };
-            var audit = await verify.Db.AuditLogs.Where(log => log.EntityId == graph.Task.Id && commentActions.Contains(log.Action)).ToListAsync();
+            var audit = await verify.Db.AuditLogs.Where(log => log.EntityId == graph.Task.Id && Enumerable.Contains(commentActions, log.Action)).ToListAsync();
             Assert.All(audit, log => Assert.DoesNotContain("sensitive", $"{log.Summary} {log.MetadataJson}", StringComparison.OrdinalIgnoreCase));
         }
 
@@ -2507,7 +2507,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
     private sealed class SaveRaceCoordinator : IDisposable
     {
-        private readonly object _gate = new();
+        private readonly System.Threading.Lock _gate = new();
         private TaskCompletionSource? _release;
         private TaskCompletionSource? _singleWriterArrival;
         private TaskCompletionSource? _singleWriterRelease;
@@ -2572,7 +2572,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
         public async Task WaitBeforeSaveAsync(CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref _saveCallCount);
-            Task? wait = null;
+            Task wait;
             lock (_gate)
             {
                 if (_singleWriterHoldArmed)

@@ -1065,7 +1065,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
     private sealed class SaveRaceCoordinator : IDisposable
     {
-        private readonly object _gate = new();
+        private readonly System.Threading.Lock _gate = new();
         private TaskCompletionSource? _release;
         private bool _armed;
         private int _remaining;
@@ -1085,7 +1085,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
         public async Task WaitBeforeSaveAsync(CancellationToken cancellationToken)
         {
-            Task? wait = null;
+            Task wait;
             lock (_gate)
             {
                 if (!_armed)

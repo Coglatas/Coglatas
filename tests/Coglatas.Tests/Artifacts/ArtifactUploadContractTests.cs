@@ -43,7 +43,7 @@ public sealed class ArtifactUploadContractTests
         var services = new ServiceCollection();
         services.Configure<JsonOptions>(options =>
             options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
-        using var serviceProvider = services.BuildServiceProvider();
+        await using var serviceProvider = services.BuildServiceProvider();
         var context = new OpenApiOperationTransformerContext
         {
             DocumentName = "v1",

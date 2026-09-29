@@ -257,7 +257,6 @@ public sealed class CommunicationPollingServiceTests
         public CommunicationPollingService Service { get; }
         public bool IncludeRemovedConversationsInList
         {
-            get => Messaging.IncludeRemovedConversationsInList;
             set => Messaging.IncludeRemovedConversationsInList = value;
         }
 
