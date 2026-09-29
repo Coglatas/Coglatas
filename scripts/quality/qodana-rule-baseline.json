@@ -34,7 +34,7 @@
     "MemberCanBePrivate.Global": 38,
     "MemberCanBePrivate.Local": 0,
     "MemberHidesStaticFromOuterClass": 3,
-    "MergeIntoPattern": 150,
+    "MergeIntoPattern": 132,
     "MethodHasAsyncOverload": 8,
     "MethodHasAsyncOverloadWithCancellation": 3,
     "NotAccessedField.Local": 0,
