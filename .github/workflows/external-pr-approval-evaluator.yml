@@ -1,246 +1,31 @@
 name: External PR approval evaluator
 
-# Trusted default-branch evaluator. Ordinary CI and automated commit signing run
-# before this workflow asks for human approval. The protected Environment is only
-# the final merge-authorization boundary and never rewrites the approved PR head.
+# Compatibility workflow only. External approval is no longer a PR merge gate.
 on:
   workflow_run:
-    workflows: ["External PR review signal", "CI", "Publication Readiness"]
+    workflows: ["External PR review signal"]
     types: [completed]
   workflow_dispatch:
     inputs:
       pr_number:
-        description: Pull request number to evaluate for human merge approval
-        required: true
+        description: Compatibility input; no approval status is published
+        required: false
         type: string
 
 permissions: {}
 
 concurrency:
-  group: human-merge-approval-${{ github.event.workflow_run.pull_requests[0].number || inputs.pr_number || github.run_id }}
+  group: external-pr-approval-compat-${{ github.event.workflow_run.id || inputs.pr_number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  resolve:
-    name: Verify signed head and required CI
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      checks: read
-      contents: read
-      pull-requests: read
-      statuses: read
-    outputs:
-      pr_number: ${{ steps.resolve.outputs.pr_number }}
-      head_sha: ${{ steps.resolve.outputs.head_sha }}
-      head_branch: ${{ steps.resolve.outputs.head_branch }}
-      base_sha: ${{ steps.resolve.outputs.base_sha }}
-      ready: ${{ steps.resolve.outputs.ready }}
-      already_approved: ${{ steps.resolve.outputs.already_approved }}
-
-    steps:
-      - name: Resolve exact PR head and gate on required CI
-        id: resolve
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EVENT_NAME: ${{ github.event_name }}
-          RUN_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
-          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
-        run: |
-          set -euo pipefail
-
-          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            pr_number="$INPUT_PR_NUMBER"
-          else
-            pr_number="$RUN_PR_NUMBER"
-          fi
-
-          if [[ -z "$pr_number" || "$pr_number" == "null" ]]; then
-            echo "No pull request is associated with the triggering workflow run." >&2
-            exit 1
-          fi
-
-          pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr_number")"
-          state="$(jq -r '.state' <<<"$pr_json")"
-          draft="$(jq -r '.draft' <<<"$pr_json")"
-          base_ref="$(jq -r '.base.ref' <<<"$pr_json")"
-          base_sha="$(jq -r '.base.sha' <<<"$pr_json")"
-          head_sha="$(jq -r '.head.sha' <<<"$pr_json")"
-          head_branch="$(jq -r '.head.ref' <<<"$pr_json")"
-          head_repo="$(jq -r '.head.repo.full_name // empty' <<<"$pr_json")"
-
-          [[ "$state" == "open" ]] || { echo "PR #$pr_number is not open." >&2; exit 1; }
-          [[ "$draft" == "false" ]] || { echo "PR #$pr_number is still draft." >&2; exit 1; }
-          [[ "$base_ref" == "main" ]] || { echo "PR #$pr_number does not target main." >&2; exit 1; }
-          [[ "$head_repo" == "$GITHUB_REPOSITORY" ]] || {
-            echo "Human merge approval is limited to same-repository PR branches." >&2
-            exit 1
-          }
-          [[ "$head_sha" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid PR head SHA." >&2; exit 1; }
-          [[ "$base_sha" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid PR base SHA." >&2; exit 1; }
-
-          already_approved="$(
-            gh api "repos/$GITHUB_REPOSITORY/commits/$head_sha/status" \
-              --jq '[.statuses[] | select(.context == "External PR approval policy" and .state == "success")] | length > 0'
-          )"
-
-          verification_states="$(
-            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$pr_number/commits?per_page=100" \
-              --jq '.[].commit.verification.verified'
-          )"
-          [[ -n "$verification_states" ]] || {
-            echo "PR #$pr_number contains no commits to evaluate." >&2
-            exit 1
-          }
-
-          all_verified=true
-          if grep -qx 'false' <<<"$verification_states"; then
-            all_verified=false
-          fi
-
-          checks_json="$(
-            gh api -H "Accept: application/vnd.github+json" \
-              "repos/$GITHUB_REPOSITORY/commits/$head_sha/check-runs?filter=latest&per_page=100"
-          )"
-
-          required_checks=(build-test frontend-test security-scan publication-readiness)
-          all_required_green=true
-
-          for check_name in "${required_checks[@]}"; do
-            state="$(
-              jq -r --arg name "$check_name" '
-                [.check_runs[]
-                  | select(.name == $name and .app.slug == "github-actions")] |
-                if length == 0 then
-                  "missing"
-                else
-                  sort_by(.started_at // .created_at // "") |
-                  last |
-                  "\(.status):\(.conclusion // "")"
-                end
-              ' <<<"$checks_json"
-            )"
-            echo "$check_name => $state"
-            if [[ "$state" != "completed:success" ]]; then
-              all_required_green=false
-            fi
-          done
-
-          ready=false
-          if [[ "$already_approved" != "true" && "$all_verified" == "true" && "$all_required_green" == "true" ]]; then
-            ready=true
-          fi
-
-          echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
-          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
-          echo "head_branch=$head_branch" >> "$GITHUB_OUTPUT"
-          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
-          echo "ready=$ready" >> "$GITHUB_OUTPUT"
-          echo "already_approved=$already_approved" >> "$GITHUB_OUTPUT"
-
-          if [[ "$already_approved" == "true" ]]; then
-            echo "Exact PR head is already human-approved."
-          elif [[ "$all_verified" != "true" ]]; then
-            echo "PR head is not fully GitHub Verified yet; auto-signing must finish first."
-          elif [[ "$all_required_green" != "true" ]]; then
-            echo "Required CI is not fully green yet; human approval is not requested."
-          else
-            echo "Signed exact head has all required CI green; human approval may be requested."
-          fi
-
   evaluate:
-    name: Human merge approval
-    needs: resolve
-    if: ${{ needs.resolve.outputs.ready == 'true' }}
+    name: External PR approval evaluator
     runs-on: ubuntu-latest
     timeout-minutes: 12
-    environment:
-      name: human-merge-approval
-    permissions:
-      checks: read
-      contents: read
-      pull-requests: read
-      statuses: write
-
     steps:
-      - name: Revalidate exact signed head and required CI after approval
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
-          EXPECTED_HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
-          EXPECTED_HEAD_BRANCH: ${{ needs.resolve.outputs.head_branch }}
-          EXPECTED_BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
+      - name: Governance approval gate retired
         run: |
-          set -euo pipefail
-
-          pr_json="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
-          state="$(jq -r '.state' <<<"$pr_json")"
-          draft="$(jq -r '.draft' <<<"$pr_json")"
-          base_ref="$(jq -r '.base.ref' <<<"$pr_json")"
-          base_sha="$(jq -r '.base.sha' <<<"$pr_json")"
-          current_head_sha="$(jq -r '.head.sha' <<<"$pr_json")"
-          current_head_branch="$(jq -r '.head.ref' <<<"$pr_json")"
-          head_repo="$(jq -r '.head.repo.full_name // empty' <<<"$pr_json")"
-
-          [[ "$state" == "open" ]] || { echo "PR #$PR_NUMBER is not open." >&2; exit 1; }
-          [[ "$draft" == "false" ]] || { echo "PR #$PR_NUMBER is draft." >&2; exit 1; }
-          [[ "$base_ref" == "main" ]] || { echo "PR #$PR_NUMBER no longer targets main." >&2; exit 1; }
-          [[ "$head_repo" == "$GITHUB_REPOSITORY" ]] || { echo "PR head moved to a fork." >&2; exit 1; }
-          [[ "$current_head_sha" == "$EXPECTED_HEAD_SHA" ]] || {
-            echo "PR head changed while human approval was pending; a fresh approval is required." >&2
-            exit 1
-          }
-          [[ "$current_head_branch" == "$EXPECTED_HEAD_BRANCH" ]] || {
-            echo "PR branch changed while human approval was pending." >&2
-            exit 1
-          }
-          [[ "$base_sha" == "$EXPECTED_BASE_SHA" ]] || {
-            echo "PR base changed while human approval was pending; a fresh approval is required." >&2
-            exit 1
-          }
-
-          verification_states="$(
-            gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/commits?per_page=100" \
-              --jq '.[].commit.verification.verified'
-          )"
-          [[ -n "$verification_states" ]] || { echo "PR contains no commits." >&2; exit 1; }
-          if grep -qx 'false' <<<"$verification_states"; then
-            echo "One or more PR commits are not GitHub Verified." >&2
-            exit 1
-          fi
-
-          checks_json="$(
-            gh api -H "Accept: application/vnd.github+json" \
-              "repos/$GITHUB_REPOSITORY/commits/$EXPECTED_HEAD_SHA/check-runs?filter=latest&per_page=100"
-          )"
-
-          required_checks=(build-test frontend-test security-scan publication-readiness)
-          for check_name in "${required_checks[@]}"; do
-            state="$(
-              jq -r --arg name "$check_name" '
-                [.check_runs[]
-                  | select(.name == $name and .app.slug == "github-actions")] |
-                if length == 0 then
-                  "missing"
-                else
-                  sort_by(.started_at // .created_at // "") |
-                  last |
-                  "\(.status):\(.conclusion // "")"
-                end
-              ' <<<"$checks_json"
-            )"
-            [[ "$state" == "completed:success" ]] || {
-              echo "Required check $check_name is not success on the approved head: $state" >&2
-              exit 1
-            }
-          done
-
-          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$EXPECTED_HEAD_SHA" \
-            -f state=success \
-            -f context="External PR approval policy" \
-            -f description="Human merge approval granted for this exact signed CI-green head"
-
-          echo "Human merge approval recorded for PR #$PR_NUMBER at $EXPECTED_HEAD_SHA."
+          echo "External PR approval is no longer a required merge status."
+          echo "Default-branch write authority is enforced by native GitHub repository permissions and owner-only rulesets."
+          echo "This workflow remains temporarily for required-check registry compatibility and publishes no commit status."
