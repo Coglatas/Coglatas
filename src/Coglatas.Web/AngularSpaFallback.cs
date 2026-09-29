@@ -1,5 +1,4 @@
 using Coglatas.Web.Models;
-using Microsoft.AspNetCore.Builder;
 
 namespace Coglatas.Web;
 
