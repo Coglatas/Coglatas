@@ -237,7 +237,7 @@ public sealed class Wpc02ECanonicalRedactionProjectionTests
         });
         var httpContext = new DefaultHttpContext
         {
-            Request = { Method = HttpMethods.Post Path = "/api/workspaces/capabilities" ContentType = "text/plain" }
+            Request = { Method = HttpMethods.Post, Path = "/api/workspaces/capabilities", ContentType = "text/plain" }
         };
 
         await middleware.InvokeAsync(httpContext);
