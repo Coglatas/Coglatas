@@ -104,6 +104,7 @@ public sealed class InvalidModelStateResponseFactoryTests
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         var details = Assert.IsType<ValidationProblemDetails>(badRequest.Value);
         Assert.Equal("The supplied value is invalid.", Assert.Single(details.Errors["WorkspaceId"]));
+        Assert.True(details.Extensions.ContainsKey("traceId"));
         Assert.DoesNotContain(
             scannerPayload,
             System.Text.Json.JsonSerializer.Serialize(details),
