@@ -349,17 +349,17 @@ public sealed class AdminServiceTests
 
         public Task<int> CountSystemAdminsAsync(CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(Users.Values.Count(user => user.SystemRole == SystemRole.SystemAdmin && user.Status == UserStatus.Active && !user.DeletedAt.HasValue));
+            return Task.FromResult(Users.Values.Count(user => user is { SystemRole: SystemRole.SystemAdmin, Status: UserStatus.Active, DeletedAt: null }));
         }
 
         public Task<int> CountSystemAdminsExcludingAsync(Guid userId, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(Users.Values.Count(user => user.Id != userId && user.SystemRole == SystemRole.SystemAdmin && user.Status == UserStatus.Active && !user.DeletedAt.HasValue));
+            return Task.FromResult(Users.Values.Count(user => user.Id != userId && user is { SystemRole: SystemRole.SystemAdmin, Status: UserStatus.Active, DeletedAt: null }));
         }
 
         public Task<IReadOnlyList<Guid>> ListActiveSystemAdminIdsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<Guid>>(Users.Values
-                .Where(user => user.SystemRole == SystemRole.SystemAdmin && user.Status == UserStatus.Active && !user.DeletedAt.HasValue)
+                .Where(user => user is { SystemRole: SystemRole.SystemAdmin, Status: UserStatus.Active, DeletedAt: null })
                 .Select(user => user.Id)
                 .ToArray());
 

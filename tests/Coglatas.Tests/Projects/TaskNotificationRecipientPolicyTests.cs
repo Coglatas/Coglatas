@@ -492,7 +492,7 @@ public sealed class TaskNotificationRecipientPolicyTests
 
         public Task<IReadOnlyList<User>> GetActiveByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<User>>(Items.Values
-                .Where(user => ids.Contains(user.Id) && user.Status == UserStatus.Active && !user.DeletedAt.HasValue)
+                .Where(user => ids.Contains(user.Id) && user is { Status: UserStatus.Active, DeletedAt: null })
                 .ToArray());
 
         public Task AddAsync(User user, CancellationToken cancellationToken = default)

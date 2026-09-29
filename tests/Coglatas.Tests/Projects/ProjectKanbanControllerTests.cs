@@ -23,7 +23,7 @@ public sealed class ProjectKanbanControllerTests
         };
         var method = typeof(ProjectKanbanController)
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(candidate => candidate.Name == "ToActionResult" && candidate.IsGenericMethod)
+            .Single(candidate => candidate is { Name: "ToActionResult", IsGenericMethod: true })
             .MakeGenericMethod(typeof(string));
 
         var action = Assert.IsAssignableFrom<IActionResult>(

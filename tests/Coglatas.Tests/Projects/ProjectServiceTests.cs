@@ -2323,8 +2323,7 @@ public sealed class ProjectServiceTests
         {
             Projects.ActivationEligibility = (userId, project) =>
                 Workspaces.Items.TryGetValue(project.WorkspaceId, out var workspace) &&
-                workspace.Status == WorkspaceStatus.Active &&
-                !workspace.DeletedAt.HasValue &&
+                workspace is { Status: WorkspaceStatus.Active, DeletedAt: null } &&
                 Workspaces.Members.Any(member =>
                     member.WorkspaceId == project.WorkspaceId &&
                     member.UserId == userId &&
@@ -2710,7 +2709,7 @@ public sealed class ProjectServiceTests
         public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(Items.GetValueOrDefault(id));
         public Task<User?> GetByNormalizedEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default) => Task.FromResult(Items.Values.FirstOrDefault(user => user.NormalizedEmail == normalizedEmail));
         public Task<IReadOnlyList<User>> GetActiveByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<User>>(Items.Values.Where(user => ids.Contains(user.Id) && user.Status == UserStatus.Active && user.DeletedAt is null).ToArray());
+            Task.FromResult<IReadOnlyList<User>>(Items.Values.Where(user => ids.Contains(user.Id) && user is { Status: UserStatus.Active, DeletedAt: null }).ToArray());
         public Task AddAsync(User user, CancellationToken cancellationToken = default) { Items[user.Id] = user; return Task.CompletedTask; }
     }
 
