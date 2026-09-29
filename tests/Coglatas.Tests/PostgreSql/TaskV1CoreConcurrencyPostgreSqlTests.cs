@@ -2507,7 +2507,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
     private sealed class SaveRaceCoordinator : IDisposable
     {
-        private readonly object _gate = new();
+        private readonly System.Threading.Lock _gate = new();
         private TaskCompletionSource? _release;
         private TaskCompletionSource? _singleWriterArrival;
         private TaskCompletionSource? _singleWriterRelease;

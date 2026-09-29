@@ -1543,7 +1543,7 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
     private sealed class HostedCommandCounter : DbCommandInterceptor
     {
-        private readonly object _sync = new();
+        private readonly System.Threading.Lock _sync = new();
         private readonly List<string> _commands = [];
         private bool _active;
 
