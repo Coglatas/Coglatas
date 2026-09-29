@@ -2230,7 +2230,7 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
         }
 
         await db.SaveChangesAsync();
-        return new WorkspaceGraph(workspace, project, task);
+        return new WorkspaceGraph(workspace);
     }
 
     private static async Task AddCategoryTasksAsync(string database, Graph graph)
@@ -2324,7 +2324,7 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
                 JoinedAt = Now
             });
         await db.SaveChangesAsync();
-        return new WorkspaceGraph(workspace, project, task);
+        return new WorkspaceGraph(workspace);
     }
 
     private static TaskItem NewTask(
@@ -2536,7 +2536,7 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
         User Actor,
         User Recipient);
 
-    private sealed record WorkspaceGraph(Workspace Workspace, Project Project, TaskItem Task);
+    private sealed record WorkspaceGraph(Workspace Workspace);
 
     private sealed record FeatureFlagSources(
         Plan EnabledPlan,

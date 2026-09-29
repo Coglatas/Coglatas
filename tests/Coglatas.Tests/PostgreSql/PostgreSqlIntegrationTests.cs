@@ -279,7 +279,6 @@ public sealed class PostgreSqlIntegrationTests
         Group Group,
         Channel Channel,
         Post Post,
-        Conversation Conversation,
         Message Message,
         Project Project,
         TaskItem Task,
@@ -349,7 +348,7 @@ public sealed class PostgreSqlIntegrationTests
         dbContext.FileObjects.Add(fileObject);
         dbContext.Attachments.Add(attachment);
         await dbContext.SaveChangesAsync();
-        return new SearchGraph(workspace, group, channel, post, conversation, message, project, task, artifact, fileObject, attachment);
+        return new SearchGraph(workspace, group, channel, post, message, project, task, artifact, fileObject, attachment);
     }
 
     private static User NewUser(string email, string displayName) => new()

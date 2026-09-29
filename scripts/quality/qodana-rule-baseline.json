@@ -39,7 +39,7 @@
     "MethodHasAsyncOverloadWithCancellation": 3,
     "NotAccessedField.Local": 0,
     "NotAccessedPositionalProperty.Global": 1173,
-    "NotAccessedPositionalProperty.Local": 47,
+    "NotAccessedPositionalProperty.Local": 41,
     "NotAccessedPrimaryConstructorParameterCompiler": 1,
     "NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract": 0,
     "ParameterHidesMember": 0,

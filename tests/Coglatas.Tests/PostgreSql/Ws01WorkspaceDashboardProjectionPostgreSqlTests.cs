@@ -707,7 +707,6 @@ public sealed class Ws01WorkspaceDashboardProjectionPostgreSqlTests
 
         return new DashboardGraph(
             tenantA,
-            tenantB,
             actor,
             singleWorkspaceUser,
             revokedUser,
@@ -952,7 +951,6 @@ public sealed class Ws01WorkspaceDashboardProjectionPostgreSqlTests
 
     private sealed record DashboardGraph(
         Tenant TenantA,
-        Tenant TenantB,
         User Actor,
         User SingleWorkspaceUser,
         User RevokedUser,
