@@ -568,7 +568,7 @@ public sealed class CanonicalTaskCreateService(
         NormalizedTaskCreateRequest request)
     {
         var policy = request.TaskOverridePolicy;
-        var canonical = string.Join("|", [
+        var canonical = string.Join("|",
             projectId.ToString("N"),
             EncodeFingerprintPart(request.Title),
             EncodeFingerprintPart(request.Description),
@@ -583,7 +583,7 @@ public sealed class CanonicalTaskCreateService(
             ((int)request.SourceScopeMode).ToString(CultureInfo.InvariantCulture),
             policy is null ? string.Empty : policy.WebEnabled ? "1" : "0",
             policy is null ? string.Empty : policy.ProjectFilesEnabled ? "1" : "0"
-        ]);
+        );
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
 
