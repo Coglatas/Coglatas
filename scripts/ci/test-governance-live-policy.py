@@ -18,7 +18,9 @@ def policy_fixture():
     return {
         "version": 1,
         "policy_id": "COGLATAS-GOVERNANCE",
-        "repository": "Coglatas/Coglatas",
+        "repository": "NYGsatoshi/Coglatas",
+        "repository_id": 1261244608,
+        "repository_aliases": ["Coglatas/Coglatas", "NYGsatoshi/Coglatas"],
         "default_branch": "main",
         "controls": [
             {
@@ -88,6 +90,7 @@ def live_fixture():
     ]
     return {
         "repository": {
+            "id": 1261244608,
             "full_name": "Coglatas/Coglatas",
             "default_branch": "main",
         },
@@ -190,6 +193,28 @@ class GovernanceLivePolicyTests(unittest.TestCase):
         self.assertEqual("PASS", report["status"])
         self.assertEqual([], report["findings"])
         self.assertEqual(64, len(report["snapshot_sha256"]))
+
+    def test_post_transfer_repository_name_passes_with_same_id(self):
+        live = live_fixture()
+        live["repository"]["full_name"] = "NYGsatoshi/Coglatas"
+        for ruleset in live["rulesets"]:
+            if ruleset.get("source") == "Coglatas/Coglatas":
+                ruleset["source"] = "NYGsatoshi/Coglatas"
+        self.assertEqual("PASS", self.evaluate(live)["status"])
+
+    def test_wrong_repository_id_fails(self):
+        live = live_fixture()
+        live["repository"]["id"] = 999999999
+        self.assertIn(
+            "REPOSITORY_ID_MISMATCH", self.codes(self.evaluate(live))
+        )
+
+    def test_unrecognized_repository_name_fails(self):
+        live = live_fixture()
+        live["repository"]["full_name"] = "someone-else/Coglatas"
+        self.assertIn(
+            "REPOSITORY_NAME_NOT_ALLOWED", self.codes(self.evaluate(live))
+        )
 
     def test_required_ruleset_disabled_fails(self):
         live = live_fixture()
