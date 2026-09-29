@@ -18,7 +18,7 @@ public sealed class AnnouncementDraftServiceTests
     [Fact]
     public async Task ApplicationOnlyCompositionProvidesFailClosedDraftPersistence()
     {
-        using var provider = new ServiceCollection()
+        await using var provider = new ServiceCollection()
             .AddApplication()
             .BuildServiceProvider();
         using var scope = provider.CreateScope();
