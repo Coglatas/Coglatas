@@ -28,9 +28,9 @@ public sealed class TaskV1PersistenceTests
                      nameof(TaskItem.BriefConstraints)
                  })
         {
-            var property = entity!.FindProperty(propertyName);
+            var property = entity.FindProperty(propertyName);
             Assert.NotNull(property);
-            Assert.True(property!.IsNullable);
+            Assert.True(property.IsNullable);
             Assert.Equal(TaskBriefText.MaximumFieldLength, property.GetMaxLength());
             Assert.DoesNotContain(entity.GetIndexes(), index => index.Properties.Contains(property));
         }
