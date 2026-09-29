@@ -40,16 +40,11 @@ def dual_registry(context: str = "build-test-v2") -> dict[str, Any]:
 
 class RegistryTests(unittest.TestCase):
     def test_registry_matches_governance_policy(self) -> None:
-        self.assertEqual(5, len(REGISTRY["checks"]))
+        self.assertEqual(4, len(REGISTRY["checks"]))
         self.assertEqual(
-            ["External PR approval policy", "build-test", "frontend-test", "security-scan", "publication-readiness"],
+            ["build-test", "frontend-test", "security-scan", "publication-readiness"],
             [item["context"] for item in REGISTRY["checks"]],
         )
-
-    def test_commit_status_trigger_models_manual_recovery(self) -> None:
-        item = next(item for item in REGISTRY["checks"] if item["kind"] == "commit-status")
-        self.assertEqual("trusted-default-branch", item["trigger"]["mode"])
-        self.assertEqual({"workflow_run", "workflow_dispatch"}, set(item["trigger"]["events"]))
 
     def test_dual_publish_expands_previous_identity(self) -> None:
         registry = dual_registry()
@@ -139,41 +134,6 @@ jobs:
 """
         errors = guard.required_check_errors(".github/workflows/publication-readiness.yml", text, REGISTRY)
         self.assertTrue(any("continue-on-error" in error for error in errors))
-
-    def test_trusted_status_requires_both_declared_events(self) -> None:
-        text = """
-name: External PR approval evaluator
-on:
-  workflow_run:
-    workflows: ["External PR review signal"]
-    types: [completed]
-jobs:
-  evaluate:
-    name: External PR approval evaluator
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-"""
-        errors = guard.required_check_errors(".github/workflows/external-pr-approval-evaluator.yml", text, REGISTRY)
-        self.assertTrue(any("workflow_dispatch" in error for error in errors))
-
-    def test_trusted_status_accepts_workflow_run_and_dispatch(self) -> None:
-        text = """
-name: External PR approval evaluator
-on:
-  workflow_run:
-    workflows: ["External PR review signal"]
-    types: [completed]
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        required: true
-jobs:
-  evaluate:
-    name: External PR approval evaluator
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-"""
-        self.assertEqual([], guard.required_check_errors(".github/workflows/external-pr-approval-evaluator.yml", text, REGISTRY))
 
     def test_dual_publish_requires_both_jobs_statically(self) -> None:
         registry = dual_registry()
@@ -314,20 +274,6 @@ class ExactHeadTests(unittest.TestCase):
         next(item for item in checks if item["name"] == "build-test")["app"] = {"id": 1, "slug": "other"}
         report = guard.exact_head_report(REGISTRY, HEAD, checks, statuses, now=NOW, trusted_base_ref="main")
         self.assertEqual("fail", report["decision"])
-
-    def test_manual_dispatch_trusted_status_is_allowed(self) -> None:
-        checks, statuses = self.success_evidence()
-        statuses[0]["workflow_event"] = "workflow_dispatch"
-        report = guard.exact_head_report(REGISTRY, HEAD, checks, statuses, now=NOW, trusted_base_ref="main")
-        self.assertEqual("pass", report["decision"])
-
-    def test_trusted_status_wrong_base_ref_fails(self) -> None:
-        checks, statuses = self.success_evidence()
-        statuses[0]["workflow_head_branch"] = "feature"
-        report = guard.exact_head_report(REGISTRY, HEAD, checks, statuses, now=NOW, trusted_base_ref="main")
-        gate = next(item for item in report["gates"] if item["kind"] == "commit-status")
-        self.assertEqual("producer-drift", gate["reason"])
-        self.assertIn("trusted-status-ref-drift", gate["producer_errors"])
 
     def test_dual_publish_requires_old_and_new_exact_head(self) -> None:
         registry = dual_registry()

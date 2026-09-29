@@ -165,8 +165,13 @@ def normalize_live_state(live_state: dict[str, Any]) -> dict[str, Any]:
     branch = _require_object(live_state.get("branch"), "live.branch")
     rulesets = _require_array(live_state.get("rulesets"), "live.rulesets")
 
+    repository_id = repository.get("id")
     full_name = repository.get("full_name")
     default_branch = repository.get("default_branch")
+    if not isinstance(repository_id, int) or isinstance(repository_id, bool) or repository_id <= 0:
+        raise EvaluationError(
+            "live.repository.id must be a positive integer"
+        )
     if not isinstance(full_name, str) or not full_name:
         raise EvaluationError(
             "live.repository.full_name must be a non-empty string"
@@ -246,6 +251,7 @@ def normalize_live_state(live_state: dict[str, Any]) -> dict[str, Any]:
     )
     return {
         "repository": {
+            "id": repository_id,
             "full_name": full_name,
             "default_branch": default_branch,
         },
@@ -336,9 +342,22 @@ def evaluate_policy(
         _control(policy, control_id)
 
     repository = policy.get("repository")
+    repository_id = policy.get("repository_id")
+    repository_aliases = policy.get("repository_aliases")
     default_branch = policy.get("default_branch")
     if not isinstance(repository, str) or not repository:
         raise EvaluationError("policy.repository must be a non-empty string")
+    if not isinstance(repository_id, int) or isinstance(repository_id, bool) or repository_id <= 0:
+        raise EvaluationError("policy.repository_id must be a positive integer")
+    if (
+        not isinstance(repository_aliases, list)
+        or not repository_aliases
+        or not all(isinstance(item, str) and item for item in repository_aliases)
+        or repository not in repository_aliases
+    ):
+        raise EvaluationError(
+            "policy.repository_aliases must contain the canonical repository name"
+        )
     if not isinstance(default_branch, str) or not default_branch:
         raise EvaluationError(
             "policy.default_branch must be a non-empty string"
@@ -347,13 +366,22 @@ def evaluate_policy(
     snapshot = normalize_live_state(live_state)
     findings: list[dict[str, str]] = []
 
-    if snapshot["repository"]["full_name"] != repository:
+    if snapshot["repository"]["id"] != repository_id:
         findings.append(
             _finding(
                 "GOV-RULESET-001",
-                "REPOSITORY_MISMATCH",
-                f"expected repository {repository!r}, got "
-                f"{snapshot['repository']['full_name']!r}",
+                "REPOSITORY_ID_MISMATCH",
+                f"expected repository id {repository_id!r}, got "
+                f"{snapshot['repository']['id']!r}",
+            )
+        )
+    if snapshot["repository"]["full_name"] not in repository_aliases:
+        findings.append(
+            _finding(
+                "GOV-RULESET-001",
+                "REPOSITORY_NAME_NOT_ALLOWED",
+                f"repository name {snapshot['repository']['full_name']!r} is not "
+                f"one of the transfer-safe aliases {repository_aliases!r}",
             )
         )
     if snapshot["repository"]["default_branch"] != default_branch:
@@ -680,6 +708,7 @@ def evaluate_policy(
         "policy_id": policy.get("policy_id"),
         "policy_version": policy.get("version"),
         "repository": repository,
+        "repository_id": repository_id,
         "default_branch": default_branch,
         "target_sha": target_sha,
         "status_context": "GOV-RULESET-001",

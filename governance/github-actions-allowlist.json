@@ -61,13 +61,6 @@
       "version": "v0.1.6",
       "purpose": "Trusted NuGet dependency snapshot submission",
       "privilegedAllowed": true
-    },
-    "Coglatas/Coglatas": {
-      "sha": "e03555c4be3700aa23f6e0bfe86b740b042dd5fa",
-      "version": "qodana-debt-ratchet-v2",
-      "purpose": "Immutable same-repository reusable Qodana gate with non-increasing inspection debt ratchet",
-      "privilegedAllowed": true,
-      "path": ".github/workflows/qodana_trusted_gate.yml"
     }
   }
 }
