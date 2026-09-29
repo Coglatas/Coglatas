@@ -235,7 +235,7 @@ public sealed class AuthSecurityHttpTests
         private WebApplication App { get; }
         private string DataProtectionKeysPath { get; }
         public HttpClient Client { get; }
-        public Guid UserId { get; }
+        private Guid UserId { get; }
         public string Email { get; }
 
         public static async Task<AuthSecurityTestApp> CreateAsync(

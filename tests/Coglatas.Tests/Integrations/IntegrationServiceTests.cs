@@ -119,12 +119,12 @@ public sealed class IntegrationServiceTests
         public Guid TenantId { get; } = Guid.NewGuid();
         public Guid UserId { get; }
         public FakeIntegrationRepository Integrations { get; } = new();
-        public FakeTenantRepository Tenants { get; } = new();
+        private FakeTenantRepository Tenants { get; } = new();
         public FakeFeatureFlags Features { get; } = new();
         public FakeClock Clock { get; } = new();
         public Sha256TokenHasher TokenHasher { get; } = new();
-        public FakeAuditLogger Audit { get; } = new();
-        public FakeUnitOfWork UnitOfWork { get; } = new();
+        private FakeAuditLogger Audit { get; } = new();
+        private FakeUnitOfWork UnitOfWork { get; } = new();
         public IntegrationService Service { get; }
         public IApiTokenValidator Validator { get; }
         private FakeCurrentTenant CurrentTenant => new(TenantId);
@@ -135,8 +135,8 @@ public sealed class IntegrationServiceTests
 
     private sealed class FakeIntegrationRepository : IIntegrationRepository
     {
-        public List<IntegrationAccount> Accounts { get; } = [];
-        public List<WebhookEndpoint> Webhooks { get; } = [];
+        private List<IntegrationAccount> Accounts { get; } = [];
+        private List<WebhookEndpoint> Webhooks { get; } = [];
         public List<ApiToken> Tokens { get; } = [];
         public Guid TenantId { get; set; }
 
