@@ -1,131 +1,312 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Coglatas/Coglatas/governance/required-checks.schema.json",
+  "$id": "https://github.com/NYGsatoshi/Coglatas/governance/required-checks.schema.json",
   "title": "Coglatas required-check operational registry",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "version", "policy_control_id", "ruleset", "checks"],
+  "required": [
+    "$schema",
+    "version",
+    "policy_control_id",
+    "ruleset",
+    "checks"
+  ],
   "properties": {
-    "$schema": {"const": "./required-checks.schema.json"},
-    "version": {"const": 1},
-    "policy_control_id": {"const": "GOV-CHECKS-001"},
-    "ruleset": {"$ref": "#/$defs/ruleset"},
-    "checks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/check"}}
+    "$schema": {
+      "const": "./required-checks.schema.json"
+    },
+    "version": {
+      "const": 1
+    },
+    "policy_control_id": {
+      "const": "GOV-CHECKS-001"
+    },
+    "ruleset": {
+      "$ref": "#/$defs/ruleset"
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    }
   },
   "$defs": {
     "ruleset": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "enforcement", "strict_required_status_checks_policy"],
+      "required": [
+        "name",
+        "enforcement",
+        "strict_required_status_checks_policy"
+      ],
       "properties": {
-        "name": {"type": "string", "minLength": 1},
-        "enforcement": {"const": "active"},
-        "strict_required_status_checks_policy": {"const": true}
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "enforcement": {
+          "const": "active"
+        },
+        "strict_required_status_checks_policy": {
+          "const": true
+        }
       }
     },
     "workflowJobTrigger": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "event"],
+      "required": [
+        "mode",
+        "event"
+      ],
       "properties": {
-        "mode": {"const": "unfiltered-pull-request"},
-        "event": {"const": "pull_request"}
+        "mode": {
+          "const": "unfiltered-pull-request"
+        },
+        "event": {
+          "const": "pull_request"
+        }
       }
     },
     "trustedStatusTrigger": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "events", "source_workflow"],
+      "required": [
+        "mode",
+        "events",
+        "source_workflow"
+      ],
       "properties": {
-        "mode": {"const": "trusted-default-branch"},
+        "mode": {
+          "const": "trusted-default-branch"
+        },
         "events": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"enum": ["workflow_run", "workflow_dispatch"]},
-          "contains": {"const": "workflow_run"}
+          "items": {
+            "enum": [
+              "workflow_run",
+              "workflow_dispatch"
+            ]
+          },
+          "contains": {
+            "const": "workflow_run"
+          }
         },
-        "source_workflow": {"type": "string", "minLength": 1}
+        "source_workflow": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "workflowJobProducer": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "integration_id", "app_slug"],
+      "required": [
+        "type",
+        "integration_id",
+        "app_slug"
+      ],
       "properties": {
-        "type": {"const": "github-actions-check"},
-        "integration_id": {"type": "integer", "minimum": 1},
-        "app_slug": {"type": "string", "minLength": 1}
+        "type": {
+          "const": "github-actions-check"
+        },
+        "integration_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "app_slug": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "commitStatusProducer": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "creator_login", "workflow_path_required"],
+      "required": [
+        "type",
+        "creator_login",
+        "workflow_path_required"
+      ],
       "properties": {
-        "type": {"const": "github-actions-status"},
-        "creator_login": {"type": "string", "minLength": 1},
-        "workflow_path_required": {"const": true}
+        "type": {
+          "const": "github-actions-status"
+        },
+        "creator_login": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workflow_path_required": {
+          "const": true
+        }
       }
     },
     "rename": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["state", "previous_context", "previous_workflow", "previous_job", "migration_issue"],
+      "required": [
+        "state",
+        "previous_context",
+        "previous_workflow",
+        "previous_job",
+        "migration_issue"
+      ],
       "properties": {
-        "state": {"enum": ["stable", "dual-publish"]},
-        "previous_context": {"type": ["string", "null"]},
-        "previous_workflow": {"type": ["string", "null"]},
-        "previous_job": {"type": ["string", "null"]},
-        "migration_issue": {"type": ["integer", "null"], "minimum": 1}
+        "state": {
+          "enum": [
+            "stable",
+            "dual-publish"
+          ]
+        },
+        "previous_context": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "previous_workflow": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "previous_job": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "migration_issue": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
       }
     },
     "baseCheck": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "gate_id", "kind", "workflow", "job", "context", "scope", "trigger",
-        "producer", "ruleset_integration_id", "allowed_conclusions", "timeout_minutes",
-        "staleness_policy", "rename"
+        "gate_id",
+        "kind",
+        "workflow",
+        "job",
+        "context",
+        "scope",
+        "trigger",
+        "producer",
+        "ruleset_integration_id",
+        "allowed_conclusions",
+        "timeout_minutes",
+        "staleness_policy",
+        "rename"
       ],
       "properties": {
-        "gate_id": {"type": "string", "pattern": "^GOV-GATE-[A-Z0-9-]+-[0-9]{3}$"},
-        "kind": {"enum": ["workflow-job", "commit-status"]},
-        "workflow": {"type": "string", "pattern": "^\\.github/workflows/.+\\.ya?ml$"},
-        "job": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"},
-        "context": {"type": "string", "minLength": 1},
-        "scope": {"enum": ["all-pr", "sensitive-only", "release"]},
+        "gate_id": {
+          "type": "string",
+          "pattern": "^GOV-GATE-[A-Z0-9-]+-[0-9]{3}$"
+        },
+        "kind": {
+          "enum": [
+            "workflow-job",
+            "commit-status"
+          ]
+        },
+        "workflow": {
+          "type": "string",
+          "pattern": "^\\.github/workflows/.+\\.ya?ml$"
+        },
+        "job": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+$"
+        },
+        "context": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "enum": [
+            "all-pr",
+            "sensitive-only",
+            "release"
+          ]
+        },
         "trigger": {},
         "producer": {},
-        "ruleset_integration_id": {"type": ["integer", "null"], "minimum": 1},
+        "ruleset_integration_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
         "allowed_conclusions": {
           "type": "array",
-          "prefixItems": [{"const": "success"}],
+          "prefixItems": [
+            {
+              "const": "success"
+            }
+          ],
           "items": false,
           "minItems": 1,
           "maxItems": 1
         },
-        "timeout_minutes": {"type": "integer", "minimum": 1},
-        "staleness_policy": {"const": "exact-head-and-timeout"},
-        "rename": {"$ref": "#/$defs/rename"}
+        "timeout_minutes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "staleness_policy": {
+          "const": "exact-head-and-timeout"
+        },
+        "rename": {
+          "$ref": "#/$defs/rename"
+        }
       }
     },
     "check": {
       "allOf": [
-        {"$ref": "#/$defs/baseCheck"},
         {
-          "if": {"properties": {"kind": {"const": "workflow-job"}}, "required": ["kind"]},
+          "$ref": "#/$defs/baseCheck"
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "workflow-job"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
           "then": {
             "properties": {
-              "trigger": {"$ref": "#/$defs/workflowJobTrigger"},
-              "producer": {"$ref": "#/$defs/workflowJobProducer"},
-              "ruleset_integration_id": {"type": "integer", "minimum": 1}
+              "trigger": {
+                "$ref": "#/$defs/workflowJobTrigger"
+              },
+              "producer": {
+                "$ref": "#/$defs/workflowJobProducer"
+              },
+              "ruleset_integration_id": {
+                "type": "integer",
+                "minimum": 1
+              }
             }
           },
           "else": {
             "properties": {
-              "trigger": {"$ref": "#/$defs/trustedStatusTrigger"},
-              "producer": {"$ref": "#/$defs/commitStatusProducer"}
+              "trigger": {
+                "$ref": "#/$defs/trustedStatusTrigger"
+              },
+              "producer": {
+                "$ref": "#/$defs/commitStatusProducer"
+              }
             }
           }
         }
