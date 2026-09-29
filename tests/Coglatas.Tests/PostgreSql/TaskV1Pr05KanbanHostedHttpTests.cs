@@ -1204,16 +1204,10 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
 
             return new HostedGraph(
                 tenantA,
-                tenantB,
                 manager,
                 member,
-                outsider,
-                tenantBManager,
                 workspace,
-                unauthorizedWorkspace,
-                crossTenantWorkspace,
                 project,
-                siblingProject,
                 unauthorizedProject,
                 crossTenantProject,
                 mainStages,
@@ -1390,16 +1384,10 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
 
     private sealed record HostedGraph(
         Tenant TenantA,
-        Tenant TenantB,
         User Manager,
         User Member,
-        User Outsider,
-        User TenantBManager,
         Workspace Workspace,
-        Workspace UnauthorizedWorkspace,
-        Workspace CrossTenantWorkspace,
         Project Project,
-        Project SiblingProject,
         Project UnauthorizedProject,
         Project CrossTenantProject,
         WorkflowStageIds MainStages,
