@@ -110,7 +110,7 @@ public sealed class TaskExecutionResultServiceTests
         }
 
         public AppDbContext Db { get; }
-        public CurrentTenantService CurrentTenant { get; }
+        private CurrentTenantService CurrentTenant { get; }
         public Tenant Tenant { get; }
         public User Actor { get; }
         public Workspace Workspace { get; }
