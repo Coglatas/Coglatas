@@ -328,6 +328,8 @@ def render_controls_markdown(policy: dict[str, Any]) -> str:
         "", "## Policy semantics", "",
         f"- Policy ID: `{policy['policy_id']}` v{policy['version']}",
         f"- Repository: `{policy['repository']}`",
+        f"- Repository ID: `{policy['repository_id']}`",
+        "- Transfer aliases: " + ", ".join(f"`{item}`" for item in policy["repository_aliases"]),
         f"- Default branch: `{policy['default_branch']}`",
         "- Live GitHub state is evidence, **not** the baseline.",
         "- Unknown controls/fields are rejected; invalid policy blocks.",

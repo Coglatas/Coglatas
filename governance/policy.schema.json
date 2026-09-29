@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Coglatas/Coglatas/governance/policy.schema.json",
+  "$id": "https://github.com/NYGsatoshi/Coglatas/governance/policy.schema.json",
   "title": "Coglatas Governance Policy Contract",
   "type": "object",
   "additionalProperties": false,
@@ -9,6 +9,8 @@
     "version",
     "policy_id",
     "repository",
+    "repository_id",
+    "repository_aliases",
     "default_branch",
     "owners",
     "semantics",
@@ -19,7 +21,14 @@
     "$schema": {"const": "./policy.schema.json"},
     "version": {"const": 1},
     "policy_id": {"const": "COGLATAS-GOVERNANCE"},
-    "repository": {"const": "Coglatas/Coglatas"},
+    "repository": {"const": "NYGsatoshi/Coglatas"},
+    "repository_id": {"const": 1261244608},
+    "repository_aliases": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {"enum": ["Coglatas/Coglatas", "NYGsatoshi/Coglatas"]}
+    },
     "default_branch": {"type": "string", "minLength": 1},
     "owners": {
       "type": "array",
