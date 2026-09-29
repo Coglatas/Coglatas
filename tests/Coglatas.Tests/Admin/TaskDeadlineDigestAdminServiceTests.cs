@@ -254,7 +254,7 @@ public sealed class TaskDeadlineDigestAdminServiceTests
     {
         public Guid? UserId => actor.Id;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => actor.Email;
+        public string Email => actor.Email;
         public SystemRole? SystemRole => actor.SystemRole;
         public bool IsAuthenticated => true;
     }

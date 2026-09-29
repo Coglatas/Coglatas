@@ -267,7 +267,7 @@ public sealed class Wpc02ECanonicalRedactionProjectionTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "redaction-test@example.invalid";
+        public string Email => "redaction-test@example.invalid";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.NormalUser;
         public bool IsAuthenticated => true;
     }
@@ -276,7 +276,7 @@ public sealed class Wpc02ECanonicalRedactionProjectionTests
     {
         public Guid TenantId => tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "redaction-test";
+        public string TenantSlug => "redaction-test";
         public bool IsPlatformScope => false;
     }
 
