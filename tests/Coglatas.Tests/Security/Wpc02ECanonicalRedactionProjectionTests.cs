@@ -246,7 +246,7 @@ public sealed class Wpc02ECanonicalRedactionProjectionTests
     private static DefaultHttpContext CreateHttpContext(IRedactionService redactor)
     {
         var services = new ServiceCollection()
-            .AddSingleton<IRedactionService>(redactor)
+            .AddSingleton(redactor)
             .AddSingleton<ICurrentUser>(new TestCurrentUser(Guid.NewGuid()))
             .AddSingleton<ICurrentTenant>(new TestCurrentTenant(Guid.NewGuid()))
             .BuildServiceProvider();
