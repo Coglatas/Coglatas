@@ -5033,7 +5033,7 @@ public sealed class HttpTenantIsolationTests
             services.AddScoped<CurrentAuthorizationTargetResolver>();
             services.AddScoped<INotificationTargetResolver>(provider => provider.GetRequiredService<CurrentAuthorizationTargetResolver>());
             services.AddScoped<INotificationOpenService, NotificationOpenService>();
-            services.AddScoped<Coglatas.Application.Search.ISearchService, DbSearchService>();
+            services.AddScoped<Application.Search.ISearchService, DbSearchService>();
             services.AddScoped<Coglatas.Application.Audit.IAuditQueryService, DbAuditQueryService>();
             services.AddSingleton<IClock, Coglatas.Infrastructure.Security.SystemClock>();
             services.AddScoped<IStudentRecordRepository, StudentRecordRepository>();

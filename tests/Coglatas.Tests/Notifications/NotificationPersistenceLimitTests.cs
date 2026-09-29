@@ -128,7 +128,7 @@ public sealed class NotificationPersistenceLimitTests
         return tenant;
     }
 
-    private sealed class FixedClock : Coglatas.Application.Common.Interfaces.IClock
+    private sealed class FixedClock : Application.Common.Interfaces.IClock
     {
         public static FixedClock Instance { get; } = new();
         public DateTimeOffset UtcNow => new(2026, 9, 2, 10, 30, 0, TimeSpan.Zero);

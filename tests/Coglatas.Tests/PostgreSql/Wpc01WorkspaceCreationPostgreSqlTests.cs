@@ -1886,7 +1886,7 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
 
     private sealed class TestCurrentUser(
         Guid userId,
-        SystemRole systemRole = Coglatas.Domain.Enums.SystemRole.NormalUser) : ICurrentUser
+        SystemRole systemRole = SystemRole.NormalUser) : ICurrentUser
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.NewGuid();

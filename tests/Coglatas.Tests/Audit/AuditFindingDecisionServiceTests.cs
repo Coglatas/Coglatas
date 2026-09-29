@@ -295,7 +295,7 @@ public sealed class AuditFindingDecisionServiceTests
         {
             AuthorizeCalls++;
             return Task.FromResult(
-                capabilityKey == Coglatas.Application.Tenancy.CapabilityKeys.AuditReview && canReview
+                capabilityKey == Application.Tenancy.CapabilityKeys.AuditReview && canReview
                     ? Result.Success()
                     : Result.Failure(new ApplicationErrorDetail("CapabilityDenied", "Audit operation denied.")));
         }
