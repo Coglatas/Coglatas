@@ -339,11 +339,11 @@ public sealed class AuthSecurityHttpTests
             return await Client.SendAsync(request);
         }
 
-        public async Task<LoginResponse> LoginAndReadAsync()
+        public async Task LoginAndReadAsync()
         {
             var response = await LoginAsync();
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<LoginResponse>()
+            _ = await response.Content.ReadFromJsonAsync<LoginResponse>()
                 ?? throw new InvalidOperationException("Login response was empty.");
         }
 

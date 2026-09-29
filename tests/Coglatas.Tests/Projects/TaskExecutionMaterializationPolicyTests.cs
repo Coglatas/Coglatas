@@ -51,7 +51,7 @@ public sealed class TaskExecutionMaterializationPolicyTests
             "text/plain",
             maximumBytes: 8));
 
-        await using var invalidUtf8 = new MemoryStream(new byte[] { 0xff, 0xfe, 0xfd });
+        await using var invalidUtf8 = new MemoryStream([0xff, 0xfe, 0xfd]);
         Assert.Null(await FirstPartyProjectFilesMaterializationV1.ReadUtf8Async(
             invalidUtf8,
             "text/markdown",
