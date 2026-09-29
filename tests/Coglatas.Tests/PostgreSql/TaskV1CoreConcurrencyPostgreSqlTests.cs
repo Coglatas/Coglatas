@@ -2063,7 +2063,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
         {
             var persisted = await verify.Db.ProjectTaskLabels.SingleAsync(value => value.Id == label.Id);
             Assert.Equal(label.Version + 1, persisted.VersionNo);
-            if (winner.Result.Value is ProjectTaskLabelResponse archiveWinner && archiveWinner.IsArchived == archiveCommand)
+            if (winner.Result.Value is { } archiveWinner && archiveWinner.IsArchived == archiveCommand)
                 Assert.Equal(archiveCommand, persisted.IsArchived);
             else
                 Assert.Equal("Updated", persisted.Name);
