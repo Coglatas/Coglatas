@@ -174,7 +174,7 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
             {
                 var claimTenant = TenantScope(graph.Tenant);
                 var repository = new TaskDeadlineDigestRepository(claimContext, claimTenant);
-                var claim = Assert.Single(await repository.ClaimDueAsync(
+                claim = Assert.Single(await repository.ClaimDueAsync(
                     "candidate-worker",
                     Now,
                     batchSize: 1,
@@ -285,7 +285,7 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
                 var tenant = TenantScope(graph.Tenant);
                 var repository = new TaskDeadlineDigestRepository(context, tenant);
                 Assert.Equal(1, await repository.UpsertSchedulesAsync([write], Now));
-                claim = Assert.Single(await repository.ClaimDueAsync(
+                var claim = Assert.Single(await repository.ClaimDueAsync(
                     "claimed-schedule",
                     Now.AddHours(2),
                     batchSize: 1,
