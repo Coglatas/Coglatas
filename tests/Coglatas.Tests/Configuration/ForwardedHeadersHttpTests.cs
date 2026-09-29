@@ -1,4 +1,3 @@
-using System.Net;
 using System.Net.Http.Json;
 using Coglatas.Web.Configuration;
 using Microsoft.AspNetCore.Antiforgery;
@@ -7,7 +6,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

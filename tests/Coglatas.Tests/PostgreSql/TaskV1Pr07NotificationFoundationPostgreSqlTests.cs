@@ -8,8 +8,6 @@ using Coglatas.Domain.Enums;
 using Coglatas.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Coglatas.Tests.PostgreSql;
 
