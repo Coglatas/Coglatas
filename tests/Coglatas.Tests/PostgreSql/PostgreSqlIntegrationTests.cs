@@ -372,7 +372,7 @@ public sealed class PostgreSqlIntegrationTests
     {
         public Guid? UserId => user.Id;
         public Guid? SessionId => null;
-        public string? Email => user.Email;
+        public string Email => user.Email;
         public SystemRole? SystemRole => user.SystemRole;
         public bool IsAuthenticated => true;
     }

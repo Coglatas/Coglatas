@@ -63,7 +63,7 @@
     "RedundantTypeDeclarationBody": 1,
     "RedundantUsingDirective": 0,
     "ReplaceWithFieldKeyword": 3,
-    "ReturnTypeCanBeNotNullable": 11,
+    "ReturnTypeCanBeNotNullable": 0,
     "ShortLivedHttpClient": 0,
     "SimplifyConditionalTernaryExpression": 1,
     "SimplifyLinqExpressionUseAll": 8,

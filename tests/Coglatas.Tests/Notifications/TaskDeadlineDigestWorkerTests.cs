@@ -540,7 +540,7 @@ public sealed class TaskDeadlineDigestWorkerTests
     {
         public ConcurrentQueue<LogEntry> Entries { get; } = [];
 
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => NoopScope.Instance;
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull => NoopScope.Instance;
 
         public bool IsEnabled(LogLevel logLevel) => true;
 

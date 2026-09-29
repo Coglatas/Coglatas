@@ -456,7 +456,7 @@ public sealed class AdminServiceTests
     {
         public Guid? UserId => user.Id;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => user.Email;
+        public string Email => user.Email;
         public SystemRole? SystemRole => user.SystemRole;
         public bool IsAuthenticated => true;
     }
