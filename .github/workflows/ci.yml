@@ -404,22 +404,80 @@ jobs:
           # This placeholder is used only for static Compose rendering; no licensed build runs here.
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
         run: |
+          set -euo pipefail
           docker compose -f docker-compose.db.yml config --quiet
           docker compose -f docker-compose.dev.yml config --quiet
           docker compose -f docker-compose.playwright.yml config --quiet
           docker compose -p coglatas-real-backend-smoke-ci-config -f docker-compose.real-backend-smoke.yml config --quiet
-          # Scanner contract fixtures are verbose; preserve failure output without
-          # overwhelming GitHub's downloadable job log.
-          compose_validation_log="$(mktemp)"
-          if docker compose -p coglatas-security-ci-config -f docker-compose.real-backend-smoke.yml -f docker-compose.security.yml config --format json |
-            python3 scripts/ci/verify-security-compose.py > "$compose_validation_log" 2>&1; then
-            tail -n 16 "$compose_validation_log"
+          docker compose -p coglatas-security-ci-config -f docker-compose.real-backend-smoke.yml -f docker-compose.security.yml config --quiet
+          docker compose -p coglatas-u22-demo-ci-config -f docker-compose.real-backend-smoke.yml -f docker-compose.u22-demo.yml config --quiet
+          docker compose config --quiet
+          docker compose -f docker-compose.local.yml config --quiet
+          docker compose -f docker-compose.onprem.yml config --quiet
+          docker compose -f docker-compose.onprem.yml -f docker-compose.onprem.ci.yml config --quiet
+          docker compose -p deploy -f deploy/sakura/docker-compose.yml config --quiet
+          bash scripts/ci/verify-onprem-proxy-topology.sh
+
+      - name: Validate SEC-02 security Compose invariants
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        shell: bash
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: |
+          set -euo pipefail
+          docker compose \
+            -p coglatas-security-ci-config \
+            -f docker-compose.real-backend-smoke.yml \
+            -f docker-compose.security.yml \
+            config --format json |
+            python3 scripts/ci/verify-security-compose.py
+
+      - name: Test SEC-03 scanner harness contract
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        shell: bash
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: bash scripts/security/test-scanner-harness.sh
+
+      - name: Test SEC-04 Schemathesis contract
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        shell: bash
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: bash scripts/security/test-schemathesis-contract.sh
+
+      - name: Test SEC-06 ZAP contract
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        shell: bash
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: bash scripts/security/test-zap-contract.sh
+
+      - name: Test AUD-02 lifecycle contract
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        shell: bash
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: bash scripts/security/test-aud02-lifecycle.sh
+
+      - name: Run SEC-03/04/05/06 and AUD-02 runtime security gate
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        shell: bash
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: |
+          set -euo pipefail
+          bash scripts/ci/generate-security-openapi-contract.sh
+
+          runtime_log="$(mktemp)"
+          if bash scripts/ci/run-security-runtime-smoke.sh > "$runtime_log" 2>&1; then
+            tail -n 16 "$runtime_log"
           else
             # Cleanup logs can be large; surface the redacted scanner failure first.
             awk '/runtime gate failed; dumping redacted Compose state/ { exit }
               /replacementString|Cookie|CSRF token/ { next }
               /SEC-06|SEC-03 scanner|SEC-02 app|ZAP|scanner network|internal scanner|app alias|report rejected|Job:|Job |Test:|Test |Automation plan|ERROR:|WARN:|Failed|Exception|Permission denied|Traceback/ { print substr($0, 1, 400) }' \
-              "$compose_validation_log" | tail -n 90 || true
+              "$runtime_log" | tail -n 90 || true
             # Keep the last redacted runtime lines before Compose cleanup floods
             # the log, including Schemathesis counterexamples and scanner exit.
             awk '/runtime gate failed; dumping redacted Compose state/ {
@@ -428,22 +486,15 @@ jobs:
                    exit
                  }
                  { total++; lines[total % 70] = substr($0, 1, 320) }' \
-              "$compose_validation_log"
+              "$runtime_log"
             if [[ -f artifacts/security/zap/preflight-stage.txt ]]; then
               grep -E '^stage=[a-z-]+$' artifacts/security/zap/preflight-stage.txt || true
             fi
-            tail -n 16 "$compose_validation_log"
-            rm -f "$compose_validation_log"
+            tail -n 16 "$runtime_log"
+            rm -f "$runtime_log"
             exit 1
           fi
-          rm -f "$compose_validation_log"
-          docker compose -p coglatas-u22-demo-ci-config -f docker-compose.real-backend-smoke.yml -f docker-compose.u22-demo.yml config --quiet
-          docker compose config --quiet
-          docker compose -f docker-compose.local.yml config --quiet
-          docker compose -f docker-compose.onprem.yml config --quiet
-          docker compose -f docker-compose.onprem.yml -f docker-compose.onprem.ci.yml config --quiet
-          docker compose -p deploy -f deploy/sakura/docker-compose.yml config --quiet
-          bash scripts/ci/verify-onprem-proxy-topology.sh
+          rm -f "$runtime_log"
 
       - name: Scan repository filesystem with Trivy
         if: github.event_name != 'pull_request' || steps.route.outputs.security_image == 'true'
