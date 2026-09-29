@@ -12,7 +12,7 @@ Issue #629 defines a three-layer, fail-closed contract for merge-blocking status
 
 A required gate passes only on `success` from the registered producer on the authoritative current head SHA. `queued`, `in_progress`, and commit-status `pending` remain pending only inside the registered timeout. Missing current-head evidence, previous-head-only evidence, timeout, `failure`, `timed_out`, `action_required`, `cancelled`, `skipped`, `neutral`, `stale`, unknown states, or producer/workflow drift never become PASS.
 
-For GitHub Actions check runs, the evaluator requires the registered GitHub App integration and resolves the Actions run referenced by `details_url` back to the registered workflow path and `pull_request` event. For trusted commit statuses, it requires the registered creator, resolves the status `target_url` back to the registered default-branch evaluator workflow, requires an explicitly registered trusted event (`workflow_run` or reviewed manual `workflow_dispatch`), and verifies that the producer run executes from the authoritative PR base branch. This prevents an identically named result from an unrelated workflow/ref from satisfying a required gate.
+For GitHub Actions check runs, the evaluator requires the registered GitHub App integration and resolves the Actions run referenced by `details_url` back to the registered workflow path and `pull_request` event. The current merge-required registry contains only ordinary GitHub Actions check runs: `build-test`, `frontend-test`, `security-scan`, and `publication-readiness`.
 
 The live evaluator entry point is:
 
@@ -37,15 +37,6 @@ python3 "$TRUSTED_REQUIRED_CHECK_EVALUATOR" \
 Live mode does **not** execute repository-static validation from the temporary directory. Static topology remains a PR/default-branch CI responsibility; live mode consumes only the explicitly supplied trusted policy/registry plus authoritative GitHub API state.
 
 Exit codes are `0` for pass, `2` for pending, and `1` for fail/unknown/API error. GOV-02 must translate the JSON decision without converting API, parsing, producer, or timeout failures into success.
-
-## Trusted commit-status trigger contract
-
-The `External PR approval policy` producer has two reviewed trusted entry points:
-
-- `workflow_run` from `External PR review signal`, used for automatic PR-head evaluation.
-- `workflow_dispatch`, used for manual recovery/re-evaluation from the default branch.
-
-Both are represented in the machine-readable trigger contract. Runtime evidence is accepted only when the referenced Actions run uses one of those events, the registered workflow path, and the authoritative PR base branch.
 
 ## No-gap rename protocol
 
