@@ -515,7 +515,7 @@ public sealed class AppDbContextSeedTests
         public Task<Stream> OpenReadAsync(
             string storageKey,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<Stream>(Stream.Null);
+            Task.FromResult(Stream.Null);
 
         public Task DeleteAsync(
             string storageKey,

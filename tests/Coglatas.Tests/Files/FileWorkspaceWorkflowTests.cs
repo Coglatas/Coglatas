@@ -194,7 +194,7 @@ public sealed class FileWorkspaceWorkflowTests
         }
 
         public Task<FileOwnerContext?> ResolveOwnerAsync(AttachmentOwnerType ownerType, Guid ownerId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<FileOwnerContext?>(ownerType == AttachmentOwnerType.Workspace ? new FileOwnerContext(ownerId) : null);
+            Task.FromResult(ownerType == AttachmentOwnerType.Workspace ? new FileOwnerContext(ownerId) : null);
     }
 
     private sealed class FakeFileDownloadGrantRepository : IFileDownloadGrantRepository

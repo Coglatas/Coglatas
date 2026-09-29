@@ -272,20 +272,20 @@ public sealed class FileSharingServiceTests
             Guid workspaceId,
             Guid userId,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<FileAccessGrantCandidate?>(Candidates.FirstOrDefault(candidate => candidate.UserId == userId));
+            Task.FromResult(Candidates.FirstOrDefault(candidate => candidate.UserId == userId));
 
         public Task<FileAccessGrant?> GetActiveGrantAsync(
             Guid fileObjectId,
             Guid grantId,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<FileAccessGrant?>(Grants.FirstOrDefault(grant =>
+            Task.FromResult(Grants.FirstOrDefault(grant =>
                 grant.FileObjectId == fileObjectId && grant.Id == grantId && grant.RevokedAt is null));
 
         public Task<FileAccessGrant?> GetActiveGrantForRecipientAsync(
             Guid fileObjectId,
             Guid recipientUserId,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<FileAccessGrant?>(Grants.FirstOrDefault(grant =>
+            Task.FromResult(Grants.FirstOrDefault(grant =>
                 grant.FileObjectId == fileObjectId && grant.RecipientUserId == recipientUserId && grant.RevokedAt is null));
 
         public Task AddAsync(FileAccessGrant grant, CancellationToken cancellationToken = default)

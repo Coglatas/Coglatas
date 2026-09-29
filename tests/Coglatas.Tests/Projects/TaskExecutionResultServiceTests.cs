@@ -326,7 +326,7 @@ public sealed class TaskExecutionResultServiceTests
         public Task<TaskExecutionPersistedResult?> GetByRunAsync(
             Guid runId,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<TaskExecutionPersistedResult?>(runId == result.TaskExecutionRunId ? result : null);
+            Task.FromResult(runId == result.TaskExecutionRunId ? result : null);
 
         public Task<IReadOnlyList<TaskExecutionResultSourceReference>> ListSourceReferencesAsync(
             Guid resultId,
