@@ -668,7 +668,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
                 await AssertDeltaAsync(verify.Db, before, graph.Task.Id, "TaskCommentDeleted", 1, 1);
             }
             var commentActions = new[] { "TaskCommentCreated", "TaskCommentUpdated", "TaskCommentDeleted" };
-            var audit = await verify.Db.AuditLogs.Where(log => log.EntityId == graph.Task.Id && commentActions.Contains(log.Action)).ToListAsync();
+            var audit = await verify.Db.AuditLogs.Where(log => log.EntityId == graph.Task.Id && Enumerable.Contains(commentActions, log.Action)).ToListAsync();
             Assert.All(audit, log => Assert.DoesNotContain("sensitive", $"{log.Summary} {log.MetadataJson}", StringComparison.OrdinalIgnoreCase));
         }
 

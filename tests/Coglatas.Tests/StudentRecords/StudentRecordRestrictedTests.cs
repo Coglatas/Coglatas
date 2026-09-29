@@ -45,7 +45,7 @@ public sealed class StudentRecordRestrictedTests
 
         var entry = Assert.Single(fixture.Audit.Entries);
         var serialized = JsonSerializer.Serialize(entry);
-        Assert.Contains(DataClassification.StudentRecordRestricted.ToString(), serialized);
+        Assert.Contains(nameof(DataClassification.StudentRecordRestricted), serialized);
         Assert.Contains(StudentRecordDataPolicy.HealthNotes, serialized);
         Assert.DoesNotContain(fixture.Record.HealthNotes!, serialized);
         Assert.DoesNotContain(fixture.Record.GuardianContact!, serialized);

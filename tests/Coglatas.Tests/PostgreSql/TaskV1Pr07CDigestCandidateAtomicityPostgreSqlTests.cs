@@ -1841,7 +1841,7 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
                 .Where(attempt => attempt.JobId == secondJob.Id)
                 .ToListAsync();
             var allAttempts = await verification.TaskDeadlineDigestAttempts.AsNoTracking()
-                .Where(attempt => jobIds.Contains(attempt.JobId))
+                .Where(attempt => Enumerable.Contains(jobIds, attempt.JobId))
                 .ToListAsync();
             var notifications = await verification.Notifications.AsNoTracking()
                 .OrderBy(notification => notification.StateVersion)
@@ -1887,10 +1887,10 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
         var jobIds = claims.Select(claim => claim.JobId).ToArray();
         await using var verification = CreateTenantContext(database, tenant);
         var jobs = await verification.TaskDeadlineDigestJobs.AsNoTracking()
-            .Where(job => jobIds.Contains(job.Id))
+            .Where(job => Enumerable.Contains(jobIds, job.Id))
             .ToListAsync();
         var attempts = await verification.TaskDeadlineDigestAttempts.AsNoTracking()
-            .Where(attempt => jobIds.Contains(attempt.JobId))
+            .Where(attempt => Enumerable.Contains(jobIds, attempt.JobId))
             .ToListAsync();
 
         Assert.Equal(claims.Count, jobs.Count);
