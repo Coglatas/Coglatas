@@ -91,7 +91,6 @@ public sealed class AuditFindingReviewerMentionsServiceTests
 
         private Fixture(
             Guid tenantId,
-            Guid actorUserId,
             Guid artifactVersionId,
             Tenant tenant,
             AppDbContext context,
@@ -103,7 +102,6 @@ public sealed class AuditFindingReviewerMentionsServiceTests
             DbAuditFindingReviewerMentionsService service)
         {
             TenantId = tenantId;
-            ActorUserId = actorUserId;
             ArtifactVersionId = artifactVersionId;
             _tenant = tenant;
             Context = context;
@@ -116,7 +114,6 @@ public sealed class AuditFindingReviewerMentionsServiceTests
         }
 
         private Guid TenantId { get; }
-        public Guid ActorUserId { get; }
         private Guid ArtifactVersionId { get; }
         public AppDbContext Context { get; }
         private StubClaimsEvidenceService Claims { get; }
@@ -190,7 +187,6 @@ public sealed class AuditFindingReviewerMentionsServiceTests
 
             return new Fixture(
                 tenantId,
-                actorUserId,
                 artifactVersionId,
                 tenant,
                 context,

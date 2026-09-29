@@ -100,15 +100,13 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
     {
         private readonly AppDbContext _db;
 
-        private Fixture(AppDbContext db, FileService service, StorageSpy storage, Guid tenantId, Guid workspaceId, Guid projectId, Guid taskId, Guid associationId, Guid fileObjectId, Guid userId, string storageKey)
+        private Fixture(AppDbContext db, FileService service, StorageSpy storage, Guid tenantId, Guid workspaceId, Guid associationId, Guid fileObjectId, Guid userId, string storageKey)
         {
             _db = db;
             Service = service;
             Storage = storage;
             TenantId = tenantId;
             WorkspaceId = workspaceId;
-            ProjectId = projectId;
-            TaskId = taskId;
             AssociationId = associationId;
             FileObjectId = fileObjectId;
             UserId = userId;
@@ -119,8 +117,6 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
         public StorageSpy Storage { get; }
         private Guid TenantId { get; }
         private Guid WorkspaceId { get; }
-        public Guid ProjectId { get; }
-        public Guid TaskId { get; }
         public Guid AssociationId { get; }
         private Guid FileObjectId { get; }
         private Guid UserId { get; }
@@ -165,7 +161,7 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
             var authorization = new FileAuthorizationService(fileRepository, projectAuthorization, null!, null!, workspaceAuthorization);
             var storage = new StorageSpy();
             var service = new FileService(fileRepository, new FileDownloadGrantRepository(db), storage, authorization, new UploadPolicy(), new FeatureFlags(), new Quota(), currentUser, currentTenant, new Clock(), new DbAuditLogger(db, new Clock(), currentUser, currentTenant), new Sha256TokenHasher(), new NoopInvalidations(), new EfUnitOfWork(db));
-            return new Fixture(db, service, storage, tenant.Id, workspace.Id, project.Id, task.Id, association.Id, file.Id, user.Id, storageKey);
+            return new Fixture(db, service, storage, tenant.Id, workspace.Id, association.Id, file.Id, user.Id, storageKey);
         }
 
         public async Task SetWorkspaceMembershipAsync(MembershipStatus status)
