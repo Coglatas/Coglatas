@@ -2601,16 +2601,16 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
 
     private sealed class ThrowAfterSaveInterceptor : SaveChangesInterceptor
     {
-        private int armed;
+        private int _armed;
 
-        public void Arm() => Interlocked.Exchange(ref armed, 1);
+        public void Arm() => Interlocked.Exchange(ref _armed, 1);
 
         public override ValueTask<int> SavedChangesAsync(
             SaveChangesCompletedEventData eventData,
             int result,
             CancellationToken cancellationToken = default)
         {
-            if (Interlocked.Exchange(ref armed, 0) == 1)
+            if (Interlocked.Exchange(ref _armed, 0) == 1)
                 throw new InjectedSaveFailureException();
 
             return base.SavedChangesAsync(eventData, result, cancellationToken);
@@ -2619,10 +2619,10 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
 
     private sealed class UserLockArrivalInterceptor : DbCommandInterceptor
     {
-        private readonly TaskCompletionSource arrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _arrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task WaitForArrivalAsync() =>
-            arrived.Task.WaitAsync(TimeSpan.FromSeconds(15));
+            _arrived.Task.WaitAsync(TimeSpan.FromSeconds(15));
 
         public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
             DbCommand command,
@@ -2633,7 +2633,7 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
             if (command.CommandText.Contains("SELECT 1 FROM users", StringComparison.Ordinal) &&
                 command.CommandText.Contains("FOR UPDATE", StringComparison.Ordinal))
             {
-                arrived.TrySetResult();
+                _arrived.TrySetResult();
             }
 
             return base.NonQueryExecutingAsync(command, eventData, result, cancellationToken);
@@ -2650,17 +2650,17 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     /// </summary>
     private sealed class CandidateFenceGate : DbCommandInterceptor
     {
-        private readonly TaskCompletionSource arrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private int candidateFenceCount;
-        private int holding;
+        private readonly TaskCompletionSource _arrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _candidateFenceCount;
+        private int _holding;
 
-        public bool IsHolding => Volatile.Read(ref holding) == 1;
+        public bool IsHolding => Volatile.Read(ref _holding) == 1;
 
         public Task WaitForArrivalAsync() =>
-            arrived.Task.WaitAsync(TimeSpan.FromSeconds(15));
+            _arrived.Task.WaitAsync(TimeSpan.FromSeconds(15));
 
-        public void Release() => release.TrySetResult();
+        public void Release() => _release.TrySetResult();
 
         public override async ValueTask<int> NonQueryExecutedAsync(
             DbCommand command,
@@ -2668,17 +2668,17 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
             int result,
             CancellationToken cancellationToken = default)
         {
-            if (IsCandidateTaskFence(command) && Interlocked.Increment(ref candidateFenceCount) == 1)
+            if (IsCandidateTaskFence(command) && Interlocked.Increment(ref _candidateFenceCount) == 1)
             {
-                Volatile.Write(ref holding, 1);
-                arrived.TrySetResult();
+                Volatile.Write(ref _holding, 1);
+                _arrived.TrySetResult();
                 try
                 {
-                    await release.Task.WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
+                    await _release.Task.WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
                 }
                 finally
                 {
-                    Volatile.Write(ref holding, 0);
+                    Volatile.Write(ref _holding, 0);
                 }
             }
 
@@ -2697,17 +2697,17 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     /// </summary>
     private sealed class RecipientUserLockGate : DbCommandInterceptor
     {
-        private readonly TaskCompletionSource arrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private int userLockCount;
-        private int holding;
+        private readonly TaskCompletionSource _arrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _userLockCount;
+        private int _holding;
 
-        public bool IsHolding => Volatile.Read(ref holding) == 1;
+        public bool IsHolding => Volatile.Read(ref _holding) == 1;
 
         public Task WaitForRecipientUserLockAsync() =>
-            arrived.Task.WaitAsync(TimeSpan.FromSeconds(15));
+            _arrived.Task.WaitAsync(TimeSpan.FromSeconds(15));
 
-        public void Release() => release.TrySetResult();
+        public void Release() => _release.TrySetResult();
 
         public override async ValueTask<int> NonQueryExecutedAsync(
             DbCommand command,
@@ -2715,17 +2715,17 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
             int result,
             CancellationToken cancellationToken = default)
         {
-            if (IsRecipientUserLock(command) && Interlocked.Increment(ref userLockCount) == 1)
+            if (IsRecipientUserLock(command) && Interlocked.Increment(ref _userLockCount) == 1)
             {
-                Volatile.Write(ref holding, 1);
-                arrived.TrySetResult();
+                Volatile.Write(ref _holding, 1);
+                _arrived.TrySetResult();
                 try
                 {
-                    await release.Task.WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
+                    await _release.Task.WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
                 }
                 finally
                 {
-                    Volatile.Write(ref holding, 0);
+                    Volatile.Write(ref _holding, 0);
                 }
             }
 
@@ -2742,17 +2742,17 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     /// </summary>
     private sealed class QueuedSameRecipientClaimProbe : DbCommandInterceptor
     {
-        private readonly TaskCompletionSource userLockRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private int jobFenceWasAcquired;
-        private int attemptFenceWasAcquired;
-        private int userLockWasRequested;
+        private readonly TaskCompletionSource _userLockRequested = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _jobFenceWasAcquired;
+        private int _attemptFenceWasAcquired;
+        private int _userLockWasRequested;
 
-        public bool JobFenceWasAcquired => Volatile.Read(ref jobFenceWasAcquired) == 1;
-        public bool AttemptFenceWasAcquired => Volatile.Read(ref attemptFenceWasAcquired) == 1;
-        public bool UserLockWasRequested => Volatile.Read(ref userLockWasRequested) == 1;
+        public bool JobFenceWasAcquired => Volatile.Read(ref _jobFenceWasAcquired) == 1;
+        public bool AttemptFenceWasAcquired => Volatile.Read(ref _attemptFenceWasAcquired) == 1;
+        public bool UserLockWasRequested => Volatile.Read(ref _userLockWasRequested) == 1;
 
         public Task WaitForUserLockRequestAsync() =>
-            userLockRequested.Task.WaitAsync(TimeSpan.FromSeconds(15));
+            _userLockRequested.Task.WaitAsync(TimeSpan.FromSeconds(15));
 
         public override async ValueTask<DbDataReader> ReaderExecutedAsync(
             DbCommand command,
@@ -2761,9 +2761,9 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
             CancellationToken cancellationToken = default)
         {
             if (IsClaimJobLock(command))
-                Interlocked.Exchange(ref jobFenceWasAcquired, 1);
+                Interlocked.Exchange(ref _jobFenceWasAcquired, 1);
             if (IsClaimAttemptLock(command))
-                Interlocked.Exchange(ref attemptFenceWasAcquired, 1);
+                Interlocked.Exchange(ref _attemptFenceWasAcquired, 1);
 
             return await base.ReaderExecutedAsync(command, eventData, result, cancellationToken);
         }
@@ -2776,15 +2776,15 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
         {
             if (IsRecipientUserLock(command))
             {
-                Interlocked.Exchange(ref userLockWasRequested, 1);
+                Interlocked.Exchange(ref _userLockWasRequested, 1);
                 if (!JobFenceWasAcquired || !AttemptFenceWasAcquired)
                 {
-                    userLockRequested.TrySetException(new InvalidOperationException(
+                    _userLockRequested.TrySetException(new InvalidOperationException(
                         "The queued generator requested the recipient User lock before its Job/Attempt claim fence completed."));
                 }
                 else
                 {
-                    userLockRequested.TrySetResult();
+                    _userLockRequested.TrySetResult();
                 }
             }
 
@@ -2810,21 +2810,21 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
 
     private sealed class FinalCandidateCommitGate : SaveChangesInterceptor
     {
-        private readonly TaskCompletionSource arrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _arrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task WaitForArrivalAsync() =>
-            arrived.Task.WaitAsync(TimeSpan.FromSeconds(15));
+            _arrived.Task.WaitAsync(TimeSpan.FromSeconds(15));
 
-        public void Release() => release.TrySetResult();
+        public void Release() => _release.TrySetResult();
 
         public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
             DbContextEventData eventData,
             InterceptionResult<int> result,
             CancellationToken cancellationToken = default)
         {
-            arrived.TrySetResult();
-            await release.Task.WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
+            _arrived.TrySetResult();
+            await _release.Task.WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
             return result;
         }
     }
