@@ -71,8 +71,8 @@ public sealed class ArtifactReportRefinementCommitGuardTests
 
     private sealed class Fixture : IAsyncDisposable
     {
-        private readonly DbContextOptions<AppDbContext> options;
-        private readonly CurrentTenant currentTenant;
+        private readonly DbContextOptions<AppDbContext> _options;
+        private readonly CurrentTenant _currentTenant;
 
         private Fixture(
             AppDbContext context,
@@ -88,8 +88,8 @@ public sealed class ArtifactReportRefinementCommitGuardTests
             ArtifactReportRefinementCommitGuardUnitOfWork guard)
         {
             Context = context;
-            this.options = options;
-            this.currentTenant = currentTenant;
+            _options = options;
+            _currentTenant = currentTenant;
             TenantId = tenantId;
             ProjectId = projectId;
             ArtifactId = artifactId;
@@ -207,7 +207,7 @@ public sealed class ArtifactReportRefinementCommitGuardTests
             return desiredVersion;
         }
 
-        public AppDbContext CreateSiblingContext() => new(options, currentTenant);
+        public AppDbContext CreateSiblingContext() => new(_options, _currentTenant);
 
         public ValueTask DisposeAsync() => Context.DisposeAsync();
     }

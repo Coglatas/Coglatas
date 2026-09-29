@@ -298,9 +298,9 @@ public sealed class ArtifactReportRefinementSectionTests
 
     private sealed class ResearchPlans : IResearchPlanRepository
     {
-        private readonly Guid revisionId = Guid.NewGuid();
+        private readonly Guid _revisionId = Guid.NewGuid();
         public Task<ResearchPlanExecutionSnapshot?> GetCurrentExecutionSnapshotForTaskAsync(Guid taskItemId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<ResearchPlanExecutionSnapshot?>(new(revisionId, 7));
+            Task.FromResult<ResearchPlanExecutionSnapshot?>(new(_revisionId, 7));
         public Task<ResearchPlan?> GetForTaskAsync(Guid taskItemId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<ResearchPlan?> GetForTaskForUpdateAsync(Guid taskItemId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<ResearchPlanRevision?> GetRevisionAsync(Guid researchPlanId, Guid researchPlanRevisionId, CancellationToken cancellationToken = default) => throw new NotSupportedException();

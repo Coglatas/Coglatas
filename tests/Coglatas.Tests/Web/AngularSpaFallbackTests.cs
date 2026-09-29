@@ -15,11 +15,11 @@ namespace Coglatas.Tests.Web;
 [Trait("Portability", "CrossPlatform")]
 public sealed class AngularSpaFallbackTests : IDisposable
 {
-    private readonly string webRootPath = Path.Combine(Path.GetTempPath(), "coglatas-angular-fallback-tests", Guid.NewGuid().ToString("N"));
+    private readonly string _webRootPath = Path.Combine(Path.GetTempPath(), "coglatas-angular-fallback-tests", Guid.NewGuid().ToString("N"));
 
     public AngularSpaFallbackTests()
     {
-        Directory.CreateDirectory(webRootPath);
+        Directory.CreateDirectory(_webRootPath);
     }
 
     [Theory]
@@ -40,7 +40,7 @@ public sealed class AngularSpaFallbackTests : IDisposable
         WriteAngularBuild();
         var context = CreateContext(path);
 
-        Assert.True(AngularSpaFallback.CanServeAngularFallback(context.Request, webRootPath));
+        Assert.True(AngularSpaFallback.CanServeAngularFallback(context.Request, _webRootPath));
     }
 
     [Theory]
@@ -63,16 +63,16 @@ public sealed class AngularSpaFallbackTests : IDisposable
         WriteAngularBuild();
         var context = CreateContext(path);
 
-        Assert.False(AngularSpaFallback.CanServeAngularFallback(context.Request, webRootPath));
+        Assert.False(AngularSpaFallback.CanServeAngularFallback(context.Request, _webRootPath));
     }
 
     [Fact]
     public void UserFacingRoutesDoNotFallBackToLegacyWwwrootWithoutAngularMarker()
     {
-        File.WriteAllText(Path.Combine(webRootPath, "index.html"), "<html>legacy</html>");
+        File.WriteAllText(Path.Combine(_webRootPath, "index.html"), "<html>legacy</html>");
         var context = CreateContext("/app/login");
 
-        Assert.False(AngularSpaFallback.CanServeAngularFallback(context.Request, webRootPath));
+        Assert.False(AngularSpaFallback.CanServeAngularFallback(context.Request, _webRootPath));
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public sealed class AngularSpaFallbackTests : IDisposable
         WriteAngularBuild();
         var context = CreateContext("/app/assets/missing.js");
 
-        Assert.False(AngularSpaFallback.CanServeAngularFallback(context.Request, webRootPath));
+        Assert.False(AngularSpaFallback.CanServeAngularFallback(context.Request, _webRootPath));
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public sealed class AngularSpaFallbackTests : IDisposable
         var context = CreateContext("/api/not-found");
         context.Response.Body = new MemoryStream();
 
-        await AngularSpaFallback.HandleAsync(context, webRootPath);
+        await AngularSpaFallback.HandleAsync(context, _webRootPath);
 
         context.Response.Body.Position = 0;
         var body = await new StreamReader(context.Response.Body).ReadToEndAsync();
@@ -109,7 +109,7 @@ public sealed class AngularSpaFallbackTests : IDisposable
         var context = CreateContext("/app/login");
         context.Response.Body = new MemoryStream();
 
-        await AngularSpaFallback.HandleAsync(context, webRootPath);
+        await AngularSpaFallback.HandleAsync(context, _webRootPath);
 
         Assert.Equal("text/html; charset=utf-8", context.Response.ContentType);
         Assert.Equal("no-cache, no-store, must-revalidate", context.Response.Headers.CacheControl.ToString());
@@ -129,7 +129,7 @@ public sealed class AngularSpaFallbackTests : IDisposable
 
         await using var app = builder.Build();
         app.MapGet("/api/example", Results.NoContent);
-        AngularSpaFallback.MapEndpointFallback(app, webRootPath);
+        AngularSpaFallback.MapEndpointFallback(app, _webRootPath);
 
         await app.StartAsync();
         try
@@ -176,7 +176,7 @@ public sealed class AngularSpaFallbackTests : IDisposable
         await using var app = builder.Build();
         app.UseMiddleware<CsrfProtectionMiddleware>();
         app.MapPost("/api/example", Results.NoContent);
-        AngularSpaFallback.MapEndpointFallback(app, webRootPath);
+        AngularSpaFallback.MapEndpointFallback(app, _webRootPath);
 
         await app.StartAsync();
         try
@@ -231,9 +231,9 @@ public sealed class AngularSpaFallbackTests : IDisposable
     {
         try
         {
-            if (Directory.Exists(webRootPath))
+            if (Directory.Exists(_webRootPath))
             {
-                Directory.Delete(webRootPath, recursive: true);
+                Directory.Delete(_webRootPath, recursive: true);
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -243,8 +243,8 @@ public sealed class AngularSpaFallbackTests : IDisposable
 
     private void WriteAngularBuild()
     {
-        File.WriteAllText(Path.Combine(webRootPath, "index.html"), "<html>Angular</html>");
-        File.WriteAllText(Path.Combine(webRootPath, AngularSpaFallback.BuildMarkerFileName), "marker");
+        File.WriteAllText(Path.Combine(_webRootPath, "index.html"), "<html>Angular</html>");
+        File.WriteAllText(Path.Combine(_webRootPath, AngularSpaFallback.BuildMarkerFileName), "marker");
     }
 
     private static DefaultHttpContext CreateContext(string path, string method = "GET")
