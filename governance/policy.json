@@ -68,7 +68,7 @@
       "id": "GOV-CHECKS-001",
       "family": "required-status-checks",
       "title": "Required pull-request status checks",
-      "purpose": "Pin every required status context, including trusted evaluator statuses, so rename, skip, missing, or stale states fail closed from one repository-owned contract.",
+      "purpose": "Pin the four ordinary merge-required CI contexts so rename, skip, missing, or stale states fail closed from one repository-owned contract.",
       "scope": [
         "pr",
         "default-branch"
@@ -189,7 +189,7 @@
       "id": "GOV-REVIEW-001",
       "family": "pr-review-codeowners",
       "title": "Pull request review and CODEOWNERS contract",
-      "purpose": "Require current-head CODEOWNER approval for external pull requests while keeping owner-authored changes mergeable without bypass in the current single-maintainer topology; native rules enforce PR/thread semantics and the trusted evaluator owns authoritative approval state.",
+      "purpose": "Keep external-contributor review expectations explicit while owner-authored changes remain mergeable without a synthetic commit-status gate; native rules enforce PR and thread semantics.",
       "scope": [
         "pr",
         "default-branch"
