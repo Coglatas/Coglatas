@@ -103,7 +103,7 @@ public static class DependencyInjection
                         // payload look like server-side PII. Preserve field
                         // ownership while removing attacker-controlled text.
                         return new BadRequestObjectResult(
-                            new ValidationProblemDetails(CreateSanitizedModelState(context.ModelState)));
+                            CreateSanitizedValidationProblemDetails(context));
                     }
 
                     if (IsWpcCreatePath(path, context.HttpContext.Request.Method))
@@ -196,6 +196,14 @@ public static class DependencyInjection
                 };
             });
         return services;
+    }
+
+    private static ValidationProblemDetails CreateSanitizedValidationProblemDetails(ActionContext context)
+    {
+        var details = new ValidationProblemDetails(CreateSanitizedModelState(context.ModelState));
+        details.Extensions["traceId"] = System.Diagnostics.Activity.Current?.Id ??
+            context.HttpContext.TraceIdentifier;
+        return details;
     }
 
     private static bool IsPr06CommandPath(string? path) =>
