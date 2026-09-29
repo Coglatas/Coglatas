@@ -129,7 +129,7 @@ public sealed class SecurityOpenApiSchemaTransformerTests
             }
 
             if (propertySchema.Enum is { Count: > 0 } &&
-                !propertySchema.Enum.Any(candidate => candidate?.ToString() == value?.ToString()))
+                propertySchema.Enum.All(candidate => candidate?.ToString() != value?.ToString()))
             {
                 return false;
             }
