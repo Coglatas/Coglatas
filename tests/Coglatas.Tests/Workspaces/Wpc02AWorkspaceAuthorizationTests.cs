@@ -79,8 +79,8 @@ public sealed class Wpc02AWorkspaceAuthorizationTests
             Authorization = new WorkspaceAuthorizationService(Users, Workspaces);
         }
 
-        public FakeUsers Users { get; } = new();
-        public FakeWorkspaces Workspaces { get; } = new();
+        private FakeUsers Users { get; } = new();
+        private FakeWorkspaces Workspaces { get; } = new();
         public WorkspaceAuthorizationService Authorization { get; }
         public Workspace Workspace { get; } = new()
         {

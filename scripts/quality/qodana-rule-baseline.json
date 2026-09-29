@@ -32,7 +32,7 @@
     "InvalidXmlDocComment": 0,
     "JoinDeclarationAndInitializer": 0,
     "MemberCanBePrivate.Global": 40,
-    "MemberCanBePrivate.Local": 15,
+    "MemberCanBePrivate.Local": 0,
     "MemberHidesStaticFromOuterClass": 3,
     "MergeIntoPattern": 150,
     "MethodHasAsyncOverload": 8,
