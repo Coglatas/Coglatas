@@ -246,8 +246,7 @@ public sealed class TaskDeadlineDigestRepository(
         var claims = new List<TaskDeadlineDigestClaim>(due.Count);
         foreach (var job in due)
         {
-            TaskDeadlineDigestAttempt attempt;
-            if (!pendingRestarts.TryGetValue(job.Id, out attempt!))
+            if (!pendingRestarts.TryGetValue(job.Id, out var attempt))
             {
                 if (job.AutomaticAttemptCount >= TaskDeadlineDigestPolicy.MaximumAutomaticAttempts)
                 {

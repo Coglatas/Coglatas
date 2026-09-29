@@ -129,7 +129,7 @@ public sealed class CommunicationPollingServiceTests
         var cursor = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
         {
             ActorUserId = Guid.NewGuid(),
-            TenantId = fixture.TenantId,
+            fixture.TenantId,
             WorkspaceId = (Guid?)null,
             Since = fixture.Clock.UtcNow.AddMinutes(-1)
         })));
