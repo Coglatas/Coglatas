@@ -58,7 +58,10 @@ PY
 
 security_schemathesis_roles() {
   case "$1" in
-    pr) printf '%s\n' anonymous alpha-owner ;;
+    # PR coverage must include a lower-privilege authenticated principal.
+    # Otherwise tenant-admin status/authorization regressions are only discovered
+    # by the post-merge deep lane.
+    pr) printf '%s\n' anonymous alpha-restricted alpha-owner ;;
     # Lower-privilege principals run before owners so expected fuzz mutations are
     # less likely to affect later coverage. Stateful exploration is limited to
     # alpha-restricted, where the synthetic fixture cannot administer the canary

@@ -70,9 +70,10 @@ public sealed class TenantAdministrationService(
 
     public async Task<Result<TenantOverviewResponse>> GetCurrentTenantOverviewAsync(CancellationToken cancellationToken = default)
     {
-        if (!await CanViewCurrentTenantAdministrationAsync(cancellationToken))
+        var authorization = await RequireCurrentTenantAdministrationAsync(cancellationToken);
+        if (!authorization.IsSuccess)
         {
-            return Result<TenantOverviewResponse>.Failure("TenantAdmin access is required.");
+            return ForwardFailure<TenantOverviewResponse>(authorization);
         }
 
         var usage = await quotaService.GetCurrentUsageAsync(currentTenant.TenantId, cancellationToken);
@@ -92,9 +93,10 @@ public sealed class TenantAdministrationService(
 
     public async Task<Result<TenantSettingsResponse>> GetCurrentTenantSettingsAsync(CancellationToken cancellationToken = default)
     {
-        if (!await CanViewCurrentTenantAdministrationAsync(cancellationToken))
+        var authorization = await RequireCurrentTenantAdministrationAsync(cancellationToken);
+        if (!authorization.IsSuccess)
         {
-            return Result<TenantSettingsResponse>.Failure("TenantAdmin access is required.");
+            return ForwardFailure<TenantSettingsResponse>(authorization);
         }
 
         var settings = await tenantPlans.GetOrCreateTenantSettingsAsync(currentTenant.TenantId, cancellationToken);
@@ -104,9 +106,10 @@ public sealed class TenantAdministrationService(
 
     public async Task<Result<TenantSettingsResponse>> UpdateCurrentTenantSettingsAsync(UpdateTenantSettingsRequest request, CancellationToken cancellationToken = default)
     {
-        if (!await CanManageCurrentTenantAdministrationAsync(cancellationToken))
+        var authorization = await RequireCurrentTenantAdministrationAsync(cancellationToken);
+        if (!authorization.IsSuccess)
         {
-            return Result<TenantSettingsResponse>.Failure("TenantAdmin access is required.");
+            return ForwardFailure<TenantSettingsResponse>(authorization);
         }
 
         var validation = ValidateSettings(request);
@@ -146,9 +149,10 @@ public sealed class TenantAdministrationService(
 
     public async Task<Result<TenantUsageResponse>> GetCurrentTenantUsageAsync(CancellationToken cancellationToken = default)
     {
-        if (!await CanViewCurrentTenantAdministrationAsync(cancellationToken))
+        var authorization = await RequireCurrentTenantAdministrationAsync(cancellationToken);
+        if (!authorization.IsSuccess)
         {
-            return Result<TenantUsageResponse>.Failure("TenantAdmin access is required.");
+            return ForwardFailure<TenantUsageResponse>(authorization);
         }
 
         return Result<TenantUsageResponse>.Success(ToUsageResponse(await quotaService.GetCurrentUsageAsync(currentTenant.TenantId, cancellationToken)));
@@ -289,25 +293,41 @@ public sealed class TenantAdministrationService(
         return Result<SubscriptionResponse>.Success(ToSubscriptionResponse(subscription));
     }
 
-    private async Task<bool> CanViewCurrentTenantAdministrationAsync(CancellationToken cancellationToken)
+    private async Task<Result> RequireCurrentTenantAdministrationAsync(CancellationToken cancellationToken)
     {
-        return await CanManageCurrentTenantAdministrationAsync(cancellationToken);
-    }
-
-    private async Task<bool> CanManageCurrentTenantAdministrationAsync(CancellationToken cancellationToken)
-    {
-        if (!currentTenant.IsAvailable || !currentUser.IsAuthenticated || !currentUser.UserId.HasValue)
+        if (!currentTenant.IsAvailable)
         {
-            return false;
+            const string message = "A tenant context is required.";
+            return Result.Failure(message, new ApplicationErrorDetail("ValidationFailed", message));
+        }
+
+        if (!currentUser.IsAuthenticated || !currentUser.UserId.HasValue)
+        {
+            const string message = "Authentication is required.";
+            return Result.Failure(message, new ApplicationErrorDetail("AuthenticationRequired", message));
         }
 
         if (IsPlatformAdmin())
         {
-            return true;
+            return Result.Success();
         }
 
         var membership = await tenants.GetTenantUserAsync(currentTenant.TenantId, currentUser.UserId.Value, cancellationToken);
-        return membership is { Status: TenantUserStatus.Active, Role: TenantUserRole.Owner or TenantUserRole.Admin };
+        if (membership is not { Status: TenantUserStatus.Active, Role: TenantUserRole.Owner or TenantUserRole.Admin })
+        {
+            const string message = "TenantAdmin access is required.";
+            return Result.Failure(message, new ApplicationErrorDetail("Forbidden", message));
+        }
+
+        return Result.Success();
+    }
+
+    private static Result<T> ForwardFailure<T>(Result result)
+    {
+        var message = result.Error ?? result.ErrorDetail?.Message ?? "Request failed.";
+        return result.ErrorDetail is null
+            ? Result<T>.Failure(message)
+            : Result<T>.Failure(message, result.ErrorDetail);
     }
 
     private bool IsPlatformAdmin()

@@ -8,10 +8,27 @@ public abstract class ApiResultControllerBase : ControllerBase
     protected IActionResult OkOrBad(Result result) =>
         result.IsSuccess
             ? Ok(new { status = "OK" })
-            : BadRequest(new { error = result.Error });
+            : ToFailureActionResult(result.Error, result.ErrorDetail);
 
     protected IActionResult ToActionResult<T>(Result<T> result) =>
         result.IsSuccess
             ? Ok(result.Value)
-            : BadRequest(new { error = result.Error });
+            : ToFailureActionResult(result.Error, result.ErrorDetail);
+
+    private IActionResult ToFailureActionResult(string? error, ApplicationErrorDetail? detail)
+    {
+        var statusCode = detail?.Code switch
+        {
+            "AuthenticationRequired" => StatusCodes.Status401Unauthorized,
+            "Forbidden" => StatusCodes.Status403Forbidden,
+            _ => StatusCodes.Status400BadRequest
+        };
+
+        return StatusCode(statusCode, new
+        {
+            error = string.IsNullOrWhiteSpace(error)
+                ? detail?.Message ?? "Request failed."
+                : error
+        });
+    }
 }
