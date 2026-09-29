@@ -67,13 +67,13 @@ public sealed class TaskSubresourceService(
             (source.FileObject.WorkspaceId.HasValue && source.FileObject.WorkspaceId != task.WorkspaceId) ||
             (source.FileObject.ProjectId.HasValue && source.FileObject.ProjectId != task.ProjectId))
             return Fail<TaskFileAssociationResponse>("TASK_FILE_ASSOCIATION_FORBIDDEN", "File is not available for this task.");
-        if (source.FileObject.Status == Coglatas.Domain.Enums.FileObjectStatus.Quarantined) return Fail<TaskFileAssociationResponse>("TASK_FILE_QUARANTINED", "File is quarantined.");
-        if (source.FileObject.Status != Coglatas.Domain.Enums.FileObjectStatus.Active) return Fail<TaskFileAssociationResponse>("TASK_FILE_ASSOCIATION_FORBIDDEN", "File is not available for this task.");
-        if (source.ScanStatus != Coglatas.Domain.Enums.FileScanStatus.Clean) return Fail<TaskFileAssociationResponse>("TASK_FILE_SCAN_NOT_READY", "File scan is not ready.");
+        if (source.FileObject.Status == FileObjectStatus.Quarantined) return Fail<TaskFileAssociationResponse>("TASK_FILE_QUARANTINED", "File is quarantined.");
+        if (source.FileObject.Status != FileObjectStatus.Active) return Fail<TaskFileAssociationResponse>("TASK_FILE_ASSOCIATION_FORBIDDEN", "File is not available for this task.");
+        if (source.ScanStatus != FileScanStatus.Clean) return Fail<TaskFileAssociationResponse>("TASK_FILE_SCAN_NOT_READY", "File scan is not ready.");
         var duplicate = (await files.ListTaskAttachmentsAsync(taskId, ct)).FirstOrDefault(x => x.FileObjectId == source.FileObjectId);
         if (duplicate is not null) return Result<TaskFileAssociationResponse>.Success(await ToFileAsync(duplicate, ct));
         if (task.VersionNo != request.ExpectedVersion) return Fail<TaskFileAssociationResponse>("TASK_STALE_VERSION", "Task has changed. Refetch and retry.");
-        var association = new Attachment { FileObjectId = source.FileObjectId, WorkspaceId = task.WorkspaceId, OwnerType = Coglatas.Domain.Enums.AttachmentOwnerType.TaskItem, OwnerId = taskId, OwnerUserId = Actor(), UploadedByUserId = source.UploadedByUserId, FileName = source.FileName, StoredFileName = source.StoredFileName, FilePath = source.FilePath, ContentType = source.ContentType, Extension = source.Extension, SizeBytes = source.SizeBytes, StorageProvider = source.StorageProvider, StorageKey = source.StorageKey, ScanStatus = source.ScanStatus };
+        var association = new Attachment { FileObjectId = source.FileObjectId, WorkspaceId = task.WorkspaceId, OwnerType = AttachmentOwnerType.TaskItem, OwnerId = taskId, OwnerUserId = Actor(), UploadedByUserId = source.UploadedByUserId, FileName = source.FileName, StoredFileName = source.StoredFileName, FilePath = source.FilePath, ContentType = source.ContentType, Extension = source.Extension, SizeBytes = source.SizeBytes, StorageProvider = source.StorageProvider, StorageKey = source.StorageKey, ScanStatus = source.ScanStatus };
         await files.AddAttachmentAsync(association, ct);
         var save = await CommitAsync(task, "TaskFileAssociated", "filesChanged", new Dictionary<string, object?> { ["fileObjectId"] = source.FileObjectId }, ct);
         if (save.IsSaved)
@@ -107,7 +107,7 @@ public sealed class TaskSubresourceService(
         if (expectedVersion <= 0) return Fail("TASK_INVALID_EXPECTED_VERSION", "Expected version must be a positive integer.");
         var attachment = await files.GetAttachmentAsync(associationId, ct);
         if (attachment is null) return Result.Success();
-        if (attachment.OwnerType != Coglatas.Domain.Enums.AttachmentOwnerType.TaskItem || attachment.OwnerId != taskId)
+        if (attachment.OwnerType != AttachmentOwnerType.TaskItem || attachment.OwnerId != taskId)
             return Fail("TASK_FILE_ASSOCIATION_NOT_FOUND", "Task file association not found.");
         // A tombstone already represents the requested DELETE state.  It is a
         // no-op even when the caller retransmits an old aggregate version.
@@ -157,7 +157,7 @@ public sealed class TaskSubresourceService(
             WorkspaceId = parent.WorkspaceId,
             ProjectId = parent.ProjectId,
             ParentTaskItemId = parent.Id,
-            Kind = Coglatas.Domain.Enums.WorkItemKind.Task,
+            Kind = WorkItemKind.Task,
             Title = title,
             Description = NullableText(request.Description, 12000),
             BriefGoal = TaskBriefText.Normalize(request.Goal),
@@ -235,7 +235,7 @@ public sealed class TaskSubresourceService(
     }
     public async Task<Result<TaskCommentResponse>> CreateCommentAsync(Guid taskId, CreateTaskCommentRequest request, CancellationToken ct = default)
     {
-        var task = await VisibleTaskAsync(taskId, ct); if (task is null || !await commentAuthorization.CanCommentOnTarget(Actor(), Coglatas.Domain.Enums.CommentTargetType.TaskItem, taskId, ct)) return Fail<TaskCommentResponse>("TASK_FORBIDDEN", "Task operation is not authorized.");
+        var task = await VisibleTaskAsync(taskId, ct); if (task is null || !await commentAuthorization.CanCommentOnTarget(Actor(), CommentTargetType.TaskItem, taskId, ct)) return Fail<TaskCommentResponse>("TASK_FORBIDDEN", "Task operation is not authorized.");
         var body = Text(request.BodyPlainText, 12000); if (body is null) return Fail<TaskCommentResponse>("VALIDATION_FAILED", "Comment body is required.");
         var safety = safetyGuard.CheckMessagePost(new CommunicationSafetyScope(Actor(), task.TenantId, task.WorkspaceId, task.Id), body, clock.UtcNow);
         if (!safety.IsAllowed) return safety.ReasonCode == "duplicate_post"
