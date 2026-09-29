@@ -346,7 +346,7 @@ public sealed class AuditFindingReviewerMentionsServiceTests
     {
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "actor@example.invalid";
+        public string Email => "actor@example.invalid";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }
@@ -355,7 +355,7 @@ public sealed class AuditFindingReviewerMentionsServiceTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "audit-tenant";
+        public string TenantSlug => "audit-tenant";
         public bool IsPlatformScope => false;
     }
 
