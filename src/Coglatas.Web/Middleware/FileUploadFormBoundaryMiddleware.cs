@@ -30,7 +30,8 @@ public sealed class FileUploadFormBoundaryMiddleware(RequestDelegate next)
             return;
         }
 
-        if (!context.Request.HasFormContentType)
+        if (!context.Request.HasFormContentType ||
+            context.Request.ContentType?.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase) != true)
         {
             await next(context);
             return;
@@ -53,7 +54,7 @@ public sealed class FileUploadFormBoundaryMiddleware(RequestDelegate next)
             return;
         }
 
-        if (form.Keys.Any(field => !allowedScalarFields.Contains(field)) ||
+        if (form.Any(field => !allowedScalarFields.Contains(field.Key) || field.Value.Count != 1) ||
             form.Files.Count != 1 ||
             form.Files.Any(file => !string.Equals(file.Name, FileFieldName, StringComparison.OrdinalIgnoreCase)))
         {
