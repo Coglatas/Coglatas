@@ -216,7 +216,7 @@ public sealed class FileActivityServiceTests
         public Task<FileVersionRecord?> GetFileVersionAsync(Guid tenantId, Guid fileObjectId, Guid versionId, CancellationToken cancellationToken = default)
         {
             VersionReadCalls++;
-            return Task.FromResult<FileVersionRecord?>(Versions.FirstOrDefault(version =>
+            return Task.FromResult(Versions.FirstOrDefault(version =>
                 version.FileObjectId == fileObjectId && version.Id == versionId));
         }
 

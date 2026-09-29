@@ -1,5 +1,4 @@
 using Coglatas.Domain.Entities;
-using Coglatas.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

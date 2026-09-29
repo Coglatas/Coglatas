@@ -1,4 +1,3 @@
-using Coglatas.Application.Common;
 
 namespace Coglatas.Application.Common.Interfaces;
 

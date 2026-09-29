@@ -1,6 +1,5 @@
 using Coglatas.Application.Search;
 using Coglatas.Application.Security.Redaction;
-using Coglatas.Web.Models;
 using Coglatas.Web.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

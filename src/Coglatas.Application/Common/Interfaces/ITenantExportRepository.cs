@@ -1,6 +1,5 @@
 using Coglatas.Application.Security.Redaction;
 using Coglatas.Domain.Entities;
-using Coglatas.Domain.Enums;
 
 namespace Coglatas.Application.Common.Interfaces;
 
