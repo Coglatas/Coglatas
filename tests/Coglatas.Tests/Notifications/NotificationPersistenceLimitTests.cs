@@ -115,7 +115,7 @@ public sealed class NotificationPersistenceLimitTests
         Assert.NotNull(entity);
         Assert.Equal(
             Notification.TitleMaximumLength,
-            entity!.FindProperty(nameof(Notification.Title))!.GetMaxLength());
+            entity.FindProperty(nameof(Notification.Title))!.GetMaxLength());
         Assert.Equal(
             Notification.BodyMaximumLength,
             entity.FindProperty(nameof(Notification.Body))!.GetMaxLength());
