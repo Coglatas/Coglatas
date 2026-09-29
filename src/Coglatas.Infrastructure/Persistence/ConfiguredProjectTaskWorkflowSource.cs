@@ -119,9 +119,9 @@ public sealed class ConfiguredProjectTaskWorkflowSource(AppDbContext dbContext)
 
         try
         {
-            string? name = null;
-            var reviewEnforcementEnabled = true;
-            long version = 0;
+            string? name;
+            bool reviewEnforcementEnabled;
+            long version;
 
             await using (var templateCommand = connection.CreateCommand())
             {

@@ -40,7 +40,7 @@ public sealed class TaskDeadlineDigestRepository(
             .AsNoTracking()
             .Where(settings => settings.TenantId == tenantId)
             .Select(settings => settings.TimeZone)
-            .SingleOrDefaultAsync(cancellationToken)!;
+            .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<IReadOnlyList<TaskDeadlineDigestScheduleCandidate>> ListScheduleCandidatesAsync(
         int page,

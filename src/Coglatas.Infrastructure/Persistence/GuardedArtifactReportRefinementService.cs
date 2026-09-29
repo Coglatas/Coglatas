@@ -212,10 +212,6 @@ public sealed class ArtifactReportRefinementCommitGuardUnitOfWork(
     private sealed record CommitContext(Guid ProjectId, Guid BaseArtifactVersionId, Guid UserId);
 }
 
-public sealed class RefinementCommitAuthorizationChangedException : Exception
-{
-}
+public sealed class RefinementCommitAuthorizationChangedException : Exception;
 
-public sealed class RefinementCommitStaleVersionException : Exception
-{
-}
+public sealed class RefinementCommitStaleVersionException : Exception;
