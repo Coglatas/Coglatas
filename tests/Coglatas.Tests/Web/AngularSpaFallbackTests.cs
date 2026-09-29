@@ -128,7 +128,7 @@ public sealed class AngularSpaFallbackTests : IDisposable
         builder.WebHost.UseKestrel().UseUrls("http://127.0.0.1:0");
 
         await using var app = builder.Build();
-        app.MapGet("/api/example", () => Results.NoContent());
+        app.MapGet("/api/example", Results.NoContent);
         AngularSpaFallback.MapEndpointFallback(app, webRootPath);
 
         await app.StartAsync();
@@ -175,7 +175,7 @@ public sealed class AngularSpaFallbackTests : IDisposable
 
         await using var app = builder.Build();
         app.UseMiddleware<CsrfProtectionMiddleware>();
-        app.MapPost("/api/example", () => Results.NoContent());
+        app.MapPost("/api/example", Results.NoContent);
         AngularSpaFallback.MapEndpointFallback(app, webRootPath);
 
         await app.StartAsync();
