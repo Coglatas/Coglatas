@@ -80,12 +80,6 @@
         "missing_or_stale": "fail",
         "required": [
           {
-            "kind": "commit-status",
-            "workflow": ".github/workflows/external-pr-approval-evaluator.yml",
-            "job": "evaluate",
-            "context": "External PR approval policy"
-          },
-          {
             "kind": "workflow-job",
             "workflow": ".github/workflows/ci.yml",
             "job": "build-test",
@@ -126,17 +120,10 @@
           "docs/verification/governance-required-checks.md"
         ],
         "workflows": [
-          ".github/workflows/external-pr-approval-evaluator.yml",
           ".github/workflows/ci.yml",
           ".github/workflows/publication-readiness.yml"
         ],
         "checks": [
-          {
-            "kind": "commit-status",
-            "workflow": ".github/workflows/external-pr-approval-evaluator.yml",
-            "job": "evaluate",
-            "context": "External PR approval policy"
-          },
           {
             "kind": "workflow-job",
             "workflow": ".github/workflows/ci.yml",
@@ -171,15 +158,15 @@
     {
       "id": "GOV-SIGNATURE-001",
       "family": "required-signatures",
-      "title": "Required commit signatures",
-      "purpose": "Require signed commits on the protected default branch.",
+      "title": "Commit signature policy",
+      "purpose": "Do not make commit signatures a merge-blocking requirement; preserve original PR commit history and rely on required CI plus repository permissions for merge protection.",
       "scope": [
         "default-branch"
       ],
       "enforcement": "blocking",
       "owner": "@NYGsatoshi",
       "expected": {
-        "required": true
+        "required": false
       },
       "evidence": {
         "kind": "github-live-settings",
@@ -249,7 +236,6 @@
           ".github/CODEOWNERS",
           ".github/workflows/ci.yml",
           ".github/workflows/publication-readiness.yml",
-          ".github/workflows/external-pr-auto-sign.yml",
           ".github/workflows/external-pr-approval-evaluator.yml",
           "scripts/ci/check-governance-review-status-invariants.py",
           "scripts/ci/evaluate-governance-pr-review.py",
@@ -285,8 +271,7 @@
         ],
         "workflows": [
           ".github/workflows/external-pr-review-signal.yml",
-          ".github/workflows/external-pr-approval-evaluator.yml",
-          ".github/workflows/external-pr-auto-sign.yml"
+          ".github/workflows/external-pr-approval-evaluator.yml"
         ],
         "checks": [],
         "rulesets": [
@@ -346,20 +331,7 @@
       "expected": {
         "default": "read-only",
         "persist_credentials": false,
-        "write_permissions_allowlist": [
-          {
-            "workflow": ".github/workflows/external-pr-auto-sign.yml",
-            "permissions": [
-              "contents:write"
-            ]
-          },
-          {
-            "workflow": ".github/workflows/external-pr-approval-evaluator.yml",
-            "permissions": [
-              "statuses:write"
-            ]
-          }
-        ]
+        "write_permissions_allowlist": []
       },
       "evidence": {
         "kind": "workflow-static",
@@ -376,8 +348,7 @@
           ".github/workflows/ci.yml",
           ".github/workflows/publication-readiness.yml",
           ".github/workflows/external-pr-review-signal.yml",
-          ".github/workflows/external-pr-approval-evaluator.yml",
-          ".github/workflows/external-pr-auto-sign.yml"
+          ".github/workflows/external-pr-approval-evaluator.yml"
         ],
         "checks": [],
         "rulesets": []
@@ -413,8 +384,7 @@
         ],
         "workflows": [
           ".github/workflows/external-pr-review-signal.yml",
-          ".github/workflows/external-pr-approval-evaluator.yml",
-          ".github/workflows/external-pr-auto-sign.yml"
+          ".github/workflows/external-pr-approval-evaluator.yml"
         ],
         "checks": [],
         "rulesets": []
