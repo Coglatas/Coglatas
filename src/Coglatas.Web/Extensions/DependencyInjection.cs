@@ -94,7 +94,8 @@ public static class DependencyInjection
 
                     if (IsCommunicationPollingPath(path) ||
                         IsTenantSwitchPath(path, context.HttpContext.Request.Method) ||
-                        IsFileFolderListPath(path, context.HttpContext.Request.Method))
+                        IsFileFolderListPath(path, context.HttpContext.Request.Method) ||
+                        HasReflectedAttemptedValue(context.ModelState))
                     {
                         // Model-binding conversion failures can embed the raw
                         // attempted query value in ValidationProblemDetails.
@@ -220,6 +221,12 @@ public static class DependencyInjection
     private static bool IsFileFolderListPath(string? path, string method) =>
         HttpMethods.IsGet(method) &&
         NormalizePath(path).Equals("/api/file-folders", StringComparison.OrdinalIgnoreCase);
+
+    private static bool HasReflectedAttemptedValue(ModelStateDictionary source) =>
+        source.Any(entry =>
+            entry.Value?.AttemptedValue is { Length: > 0 } attempted &&
+            entry.Value.Errors.Any(error =>
+                error.ErrorMessage.Contains(attempted, StringComparison.Ordinal)));
 
     private static ModelStateDictionary CreateSanitizedModelState(ModelStateDictionary source)
     {
