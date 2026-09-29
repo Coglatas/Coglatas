@@ -93,7 +93,8 @@ public static class DependencyInjection
                     }
 
                     if (IsCommunicationPollingPath(path) ||
-                        IsTenantSwitchPath(path, context.HttpContext.Request.Method))
+                        IsTenantSwitchPath(path, context.HttpContext.Request.Method) ||
+                        IsFileFolderListPath(path, context.HttpContext.Request.Method))
                     {
                         // Model-binding conversion failures can embed the raw
                         // attempted query value in ValidationProblemDetails.
@@ -215,6 +216,10 @@ public static class DependencyInjection
     private static bool IsTenantSwitchPath(string? path, string method) =>
         HttpMethods.IsPost(method) &&
         NormalizePath(path).Equals("/api/tenants/switch", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsFileFolderListPath(string? path, string method) =>
+        HttpMethods.IsGet(method) &&
+        NormalizePath(path).Equals("/api/file-folders", StringComparison.OrdinalIgnoreCase);
 
     private static ModelStateDictionary CreateSanitizedModelState(ModelStateDictionary source)
     {
