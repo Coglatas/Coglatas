@@ -59,8 +59,8 @@ public sealed class ArtifactsController(IArtifactService artifacts) : Controller
     [HttpDelete("api/artifact-versions/{versionId:guid}")]
     public async Task<IActionResult> DeleteVersion(Guid versionId, CancellationToken cancellationToken) => OkOrBad(await artifacts.DeleteVersionAsync(versionId, cancellationToken));
 
-    private IActionResult OkOrBad(Coglatas.Application.Common.Result result) => result.IsSuccess ? Ok(new { status = "OK" }) : Failure(result.Error);
-    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result) => result.IsSuccess ? Ok(result.Value) : Failure(result.Error);
+    private IActionResult OkOrBad(Application.Common.Result result) => result.IsSuccess ? Ok(new { status = "OK" }) : Failure(result.Error);
+    private IActionResult ToActionResult<T>(Application.Common.Result<T> result) => result.IsSuccess ? Ok(result.Value) : Failure(result.Error);
 
     private IActionResult Failure(string? error) => StatusCode(error switch
     {
