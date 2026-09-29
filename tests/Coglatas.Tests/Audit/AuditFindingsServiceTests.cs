@@ -483,7 +483,7 @@ public sealed class AuditFindingsServiceTests
                 Role = role,
                 Status = status,
                 JoinedAt = DateTimeOffset.UtcNow,
-                Tenant = tenant,
+                Tenant = _tenant,
                 User = user,
             });
             await Context.SaveChangesAsync();
