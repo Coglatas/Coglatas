@@ -223,4 +223,3 @@ public sealed class SecurityOpenApiSchemaTransformer : IOpenApiSchemaTransformer
         urlSchema.Pattern = "^(?:/(?!/)(?!\\.\\.(?:/|$))(?!.*?/\\.\\.(?:/|$))[^\\s\\\\]*|[hH][tT][tT][pP][sS]://(?:\\[[0-9A-Fa-f:.]+\\]|[^\\s/:?#@\\\\][^\\s/:?#@\\\\]*)(?::[0-9]{1,5})?(?:[/?#][^\\s\\\\]*)?)$";
     }
 }
-

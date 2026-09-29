@@ -98,4 +98,3 @@ public sealed class FileUploadFormBoundaryMiddleware(RequestDelegate next)
             context.TraceIdentifier));
     }
 }
-
