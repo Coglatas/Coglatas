@@ -285,7 +285,7 @@ public sealed class FileActivityServiceTests
         public Task<Stream> OpenReadAsync(string storageKey, CancellationToken cancellationToken = default)
         {
             LastOpenedStorageKey = storageKey;
-            return Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("version")));
+            return Task.FromResult<Stream>(new MemoryStream("version"u8.ToArray()));
         }
         public Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<bool> ExistsAsync(string storageKey, CancellationToken cancellationToken = default) => Task.FromResult(true);
