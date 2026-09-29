@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Coglatas/Coglatas/governance/policy.schema.json",
+  "$id": "https://github.com/NYGsatoshi/Coglatas/governance/policy.schema.json",
   "title": "Coglatas Governance Policy Contract",
   "type": "object",
   "additionalProperties": false,
@@ -9,6 +9,8 @@
     "version",
     "policy_id",
     "repository",
+    "repository_id",
+    "repository_aliases",
     "default_branch",
     "owners",
     "semantics",
@@ -16,39 +18,85 @@
     "controls"
   ],
   "properties": {
-    "$schema": {"const": "./policy.schema.json"},
-    "version": {"const": 1},
-    "policy_id": {"const": "COGLATAS-GOVERNANCE"},
-    "repository": {"const": "Coglatas/Coglatas"},
-    "default_branch": {"type": "string", "minLength": 1},
+    "$schema": {
+      "const": "./policy.schema.json"
+    },
+    "version": {
+      "const": 1
+    },
+    "policy_id": {
+      "const": "COGLATAS-GOVERNANCE"
+    },
+    "repository": {
+      "const": "NYGsatoshi/Coglatas"
+    },
+    "default_branch": {
+      "type": "string",
+      "minLength": 1
+    },
     "owners": {
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
-      "items": {"type": "string", "pattern": "^@[A-Za-z0-9-]+$"}
+      "items": {
+        "type": "string",
+        "pattern": "^@[A-Za-z0-9-]+$"
+      }
     },
-    "semantics": {"$ref": "#/$defs/semantics"},
+    "semantics": {
+      "$ref": "#/$defs/semantics"
+    },
     "waiver_rules": {
       "type": "object",
       "minProperties": 1,
-      "additionalProperties": {"$ref": "#/$defs/waiverRule"}
+      "additionalProperties": {
+        "$ref": "#/$defs/waiverRule"
+      }
     },
     "controls": {
       "type": "array",
       "minItems": 12,
-      "items": {"$ref": "#/$defs/control"}
+      "items": {
+        "$ref": "#/$defs/control"
+      }
+    },
+    "repository_id": {
+      "const": 1261244608
+    },
+    "repository_aliases": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "Coglatas/Coglatas",
+          "NYGsatoshi/Coglatas"
+        ]
+      }
     }
   },
   "$defs": {
     "semantics": {
       "type": "object",
       "properties": {
-        "live_state_is_baseline": {"const": false},
-        "unknown_control_behavior": {"const": "reject"},
-        "unknown_field_behavior": {"const": "reject"},
-        "invalid_policy_behavior": {"const": "block"},
-        "implicit_critical_defaults": {"const": "forbidden"},
-        "downgrade_requires_explicit_diff": {"const": true}
+        "live_state_is_baseline": {
+          "const": false
+        },
+        "unknown_control_behavior": {
+          "const": "reject"
+        },
+        "unknown_field_behavior": {
+          "const": "reject"
+        },
+        "invalid_policy_behavior": {
+          "const": "block"
+        },
+        "implicit_critical_defaults": {
+          "const": "forbidden"
+        },
+        "downgrade_requires_explicit_diff": {
+          "const": true
+        }
       },
       "additionalProperties": false,
       "required": [
@@ -63,11 +111,23 @@
     "waiverRule": {
       "type": "object",
       "properties": {
-        "owner_required": {"const": true},
-        "reason_required": {"const": true},
-        "expiry_required": {"const": true},
-        "tracking_issue_required": {"const": true},
-        "max_duration_days": {"type": "integer", "minimum": 1, "maximum": 90}
+        "owner_required": {
+          "const": true
+        },
+        "reason_required": {
+          "const": true
+        },
+        "expiry_required": {
+          "const": true
+        },
+        "tracking_issue_required": {
+          "const": true
+        },
+        "max_duration_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 90
+        }
       },
       "additionalProperties": false,
       "required": [
@@ -90,30 +150,62 @@
             "governance-manifest"
           ]
         },
-        "source": {"type": "string", "minLength": 1}
+        "source": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "additionalProperties": false,
-      "required": ["kind", "source"]
+      "required": [
+        "kind",
+        "source"
+      ]
     },
     "exception": {
       "type": "object",
       "properties": {
-        "allowed": {"type": "boolean"},
-        "waiver_rule": {"type": "string", "minLength": 1}
+        "allowed": {
+          "type": "boolean"
+        },
+        "waiver_rule": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "additionalProperties": false,
-      "required": ["allowed"]
+      "required": [
+        "allowed"
+      ]
     },
     "checkReference": {
       "type": "object",
       "properties": {
-        "kind": {"enum": ["workflow-job", "commit-status"]},
-        "workflow": {"type": "string", "minLength": 1},
-        "job": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"},
-        "context": {"type": "string", "minLength": 1}
+        "kind": {
+          "enum": [
+            "workflow-job",
+            "commit-status"
+          ]
+        },
+        "workflow": {
+          "type": "string",
+          "minLength": 1
+        },
+        "job": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+$"
+        },
+        "context": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "additionalProperties": false,
-      "required": ["kind", "workflow", "job", "context"]
+      "required": [
+        "kind",
+        "workflow",
+        "job",
+        "context"
+      ]
     },
     "references": {
       "type": "object",
@@ -121,57 +213,110 @@
         "paths": {
           "type": "array",
           "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "workflows": {
           "type": "array",
           "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "checks": {
           "type": "array",
-          "items": {"$ref": "#/$defs/checkReference"}
+          "items": {
+            "$ref": "#/$defs/checkReference"
+          }
         },
         "rulesets": {
           "type": "array",
           "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       },
       "additionalProperties": false,
-      "required": ["paths", "workflows", "checks", "rulesets"]
+      "required": [
+        "paths",
+        "workflows",
+        "checks",
+        "rulesets"
+      ]
     },
     "writePermissionAllowlistEntry": {
       "type": "object",
       "properties": {
-        "workflow": {"type": "string", "minLength": 1},
+        "workflow": {
+          "type": "string",
+          "minLength": 1
+        },
         "permissions": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"type": "string", "pattern": "^[a-z-]+:(read|write)$"}
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z-]+:(read|write)$"
+          }
         }
       },
       "additionalProperties": false,
-      "required": ["workflow", "permissions"]
+      "required": [
+        "workflow",
+        "permissions"
+      ]
     },
     "bypassActor": {
       "type": "object",
       "properties": {
         "actor_type": {
-          "enum": ["Integration", "User", "Team", "RepositoryRole", "OrganizationAdmin", "DeployKey"]
+          "enum": [
+            "Integration",
+            "User",
+            "Team",
+            "RepositoryRole",
+            "OrganizationAdmin",
+            "DeployKey"
+          ]
         },
-        "actor_id": {"type": "integer", "minimum": 1},
-        "bypass_mode": {"enum": ["always", "pull_request"]},
-        "purpose": {"type": "string", "minLength": 1},
-        "rationale": {"type": "string", "minLength": 1},
-        "break_glass": {"type": "boolean"},
-        "normal_development": {"const": false},
+        "actor_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bypass_mode": {
+          "enum": [
+            "always",
+            "pull_request"
+          ]
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "break_glass": {
+          "type": "boolean"
+        },
+        "normal_development": {
+          "const": false
+        },
         "rulesets": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       },
       "additionalProperties": false,
@@ -187,15 +332,33 @@
       ],
       "allOf": [
         {
-          "if": {"properties": {"actor_type": {"const": "User"}}, "required": ["actor_type"]},
-          "then": {"properties": {"break_glass": {"const": true}}}
+          "if": {
+            "properties": {
+              "actor_type": {
+                "const": "User"
+              }
+            },
+            "required": [
+              "actor_type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "break_glass": {
+                "const": true
+              }
+            }
+          }
         }
       ]
     },
     "control": {
       "type": "object",
       "properties": {
-        "id": {"type": "string", "pattern": "^GOV-[A-Z0-9-]+-[0-9]{3}$"},
+        "id": {
+          "type": "string",
+          "pattern": "^GOV-[A-Z0-9-]+-[0-9]{3}$"
+        },
         "family": {
           "enum": [
             "ruleset",
@@ -212,22 +375,50 @@
             "governance-evidence"
           ]
         },
-        "title": {"type": "string", "minLength": 1},
-        "purpose": {"type": "string", "minLength": 1},
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
         "scope": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"enum": ["pr", "default-branch", "release", "scheduled"]}
+          "items": {
+            "enum": [
+              "pr",
+              "default-branch",
+              "release",
+              "scheduled"
+            ]
+          }
         },
         "enforcement": {
-          "enum": ["blocking", "required-on-sensitive-change", "audit"]
+          "enum": [
+            "blocking",
+            "required-on-sensitive-change",
+            "audit"
+          ]
         },
-        "owner": {"type": "string", "pattern": "^@[A-Za-z0-9-]+$"},
-        "expected": {"type": "object"},
-        "evidence": {"$ref": "#/$defs/evidence"},
-        "exception": {"$ref": "#/$defs/exception"},
-        "references": {"$ref": "#/$defs/references"},
+        "owner": {
+          "type": "string",
+          "pattern": "^@[A-Za-z0-9-]+$"
+        },
+        "expected": {
+          "type": "object"
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "exception": {
+          "$ref": "#/$defs/exception"
+        },
+        "references": {
+          "$ref": "#/$defs/references"
+        },
         "failure_classification": {
           "type": "string",
           "pattern": "^[a-z][a-z0-9-]+$"
@@ -250,68 +441,259 @@
       ],
       "allOf": [
         {
-          "if": {"properties": {"family": {"const": "ruleset"}}, "required": ["family"]},
-          "then": {"properties": {"expected": {"$ref": "#/$defs/rulesetExpected"}}}
+          "if": {
+            "properties": {
+              "family": {
+                "const": "ruleset"
+              }
+            },
+            "required": [
+              "family"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "$ref": "#/$defs/rulesetExpected"
+              }
+            }
+          }
         },
         {
-          "if": {"properties": {"family": {"const": "required-status-checks"}}, "required": ["family"]},
-          "then": {"properties": {"expected": {"$ref": "#/$defs/requiredChecksExpected"}}}
+          "if": {
+            "properties": {
+              "family": {
+                "const": "required-status-checks"
+              }
+            },
+            "required": [
+              "family"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "$ref": "#/$defs/requiredChecksExpected"
+              }
+            }
+          }
         },
         {
-          "if": {"properties": {"family": {"const": "required-signatures"}}, "required": ["family"]},
-          "then": {"properties": {"expected": {"$ref": "#/$defs/requiredSignaturesExpected"}}}
+          "if": {
+            "properties": {
+              "family": {
+                "const": "required-signatures"
+              }
+            },
+            "required": [
+              "family"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "$ref": "#/$defs/requiredSignaturesExpected"
+              }
+            }
+          }
         },
         {
-          "if": {"properties": {"family": {"const": "pr-review-codeowners"}}, "required": ["family"]},
-          "then": {"properties": {"expected": {"$ref": "#/$defs/reviewExpected"}}}
+          "if": {
+            "properties": {
+              "family": {
+                "const": "pr-review-codeowners"
+              }
+            },
+            "required": [
+              "family"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "$ref": "#/$defs/reviewExpected"
+              }
+            }
+          }
         },
         {
-          "if": {"properties": {"family": {"const": "bypass-actors"}}, "required": ["family"]},
-          "then": {"properties": {"expected": {"$ref": "#/$defs/bypassExpected"}}}
+          "if": {
+            "properties": {
+              "family": {
+                "const": "bypass-actors"
+              }
+            },
+            "required": [
+              "family"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "$ref": "#/$defs/bypassExpected"
+              }
+            }
+          }
         },
         {
-          "if": {"properties": {"family": {"const": "workflow-permissions"}}, "required": ["family"]},
-          "then": {"properties": {"expected": {"$ref": "#/$defs/workflowPermissionsExpected"}}}
+          "if": {
+            "properties": {
+              "family": {
+                "const": "workflow-permissions"
+              }
+            },
+            "required": [
+              "family"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "$ref": "#/$defs/workflowPermissionsExpected"
+              }
+            }
+          }
         },
         {
-          "if": {"properties": {"family": {"const": "workflow-trust-boundary"}}, "required": ["family"]},
-          "then": {"properties": {"expected": {"$ref": "#/$defs/trustBoundaryExpected"}}}
+          "if": {
+            "properties": {
+              "family": {
+                "const": "workflow-trust-boundary"
+              }
+            },
+            "required": [
+              "family"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "$ref": "#/$defs/trustBoundaryExpected"
+              }
+            }
+          }
         },
         {
-          "if": {"properties": {"family": {"const": "self-hosted-runner"}}, "required": ["family"]},
-          "then": {"properties": {"expected": {"$ref": "#/$defs/selfHostedExpected"}}}
+          "if": {
+            "properties": {
+              "family": {
+                "const": "self-hosted-runner"
+              }
+            },
+            "required": [
+              "family"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "$ref": "#/$defs/selfHostedExpected"
+              }
+            }
+          }
         },
         {
-          "if": {"properties": {"family": {"const": "action-refs"}}, "required": ["family"]},
-          "then": {"properties": {"expected": {"$ref": "#/$defs/actionRefsExpected"}}}
+          "if": {
+            "properties": {
+              "family": {
+                "const": "action-refs"
+              }
+            },
+            "required": [
+              "family"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "$ref": "#/$defs/actionRefsExpected"
+              }
+            }
+          }
         },
         {
-          "if": {"properties": {"family": {"const": "governance-sensitive-paths"}}, "required": ["family"]},
-          "then": {"properties": {"expected": {"$ref": "#/$defs/sensitivePathsExpected"}}}
+          "if": {
+            "properties": {
+              "family": {
+                "const": "governance-sensitive-paths"
+              }
+            },
+            "required": [
+              "family"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "$ref": "#/$defs/sensitivePathsExpected"
+              }
+            }
+          }
         },
         {
-          "if": {"properties": {"family": {"const": "waiver-expiry"}}, "required": ["family"]},
-          "then": {"properties": {"expected": {"$ref": "#/$defs/waiverExpected"}}}
+          "if": {
+            "properties": {
+              "family": {
+                "const": "waiver-expiry"
+              }
+            },
+            "required": [
+              "family"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "$ref": "#/$defs/waiverExpected"
+              }
+            }
+          }
         },
         {
-          "if": {"properties": {"family": {"const": "governance-evidence"}}, "required": ["family"]},
-          "then": {"properties": {"expected": {"$ref": "#/$defs/evidenceExpected"}}}
+          "if": {
+            "properties": {
+              "family": {
+                "const": "governance-evidence"
+              }
+            },
+            "required": [
+              "family"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected": {
+                "$ref": "#/$defs/evidenceExpected"
+              }
+            }
+          }
         }
       ]
     },
     "rulesetExpected": {
       "type": "object",
       "properties": {
-        "target": {"const": "default-branch"},
+        "target": {
+          "const": "default-branch"
+        },
         "ruleset_names": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
-        "strict_required_status_checks": {"type": "boolean"},
-        "branch_deletion_allowed": {"type": "boolean"},
-        "non_fast_forward_allowed": {"type": "boolean"}
+        "strict_required_status_checks": {
+          "type": "boolean"
+        },
+        "branch_deletion_allowed": {
+          "type": "boolean"
+        },
+        "non_fast_forward_allowed": {
+          "type": "boolean"
+        }
       },
       "additionalProperties": false,
       "required": [
@@ -325,57 +707,115 @@
     "requiredChecksExpected": {
       "type": "object",
       "properties": {
-        "strict": {"type": "boolean"},
-        "missing_or_stale": {"enum": ["fail"]},
+        "strict": {
+          "type": "boolean"
+        },
+        "missing_or_stale": {
+          "enum": [
+            "fail"
+          ]
+        },
         "required": {
           "type": "array",
           "minItems": 1,
-          "items": {"$ref": "#/$defs/checkReference"}
+          "items": {
+            "$ref": "#/$defs/checkReference"
+          }
         }
       },
       "additionalProperties": false,
-      "required": ["strict", "missing_or_stale", "required"]
+      "required": [
+        "strict",
+        "missing_or_stale",
+        "required"
+      ]
     },
     "requiredSignaturesExpected": {
       "type": "object",
-      "properties": {"required": {"type": "boolean"}},
+      "properties": {
+        "required": {
+          "type": "boolean"
+        }
+      },
       "additionalProperties": false,
-      "required": ["required"]
+      "required": [
+        "required"
+      ]
     },
     "reviewExpected": {
       "type": "object",
       "properties": {
-        "pull_request_required": {"const": true},
-        "approvals_required": {"type": "integer", "minimum": 0},
-        "codeowners_review_required": {"type": "boolean"},
-        "unattributed_changes_require_additional_approval": {"type": "boolean"},
-        "dismiss_stale_reviews_on_push": {"type": "boolean"},
-        "require_last_push_approval": {"type": "boolean"},
-        "required_review_thread_resolution": {"const": true},
-        "author_cannot_self_approve": {"const": true},
-        "minimum_distinct_codeowners": {"type": "integer", "minimum": 1},
-        "external_pr_current_head_approval_required": {"const": true},
+        "pull_request_required": {
+          "const": true
+        },
+        "approvals_required": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "codeowners_review_required": {
+          "type": "boolean"
+        },
+        "unattributed_changes_require_additional_approval": {
+          "type": "boolean"
+        },
+        "dismiss_stale_reviews_on_push": {
+          "type": "boolean"
+        },
+        "require_last_push_approval": {
+          "type": "boolean"
+        },
+        "required_review_thread_resolution": {
+          "const": true
+        },
+        "author_cannot_self_approve": {
+          "const": true
+        },
+        "minimum_distinct_codeowners": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "external_pr_current_head_approval_required": {
+          "const": true
+        },
         "external_pr_approval_reviewer": {
           "type": "string",
           "pattern": "^@[A-Za-z0-9-]+$"
         },
-        "external_approval_reviewer_must_be_codeowner": {"const": true},
-        "owner_authored_pr_external_approval_required": {"type": "boolean"},
-        "draft_pr_blocks": {"const": true},
-        "changes_requested_blocks": {"const": true},
-        "previous_head_approval_satisfies": {"const": false},
-        "codeowners_fallback_required": {"const": true},
+        "external_approval_reviewer_must_be_codeowner": {
+          "const": true
+        },
+        "owner_authored_pr_external_approval_required": {
+          "type": "boolean"
+        },
+        "draft_pr_blocks": {
+          "const": true
+        },
+        "changes_requested_blocks": {
+          "const": true
+        },
+        "previous_head_approval_satisfies": {
+          "const": false
+        },
+        "codeowners_fallback_required": {
+          "const": true
+        },
         "codeowners_required_explicit_patterns": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "codeowners_sensitive_paths": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       },
       "additionalProperties": false,
@@ -407,11 +847,22 @@
         "allowed_actors": {
           "type": "array",
           "uniqueItems": true,
-          "items": {"$ref": "#/$defs/bypassActor"}
+          "items": {
+            "$ref": "#/$defs/bypassActor"
+          }
         },
-        "normal_development_bypass_forbidden": {"const": true},
-        "user_always_bypass": {"enum": ["forbidden", "break-glass-only"]},
-        "break_glass_usage_evidence_required": {"const": true}
+        "normal_development_bypass_forbidden": {
+          "const": true
+        },
+        "user_always_bypass": {
+          "enum": [
+            "forbidden",
+            "break-glass-only"
+          ]
+        },
+        "break_glass_usage_evidence_required": {
+          "const": true
+        }
       },
       "additionalProperties": false,
       "required": [
@@ -424,23 +875,51 @@
     "workflowPermissionsExpected": {
       "type": "object",
       "properties": {
-        "default": {"enum": ["read-only"]},
-        "persist_credentials": {"type": "boolean"},
+        "default": {
+          "enum": [
+            "read-only"
+          ]
+        },
+        "persist_credentials": {
+          "type": "boolean"
+        },
         "write_permissions_allowlist": {
           "type": "array",
-          "items": {"$ref": "#/$defs/writePermissionAllowlistEntry"}
+          "items": {
+            "$ref": "#/$defs/writePermissionAllowlistEntry"
+          }
         }
       },
       "additionalProperties": false,
-      "required": ["default", "persist_credentials", "write_permissions_allowlist"]
+      "required": [
+        "default",
+        "persist_credentials",
+        "write_permissions_allowlist"
+      ]
     },
     "trustBoundaryExpected": {
       "type": "object",
       "properties": {
-        "pull_request_target": {"enum": ["forbidden"]},
-        "workflow_run_untrusted_head_execution": {"enum": ["forbidden"]},
-        "untrusted_pr_write_token": {"enum": ["forbidden"]},
-        "untrusted_pr_secrets": {"enum": ["forbidden"]}
+        "pull_request_target": {
+          "enum": [
+            "forbidden"
+          ]
+        },
+        "workflow_run_untrusted_head_execution": {
+          "enum": [
+            "forbidden"
+          ]
+        },
+        "untrusted_pr_write_token": {
+          "enum": [
+            "forbidden"
+          ]
+        },
+        "untrusted_pr_secrets": {
+          "enum": [
+            "forbidden"
+          ]
+        }
       },
       "additionalProperties": false,
       "required": [
@@ -453,21 +932,48 @@
     "selfHostedExpected": {
       "type": "object",
       "properties": {
-        "untrusted_pr": {"enum": ["forbidden"]},
-        "persistent_privileged": {"enum": ["forbidden"]}
+        "untrusted_pr": {
+          "enum": [
+            "forbidden"
+          ]
+        },
+        "persistent_privileged": {
+          "enum": [
+            "forbidden"
+          ]
+        }
       },
       "additionalProperties": false,
-      "required": ["untrusted_pr", "persistent_privileged"]
+      "required": [
+        "untrusted_pr",
+        "persistent_privileged"
+      ]
     },
     "actionRefsExpected": {
       "type": "object",
       "properties": {
-        "third_party": {"enum": ["immutable-sha"]},
-        "reusable_workflow": {"enum": ["immutable-sha-or-local"]},
-        "mutable_tag": {"enum": ["forbidden"]}
+        "third_party": {
+          "enum": [
+            "immutable-sha"
+          ]
+        },
+        "reusable_workflow": {
+          "enum": [
+            "immutable-sha-or-local"
+          ]
+        },
+        "mutable_tag": {
+          "enum": [
+            "forbidden"
+          ]
+        }
       },
       "additionalProperties": false,
-      "required": ["third_party", "reusable_workflow", "mutable_tag"]
+      "required": [
+        "third_party",
+        "reusable_workflow",
+        "mutable_tag"
+      ]
     },
     "sensitivePathsExpected": {
       "type": "object",
@@ -476,27 +982,62 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
-        "require_nonempty_match": {"type": "boolean"},
-        "catch_all": {"enum": ["forbidden"]}
+        "require_nonempty_match": {
+          "type": "boolean"
+        },
+        "catch_all": {
+          "enum": [
+            "forbidden"
+          ]
+        }
       },
       "additionalProperties": false,
-      "required": ["patterns", "require_nonempty_match", "catch_all"]
+      "required": [
+        "patterns",
+        "require_nonempty_match",
+        "catch_all"
+      ]
     },
     "waiverExpected": {
       "type": "object",
-      "properties": {"rule_name": {"type": "string", "minLength": 1}},
+      "properties": {
+        "rule_name": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
       "additionalProperties": false,
-      "required": ["rule_name"]
+      "required": [
+        "rule_name"
+      ]
     },
     "evidenceExpected": {
       "type": "object",
       "properties": {
-        "aggregate_context": {"type": "string", "minLength": 1},
-        "bind_to": {"enum": ["exact-head-sha"]},
-        "missing_stale_skipped_cancelled": {"enum": ["fail"]},
-        "live_evaluator": {"enum": ["trusted-default-branch"]}
+        "aggregate_context": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bind_to": {
+          "enum": [
+            "exact-head-sha"
+          ]
+        },
+        "missing_stale_skipped_cancelled": {
+          "enum": [
+            "fail"
+          ]
+        },
+        "live_evaluator": {
+          "enum": [
+            "trusted-default-branch"
+          ]
+        }
       },
       "additionalProperties": false,
       "required": [
