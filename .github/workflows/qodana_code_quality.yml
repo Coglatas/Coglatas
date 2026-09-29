@@ -25,4 +25,4 @@ jobs:
     if: ${{ github.repository_id == '1261244608' && github.ref == 'refs/heads/main' }}
     permissions:
       contents: read
-    uses: $/.github/workflows/qodana_trusted_gate.yml
+    uses: ./.github/workflows/qodana_trusted_gate.yml
