@@ -2604,7 +2604,7 @@ public sealed class ProjectServiceTests
         public List<Comment> Comments { get; } = [];
         public List<WorkItemCollaborator> Collaborators { get; } = [];
         public List<WorkItemWatchState> Watches { get; } = [];
-        private readonly System.Threading.Lock _memberLookupSync = new();
+        private readonly Lock _memberLookupSync = new();
         private readonly TaskCompletionSource _firstMemberLookupEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource _releaseMemberLookups = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int _activeMemberLookups;
