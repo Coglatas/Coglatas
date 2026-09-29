@@ -188,22 +188,22 @@ public sealed class FormServiceTests
                 UnitOfWork);
         }
 
-        public FakeUsers Users { get; } = new();
-        public FakeWorkspaces Workspaces { get; } = new();
-        public FakeGroups Groups { get; } = new();
-        public FakeProjects Projects { get; } = new();
-        public FakeForms Forms { get; }
+        private FakeUsers Users { get; } = new();
+        private FakeWorkspaces Workspaces { get; } = new();
+        private FakeGroups Groups { get; } = new();
+        private FakeProjects Projects { get; } = new();
+        private FakeForms Forms { get; }
         public FakeCurrentUser Current { get; } = new();
-        public FakeClock Clock { get; } = new();
-        public FakeAuditLogger Audit { get; } = new();
-        public FakeNotifications Notifications { get; } = new();
-        public FakeUnitOfWork UnitOfWork { get; } = new();
-        public WorkspaceAuthorizationService WorkspaceAuthorization { get; }
-        public GroupAuthorizationService GroupAuthorization { get; }
-        public ProjectAuthorizationService ProjectAuthorization { get; }
-        public FormAuthorizationService FormAuthorization { get; }
+        private FakeClock Clock { get; } = new();
+        private FakeAuditLogger Audit { get; } = new();
+        private FakeNotifications Notifications { get; } = new();
+        private FakeUnitOfWork UnitOfWork { get; } = new();
+        private WorkspaceAuthorizationService WorkspaceAuthorization { get; }
+        private GroupAuthorizationService GroupAuthorization { get; }
+        private ProjectAuthorizationService ProjectAuthorization { get; }
+        private FormAuthorizationService FormAuthorization { get; }
         public FormService Service { get; }
-        public Workspace Workspace { get; } = new() { Name = "Workspace", Slug = "workspace", CreatedByUserId = Guid.NewGuid(), Status = WorkspaceStatus.Active };
+        private Workspace Workspace { get; } = new() { Name = "Workspace", Slug = "workspace", CreatedByUserId = Guid.NewGuid(), Status = WorkspaceStatus.Active };
 
         public static FormFixture Create()
         {
@@ -402,8 +402,8 @@ public sealed class FormServiceTests
 
     private sealed class FakeGroups : IGroupRepository
     {
-        public Dictionary<Guid, Group> Items { get; } = [];
-        public List<GroupMember> Members { get; } = [];
+        private Dictionary<Guid, Group> Items { get; } = [];
+        private List<GroupMember> Members { get; } = [];
         public Task<IReadOnlyList<Group>> ListByWorkspaceAsync(Guid workspaceId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Group>>(Items.Values.Where(group => group.WorkspaceId == workspaceId).ToList());
         public Task<IReadOnlyList<Group>> ListManagedByUserAsync(Guid workspaceId, Guid userId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Group>>(Items.Values.Where(group => group.WorkspaceId == workspaceId && Members.Any(member => member.GroupId == group.Id && member.UserId == userId && member.Role is GroupRole.Owner or GroupRole.Admin)).ToList());
         public Task<Group?> GetByIdAsync(Guid groupId, CancellationToken cancellationToken = default) => Task.FromResult(Items.GetValueOrDefault(groupId));
@@ -415,8 +415,8 @@ public sealed class FormServiceTests
 
     private sealed class FakeProjects : IProjectRepository
     {
-        public Dictionary<Guid, Project> ProjectItems { get; } = [];
-        public List<ProjectMember> Members { get; } = [];
+        private Dictionary<Guid, Project> ProjectItems { get; } = [];
+        private List<ProjectMember> Members { get; } = [];
         public Task<IReadOnlyList<Project>> ListVisibleAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Project>>(ProjectItems.Values.ToList());
         public Task<Project?> GetProjectAsync(Guid projectId, CancellationToken cancellationToken = default) => Task.FromResult(ProjectItems.GetValueOrDefault(projectId));
         public Task<ProjectMember?> GetMemberAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default) => Task.FromResult(Members.FirstOrDefault(member => member.ProjectId == projectId && member.UserId == userId));
