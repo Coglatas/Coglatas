@@ -21,6 +21,6 @@ public sealed class FileNameSanitizerTests
         Assert.DoesNotContain("..", sanitized, StringComparison.Ordinal);
         Assert.DoesNotContain("/", sanitized, StringComparison.Ordinal);
         Assert.DoesNotContain("\\", sanitized, StringComparison.Ordinal);
-        Assert.DoesNotContain(sanitized, character => char.IsControl(character));
+        Assert.DoesNotContain(sanitized, char.IsControl);
     }
 }

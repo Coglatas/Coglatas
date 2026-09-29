@@ -336,7 +336,6 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
         await using var harness = await ServiceHarness.CreateAsync(useRealNotifications: true);
         var graph = harness.Graph;
         var taskId = graph.Task.Id;
-        var before = await SnapshotAsync(harness);
         await using var first = harness.CreateScope();
         await using var second = harness.CreateScope();
         harness.Race.Arm();
