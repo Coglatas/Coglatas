@@ -92,7 +92,7 @@ public static class DependencyInjection
                             "query"));
                     }
 
-                    if (IsCommunicationPollingPath(path))
+                    if (IsCommunicationPollingPath(path) ||\n                        IsTenantSwitchPath(path, context.HttpContext.Request.Method))
                     {
                         // Model-binding conversion failures can embed the raw
                         // attempted query value in ValidationProblemDetails.
@@ -211,7 +211,7 @@ public static class DependencyInjection
     private static bool IsCommunicationPollingPath(string? path) =>
         NormalizePath(path).StartsWith("/api/communication/poll/", StringComparison.OrdinalIgnoreCase);
 
-    private static ModelStateDictionary CreateSanitizedModelState(ModelStateDictionary source)
+    private static bool IsTenantSwitchPath(string? path, string method) =>\n        HttpMethods.IsPost(method) &&\n        NormalizePath(path).Equals("/api/tenants/switch", StringComparison.OrdinalIgnoreCase);\n\n    private static ModelStateDictionary CreateSanitizedModelState(ModelStateDictionary source)
     {
         var sanitized = new ModelStateDictionary();
         foreach (var entry in source)
