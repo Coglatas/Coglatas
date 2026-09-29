@@ -246,7 +246,7 @@ public sealed class TaskExecutionResultServiceTests
                 task.Id,
                 run.Id,
                 FirstPartyProjectFilesReportV1.SchemaVersion,
-                TaskExecutionRunStatus.Succeeded.ToString(),
+                nameof(TaskExecutionRunStatus.Succeeded),
                 FirstPartyProjectFilesReportV1.Title,
                 reportBody,
                 reportHash,

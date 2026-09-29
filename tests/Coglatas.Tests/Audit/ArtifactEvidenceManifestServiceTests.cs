@@ -61,7 +61,7 @@ public sealed class ArtifactEvidenceManifestServiceTests
         var result = await fixture.Service.AttachAsync(
             fixture.Version.Id,
             RequestForSource(
-                ArtifactEvidenceSourceKind.FileAttachment.ToString(),
+                nameof(ArtifactEvidenceSourceKind.FileAttachment),
                 sourceAttachmentId.ToString("D")));
 
         Assert.False(result.IsSuccess);
@@ -83,7 +83,7 @@ public sealed class ArtifactEvidenceManifestServiceTests
         var result = await fixture.Service.AttachAsync(
             fixture.Version.Id,
             RequestForSource(
-                ArtifactEvidenceSourceKind.ArtifactVersion.ToString(),
+                nameof(ArtifactEvidenceSourceKind.ArtifactVersion),
                 fixture.SecondVersion.Id.ToString("D")));
 
         Assert.False(result.IsSuccess);
@@ -175,11 +175,11 @@ public sealed class ArtifactEvidenceManifestServiceTests
                     ordinal,
                     $"Bounded claim {ordinal}.",
                     true,
-                    ArtifactClaimSupportStatus.Supported.ToString(),
-                    ArtifactClaimReviewStatus.Reviewed.ToString(),
+                    nameof(ArtifactClaimSupportStatus.Supported),
+                    nameof(ArtifactClaimReviewStatus.Reviewed),
                     [new ArtifactEvidenceManifestItem(
                         1,
-                        ArtifactEvidenceSourceKind.WebSnapshot.ToString(),
+                        nameof(ArtifactEvidenceSourceKind.WebSnapshot),
                         $"web:bounded-{ordinal}",
                         "Authorized source",
                         "Bounded evidence passage.",
@@ -198,7 +198,7 @@ public sealed class ArtifactEvidenceManifestServiceTests
         string claimText = "Audited claim.",
         string passage = "Bounded evidence passage.") =>
         RequestForSource(
-            ArtifactEvidenceSourceKind.WebSnapshot.ToString(),
+            nameof(ArtifactEvidenceSourceKind.WebSnapshot),
             "web:test-source",
             claimText,
             passage);
@@ -214,8 +214,8 @@ public sealed class ArtifactEvidenceManifestServiceTests
                 1,
                 claimText,
                 true,
-                ArtifactClaimSupportStatus.Supported.ToString(),
-                ArtifactClaimReviewStatus.Reviewed.ToString(),
+                nameof(ArtifactClaimSupportStatus.Supported),
+                nameof(ArtifactClaimReviewStatus.Reviewed),
                 new[]
                 {
                     new ArtifactEvidenceManifestItem(

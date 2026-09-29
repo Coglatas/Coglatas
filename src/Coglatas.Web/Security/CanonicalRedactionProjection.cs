@@ -62,7 +62,7 @@ public static class CanonicalRedactionProjection
             FieldAccessPolicy: fieldAccessPolicy);
 
         var redactionService = requestServices.GetRequiredService<IRedactionService>();
-        var result = redactionService.Redact(context, source!, profile);
+        var result = redactionService.Redact(context, source, profile);
 
         if (result.Value is null or RedactedPayload)
         {
