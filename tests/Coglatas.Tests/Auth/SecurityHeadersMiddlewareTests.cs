@@ -162,9 +162,10 @@ public sealed class SecurityHeadersMiddlewareTests
     [Trait("Scope", "FCI-07")]
     public async Task TaskDetailReadIsExplicitlyNonCacheable()
     {
-        var context = new DefaultHttpContext();
-        context.Request.Method = HttpMethods.Get;
-        context.Request.Path = $"/api/tasks/{Guid.NewGuid():D}";
+        var context = new DefaultHttpContext
+        {
+            Request = { Method = HttpMethods.Get, Path = $"/api/tasks/{Guid.NewGuid():D}" }
+        };
         var middleware = new SecurityHeadersMiddleware(_ => Task.CompletedTask);
 
         await middleware.InvokeAsync(context);
@@ -181,9 +182,10 @@ public sealed class SecurityHeadersMiddlewareTests
     [Trait("Scope", "FCI-07")]
     public async Task TaskNoStorePolicyDoesNotLeakToOtherTaskRoutes(string path)
     {
-        var context = new DefaultHttpContext();
-        context.Request.Method = HttpMethods.Get;
-        context.Request.Path = path;
+        var context = new DefaultHttpContext
+        {
+            Request = { Method = HttpMethods.Get, Path = path }
+        };
         var middleware = new SecurityHeadersMiddleware(_ => Task.CompletedTask);
 
         await middleware.InvokeAsync(context);

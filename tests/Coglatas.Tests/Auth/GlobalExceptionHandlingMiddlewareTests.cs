@@ -50,11 +50,14 @@ public sealed class GlobalExceptionHandlingMiddlewareTests
         var context = new DefaultHttpContext
         {
             TraceIdentifier = "multipart-trace",
-            Response = { Body = new MemoryStream() }
+            Response = { Body = new MemoryStream() },
+            Request =
+            {
+                Method = HttpMethods.Post,
+                ContentType = "multipart/form-data; boundary=test-boundary",
+                Path = "/api/files"
+            }
         };
-        context.Request.Method = HttpMethods.Post;
-        context.Request.ContentType = "multipart/form-data; boundary=test-boundary";
-        context.Request.Path = "/api/files";
 
         await middleware.InvokeAsync(context);
 
@@ -78,9 +81,12 @@ public sealed class GlobalExceptionHandlingMiddlewareTests
         var context = new DefaultHttpContext
         {
             TraceIdentifier = "gantt-trace",
-            Response = { Body = new MemoryStream() }
+            Response = { Body = new MemoryStream() },
+            Request =
+            {
+                Path = "/api/projects/00000000-0000-0000-0000-000000000001/gantt/"
+            }
         };
-        context.Request.Path = "/api/projects/00000000-0000-0000-0000-000000000001/gantt/";
 
         await middleware.InvokeAsync(context);
 
@@ -103,9 +109,12 @@ public sealed class GlobalExceptionHandlingMiddlewareTests
         var context = new DefaultHttpContext
         {
             TraceIdentifier = "wpc01-exception-request",
-            Response = { Body = new MemoryStream() }
+            Response = { Body = new MemoryStream() },
+            Request =
+            {
+                Path = "/api/workspaces"
+            }
         };
-        context.Request.Path = "/api/workspaces";
 
         await middleware.InvokeAsync(context);
 

@@ -70,8 +70,7 @@ public sealed class FileActivityServiceTests
     [Fact]
     public async Task ActivityFailsClosedBeforeReadingHistoryWhenViewAuthorizationIsRevoked()
     {
-        var fixture = new Fixture();
-        fixture.Authorization.CanView = false;
+        var fixture = new Fixture { Authorization = { CanView = false } };
 
         var result = await fixture.Service.GetAsync(fixture.File.Id);
 

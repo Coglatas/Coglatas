@@ -17,8 +17,10 @@ public sealed class TenantCookiePolicyTests
         string requestScheme,
         bool expectedSecure)
     {
-        var context = new DefaultHttpContext();
-        context.Request.Scheme = requestScheme;
+        var context = new DefaultHttpContext
+        {
+            Request = { Scheme = requestScheme }
+        };
 
         var options = TenantCookiePolicy.Build(
             context,
