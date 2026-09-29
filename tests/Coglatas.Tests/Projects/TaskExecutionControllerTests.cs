@@ -164,7 +164,7 @@ public sealed class TaskExecutionControllerTests
             .GetMethod(nameof(TaskExecutionController.RequestRun))!
             .GetCustomAttribute<HttpPostAttribute>();
         Assert.NotNull(route);
-        Assert.Equal("api/tasks/{taskItemId:guid}/execution-runs", route!.Template);
+        Assert.Equal("api/tasks/{taskItemId:guid}/execution-runs", route.Template);
     }
 
     private static TaskExecutionController Controller(ITaskExecutionScopeService service) => new(service)

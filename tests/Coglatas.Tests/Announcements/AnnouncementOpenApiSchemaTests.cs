@@ -87,7 +87,7 @@ public sealed class AnnouncementOpenApiSchemaTests
             JsonTypeInfo = options.GetTypeInfo(type),
             ApplicationServices = EmptyServiceProvider.Instance
         };
-        await new SecurityOpenApiSchemaTransformer().TransformAsync(schema, context, default);
+        await new SecurityOpenApiSchemaTransformer().TransformAsync(schema, context, CancellationToken.None);
         return schema;
     }
 

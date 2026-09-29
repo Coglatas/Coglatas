@@ -64,7 +64,7 @@ public sealed class TenantExportRedactionTests
         var tenantEntry = archive.GetEntry("tenant.json");
         Assert.NotNull(tenantEntry);
 
-        await using var tenantStream = tenantEntry!.Open();
+        await using var tenantStream = tenantEntry.Open();
         using var json = await JsonDocument.ParseAsync(tenantStream);
         Assert.Equal(JsonValueKind.Array, json.RootElement.ValueKind);
         Assert.Equal(1, json.RootElement.GetArrayLength());
