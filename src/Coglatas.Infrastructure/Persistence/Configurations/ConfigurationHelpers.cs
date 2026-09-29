@@ -1,5 +1,4 @@
 using Coglatas.Domain.Common;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Coglatas.Infrastructure.Persistence.Configurations;

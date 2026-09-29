@@ -271,7 +271,7 @@ public sealed class TaskV1Pr07DOutboxDispatcherTests
             Task.FromResult(new RealtimeOutboxDiagnostics(0, 0, 0, null, 0, 0, 0, 0));
 
         public Task<OutboxEvent?> GetByIdAsync(Guid eventId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<OutboxEvent?>(eventId == Event.Id ? Event : null);
+            Task.FromResult(eventId == Event.Id ? Event : null);
 
         public Task<bool> ReplayAsync(Guid eventId, DateTimeOffset now, CancellationToken cancellationToken = default)
         {

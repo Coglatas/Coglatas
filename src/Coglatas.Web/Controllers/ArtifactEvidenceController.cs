@@ -1,5 +1,4 @@
 using Coglatas.Application.Artifacts;
-using Coglatas.Application.Common;
 using Coglatas.Web.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

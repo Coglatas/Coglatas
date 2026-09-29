@@ -1,4 +1,3 @@
-using Coglatas.Application.Realtime;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Coglatas.Web.Realtime;
