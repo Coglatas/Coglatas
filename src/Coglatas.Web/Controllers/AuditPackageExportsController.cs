@@ -79,11 +79,11 @@ public sealed class AuditPackageExportsController(IAuditPackageExportService exp
             enableRangeProcessing: false);
     }
 
-    private IActionResult FromResult<T>(Application.Common.Result<T> result) =>
+    private IActionResult FromResult<T>(Coglatas.Application.Common.Result<T> result) =>
         result.IsSuccess ? Ok(result.Value) : FromFailure(result.ErrorDetail, result.Error);
 
     private IActionResult FromFailure(
-        Application.Common.ApplicationErrorDetail? detail,
+        Coglatas.Application.Common.ApplicationErrorDetail? detail,
         string? fallback)
     {
         var status = detail?.Code switch

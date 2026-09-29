@@ -1,4 +1,3 @@
-using Coglatas.Application.Common;
 using Coglatas.Domain.Entities;
 
 namespace Coglatas.Application.Common.Interfaces;

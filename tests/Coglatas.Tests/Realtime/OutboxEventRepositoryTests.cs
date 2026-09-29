@@ -45,7 +45,7 @@ public sealed class OutboxEventRepositoryTests
 
         var deadLetter = await repository.GetByIdAsync(eventId);
         Assert.NotNull(deadLetter);
-        Assert.Equal(eventId, deadLetter!.Id);
+        Assert.Equal(eventId, deadLetter.Id);
         Assert.Equal(OutboxEventStatus.DeadLetter, deadLetter.Status);
         Assert.Equal(1, deadLetter.AttemptCount);
         Assert.NotNull(deadLetter.DeadLetteredAt);

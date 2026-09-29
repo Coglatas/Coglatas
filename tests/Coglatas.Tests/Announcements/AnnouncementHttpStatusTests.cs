@@ -25,7 +25,7 @@ public sealed class AnnouncementHttpStatusTests
             "Title",
             "Body");
 
-        var result = Assert.IsType<ObjectResult>(await controller.Create(request, default));
+        var result = Assert.IsType<ObjectResult>(await controller.Create(request, CancellationToken.None));
 
         Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
         Assert.Equal(
@@ -42,7 +42,7 @@ public sealed class AnnouncementHttpStatusTests
     {
         var controller = new AnnouncementsController(null!, new AnalyticsStub(error), null!, null!);
 
-        var result = Assert.IsType<ObjectResult>(await controller.Acknowledge(Guid.NewGuid(), default));
+        var result = Assert.IsType<ObjectResult>(await controller.Acknowledge(Guid.NewGuid(), CancellationToken.None));
 
         Assert.Equal(status, result.StatusCode);
         Assert.Equal(error, JsonSerializer.SerializeToElement(result.Value).GetProperty("error").GetString());
@@ -54,7 +54,7 @@ public sealed class AnnouncementHttpStatusTests
         const string error = "You are not allowed to view announcement analytics.";
         var controller = new AnnouncementsController(null!, new AnalyticsStub(error), null!, null!);
 
-        var result = Assert.IsType<ObjectResult>(await controller.Analytics(Guid.NewGuid(), default));
+        var result = Assert.IsType<ObjectResult>(await controller.Analytics(Guid.NewGuid(), CancellationToken.None));
 
         Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
         Assert.Equal(error, JsonSerializer.SerializeToElement(result.Value).GetProperty("error").GetString());
@@ -65,7 +65,7 @@ public sealed class AnnouncementHttpStatusTests
     {
         var controller = new AnnouncementsController(null!, new AnalyticsStub(null), null!, null!);
 
-        var result = Assert.IsType<OkObjectResult>(await controller.Acknowledge(Guid.NewGuid(), default));
+        var result = Assert.IsType<OkObjectResult>(await controller.Acknowledge(Guid.NewGuid(), CancellationToken.None));
 
         Assert.Equal("OK", JsonSerializer.SerializeToElement(result.Value).GetProperty("status").GetString());
     }

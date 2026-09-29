@@ -184,13 +184,13 @@ public sealed class FileActivityServiceTests
                 new CurrentTenant(TenantId));
         }
 
-        public Guid TenantId { get; } = Guid.NewGuid();
-        public Guid WorkspaceId { get; } = Guid.NewGuid();
+        private Guid TenantId { get; } = Guid.NewGuid();
+        private Guid WorkspaceId { get; } = Guid.NewGuid();
         public Guid ActorUserId { get; } = Guid.NewGuid();
         public FileObject File { get; }
-        public Attachment Attachment { get; }
+        private Attachment Attachment { get; }
         public FakeFileRepository Files { get; } = new();
-        public FakeGrantRepository Grants { get; } = new();
+        private FakeGrantRepository Grants { get; } = new();
         public FakeFileAuthorization Authorization { get; } = new();
         public FakeStorage Storage { get; } = new();
         public FileActivityService Service { get; }
@@ -216,7 +216,7 @@ public sealed class FileActivityServiceTests
         public Task<FileVersionRecord?> GetFileVersionAsync(Guid tenantId, Guid fileObjectId, Guid versionId, CancellationToken cancellationToken = default)
         {
             VersionReadCalls++;
-            return Task.FromResult<FileVersionRecord?>(Versions.FirstOrDefault(version =>
+            return Task.FromResult(Versions.FirstOrDefault(version =>
                 version.FileObjectId == fileObjectId && version.Id == versionId));
         }
 

@@ -147,8 +147,8 @@ public sealed class TaskDerivedValuesTests
 
         Assert.NotNull(omitted);
         Assert.NotNull(explicitlyCleared);
-        Assert.False(omitted!.Description.IsSpecified);
-        Assert.True(explicitlyCleared!.Description.IsSpecified);
+        Assert.False(omitted.Description.IsSpecified);
+        Assert.True(explicitlyCleared.Description.IsSpecified);
         Assert.Null(explicitlyCleared.Description.Value);
     }
 

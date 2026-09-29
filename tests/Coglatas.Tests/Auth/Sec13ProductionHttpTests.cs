@@ -155,7 +155,7 @@ public sealed class Sec13ProductionHttpTests
             {
                 Content = JsonContent.Create(new { })
             };
-            mismatchRequest.Headers.TryAddWithoutValidation(SecurityOptions.CsrfHeaderName, csrfToken!);
+            mismatchRequest.Headers.TryAddWithoutValidation(SecurityOptions.CsrfHeaderName, csrfToken);
             using var mismatchResponse = await otherClient.SendAsync(mismatchRequest);
 
             Assert.Equal(HttpStatusCode.Forbidden, mismatchResponse.StatusCode);

@@ -2368,9 +2368,9 @@ public sealed class ProjectServiceTests
                 taskNotifications: TaskNotifications);
         }
 
-        public FakeUsers Users { get; } = new();
+        private FakeUsers Users { get; } = new();
         public FakeWorkspaces Workspaces { get; } = new();
-        public FakeGroups Groups { get; } = new();
+        private FakeGroups Groups { get; } = new();
         public FakeProjects Projects { get; } = new();
         public FakeCurrentUser Current { get; } = new();
         public FakeClock Clock { get; } = new();
@@ -2380,8 +2380,8 @@ public sealed class ProjectServiceTests
         public RecordingTaskNotificationProducer TaskNotifications { get; } = new();
         public RecordingInvalidations Invalidations { get; } = new();
         public RecordingAuthorizationChanges AuthorizationChanges { get; } = new();
-        public WorkspaceAuthorizationService WorkspaceAuthorization { get; }
-        public GroupAuthorizationService GroupAuthorization { get; }
+        private WorkspaceAuthorizationService WorkspaceAuthorization { get; }
+        private GroupAuthorizationService GroupAuthorization { get; }
         public ProjectAuthorizationService ProjectAuthorization { get; }
         public ProjectService Service { get; }
         public TaskCommandService Commands { get; }
@@ -2629,7 +2629,7 @@ public sealed class ProjectServiceTests
         public Task<IReadOnlyList<Guid>> ListCurrentReaderUserIdsAsync(Guid projectId, CancellationToken cancellationToken = default) =>
             Task.FromResult(CurrentReaderUserIds.TryGetValue(projectId, out var userIds)
                 ? userIds
-                : (IReadOnlyList<Guid>)Members
+                : Members
                     .Where(member => member.ProjectId == projectId)
                     .Select(member => member.UserId)
                     .Distinct()

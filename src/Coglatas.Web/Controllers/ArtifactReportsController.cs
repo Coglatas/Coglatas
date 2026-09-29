@@ -51,7 +51,7 @@ public sealed class ArtifactReportsController(
             request,
             cancellationToken));
 
-    private IActionResult ToActionResult<T>(Application.Common.Result<T> result)
+    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result)
     {
         if (result.IsSuccess)
             return Ok(result.Value);

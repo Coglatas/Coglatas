@@ -26,7 +26,7 @@ public sealed class CommunicationPollingController(ICommunicationPollingService 
         return ToActionResult(await polling.GetUpdatesAsync(query, cancellationToken));
     }
 
-    private IActionResult ToActionResult<T>(Application.Common.Result<T> result)
+    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result)
     {
         if (result.IsSuccess)
         {

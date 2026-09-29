@@ -1,4 +1,3 @@
-using Coglatas.Domain.Entities;
 
 namespace Coglatas.Application.Announcements;
 

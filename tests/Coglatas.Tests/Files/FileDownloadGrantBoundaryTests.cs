@@ -301,8 +301,8 @@ public sealed class FileDownloadGrantBoundaryTests
 
         public Guid TenantId { get; } = Guid.NewGuid();
         public Guid WorkspaceId { get; } = Guid.NewGuid();
-        public Guid ProjectId { get; } = Guid.NewGuid();
-        public Guid TaskId { get; } = Guid.NewGuid();
+        private Guid ProjectId { get; } = Guid.NewGuid();
+        private Guid TaskId { get; } = Guid.NewGuid();
         public Guid UserId { get; } = Guid.NewGuid();
         public FileObject FileObject { get; } = new()
         {
@@ -325,7 +325,7 @@ public sealed class FileDownloadGrantBoundaryTests
             ScanStatus = FileScanStatus.Clean
         };
 
-        public FakeFileRepository Files { get; } = new();
+        private FakeFileRepository Files { get; } = new();
         public FakeFileDownloadGrantRepository Grants { get; } = new();
         public FakeStorage Storage { get; } = new();
         public FakeAuthorization Authorization { get; } = new();

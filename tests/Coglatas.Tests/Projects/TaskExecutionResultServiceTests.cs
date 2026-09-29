@@ -110,7 +110,7 @@ public sealed class TaskExecutionResultServiceTests
         }
 
         public AppDbContext Db { get; }
-        public CurrentTenantService CurrentTenant { get; }
+        private CurrentTenantService CurrentTenant { get; }
         public Tenant Tenant { get; }
         public User Actor { get; }
         public Workspace Workspace { get; }
@@ -326,7 +326,7 @@ public sealed class TaskExecutionResultServiceTests
         public Task<TaskExecutionPersistedResult?> GetByRunAsync(
             Guid runId,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<TaskExecutionPersistedResult?>(runId == result.TaskExecutionRunId ? result : null);
+            Task.FromResult(runId == result.TaskExecutionRunId ? result : null);
 
         public Task<IReadOnlyList<TaskExecutionResultSourceReference>> ListSourceReferencesAsync(
             Guid resultId,

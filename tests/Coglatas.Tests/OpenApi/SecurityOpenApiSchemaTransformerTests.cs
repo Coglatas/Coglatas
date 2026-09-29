@@ -172,7 +172,7 @@ public sealed class SecurityOpenApiSchemaTransformerTests
             ApplicationServices = EmptyServiceProvider.Instance
         };
 
-        await new SecurityOpenApiSchemaTransformer().TransformAsync(schema, context, default);
+        await new SecurityOpenApiSchemaTransformer().TransformAsync(schema, context, CancellationToken.None);
         return schema;
     }
 

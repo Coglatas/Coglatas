@@ -164,7 +164,7 @@ public sealed class FileActivityService(
             version.SizeBytes));
     }
 
-    private async Task<Domain.Entities.Attachment?> AuthorizedWorkspaceAttachmentAsync(
+    private async Task<Coglatas.Domain.Entities.Attachment?> AuthorizedWorkspaceAttachmentAsync(
         Guid fileObjectId,
         bool requireDownload,
         CancellationToken cancellationToken)

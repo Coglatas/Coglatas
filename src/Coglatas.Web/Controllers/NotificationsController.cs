@@ -90,7 +90,7 @@ public sealed class NotificationsController(INotificationApplicationService noti
     }
 
     private IActionResult ToActionResult<T>(
-        Application.Common.Result<T> result,
+        Coglatas.Application.Common.Result<T> result,
         string moduleKey)
     {
         return result.IsSuccess

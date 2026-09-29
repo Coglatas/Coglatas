@@ -693,7 +693,7 @@ public sealed class TaskSubresourceServiceTests
         public FakeTaskUnitOfWork UnitOfWork { get; } = new();
         public FakeTaskNotificationProducer Notifications { get; } = new();
         public ControllableProjectAuthorization ProjectAuthorization { get; } = new();
-        public ControllableCommentAuthorization CommentAuthorization { get; } = new();
+        private ControllableCommentAuthorization CommentAuthorization { get; } = new();
         public TaskSubresourceService Service { get; }
 
         public Guid AddEligibleMentionUser()
@@ -839,7 +839,7 @@ public sealed class TaskSubresourceServiceTests
     private sealed class ControllableProjectAuthorization : IProjectAuthorizationService
     {
         public bool ViewAllowed { get; set; } = true;
-        public bool ManageAllowed { get; set; } = true;
+        private bool ManageAllowed { get; set; } = true;
         public HashSet<Guid> DeniedViewUserIds { get; } = [];
 
         public Task<bool> CanViewProject(Guid userId, Guid projectId, CancellationToken cancellationToken = default) => Task.FromResult(ViewAllowed && !DeniedViewUserIds.Contains(userId));
@@ -849,7 +849,7 @@ public sealed class TaskSubresourceServiceTests
 
     private sealed class ControllableCommentAuthorization : ICommentAuthorizationService
     {
-        public bool IsAllowed { get; set; } = true;
+        private bool IsAllowed { get; set; } = true;
         public Task<bool> CanCommentOnTarget(Guid userId, CommentTargetType targetType, Guid targetId, CancellationToken cancellationToken = default) => Task.FromResult(IsAllowed);
     }
 
