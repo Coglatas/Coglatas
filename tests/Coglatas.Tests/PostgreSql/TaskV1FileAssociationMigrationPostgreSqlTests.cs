@@ -35,7 +35,7 @@ INSERT INTO file_objects ("Id", "TenantId", "WorkspaceId", "ProjectId", "Uploade
 VALUES (@fileId, @tenantId, @workspaceId, @projectId, @userId, 'proof.txt', @storageKey, 'text/plain', 42, 'Active', @firstCreated);
 """, ("taskB", taskB), ("fileId", fileId), ("tenantId", graph.TenantId), ("workspaceId", graph.WorkspaceId), ("projectId", graph.ProjectId), ("userId", graph.UserId), ("storageKey", $"migration/files/{fileId:N}"), ("firstCreated", firstCreated));
 
-            foreach (var (id, taskId, ownerType, ownerId, createdAt, deletedAt) in new[]
+            foreach (var (id, _, ownerType, ownerId, createdAt, deletedAt) in new[]
             {
                 (first, graph.TaskId, "TaskItem", (Guid?)graph.TaskId, firstCreated, (DateTimeOffset?)null),
                 (later, graph.TaskId, "TaskItem", (Guid?)graph.TaskId, tiedCreated, (DateTimeOffset?)null),
