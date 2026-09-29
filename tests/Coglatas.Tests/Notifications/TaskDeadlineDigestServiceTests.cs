@@ -541,7 +541,7 @@ public sealed class TaskDeadlineDigestServiceTests
     private sealed class FakeDigestTransaction : ITaskDeadlineDigestTransaction
     {
         public int CommitCount { get; private set; }
-        private int DisposeCount { get; private set; }
+        private int DisposeCount { get; set; }
 
         public Task CommitAsync(CancellationToken cancellationToken = default)
         {
