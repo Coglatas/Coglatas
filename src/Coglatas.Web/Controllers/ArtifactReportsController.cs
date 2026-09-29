@@ -16,14 +16,14 @@ public sealed class ArtifactReportsController(
         Guid artifactVersionId,
         [FromQuery] Guid? taskId,
         CancellationToken cancellationToken) =>
-        Response(await reports.GetAsync(projectId, artifactVersionId, taskId, cancellationToken));
+        ToActionResult(await reports.GetAsync(projectId, artifactVersionId, taskId, cancellationToken));
 
     [HttpPost("api/artifact-versions/{artifactVersionId:guid}/report")]
     public async Task<IActionResult> Attach(
         Guid artifactVersionId,
         AttachArtifactReportRequest request,
         CancellationToken cancellationToken) =>
-        Response(await reports.AttachAsync(artifactVersionId, request, cancellationToken));
+        ToActionResult(await reports.AttachAsync(artifactVersionId, request, cancellationToken));
 
     [HttpGet("api/projects/{projectId:guid}/artifact-versions/{artifactVersionId:guid}/report/refinement-preflight")]
     public async Task<IActionResult> RefinementPreflight(
@@ -32,7 +32,7 @@ public sealed class ArtifactReportsController(
         [FromQuery] ArtifactReportRefinementTargetKind targetKind,
         [FromQuery] Guid targetLogicalId,
         CancellationToken cancellationToken) =>
-        Response(await refinements.PreflightAsync(
+        ToActionResult(await refinements.PreflightAsync(
             projectId,
             artifactVersionId,
             targetKind,
@@ -45,13 +45,13 @@ public sealed class ArtifactReportsController(
         Guid artifactVersionId,
         RefineArtifactReportRequest request,
         CancellationToken cancellationToken) =>
-        Response(await refinements.RefineAsync(
+        ToActionResult(await refinements.RefineAsync(
             projectId,
             artifactVersionId,
             request,
             cancellationToken));
 
-    private IActionResult Response<T>(Coglatas.Application.Common.Result<T> result)
+    private IActionResult ToActionResult<T>(Coglatas.Application.Common.Result<T> result)
     {
         if (result.IsSuccess)
             return Ok(result.Value);

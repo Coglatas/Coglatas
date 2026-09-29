@@ -1,8 +1,6 @@
 using System.Text.Json;
 using Coglatas.Application.Common;
-using Coglatas.Application.Common.Interfaces;
 using Coglatas.Domain.Entities;
-using Coglatas.Domain.Enums;
 
 namespace Coglatas.Application.Realtime;
 

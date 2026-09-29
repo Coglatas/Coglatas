@@ -321,7 +321,7 @@ public sealed class AuditClaimsEvidenceServiceTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => isPlatformScope ? null : "audit-test";
+        public string? TenantSlug => IsPlatformScope ? null : "audit-test";
         public bool IsPlatformScope { get; } = isPlatformScope;
     }
 

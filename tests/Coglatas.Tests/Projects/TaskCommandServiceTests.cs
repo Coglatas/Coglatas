@@ -1652,12 +1652,8 @@ public sealed class TaskCommandServiceTests
     private sealed class RecordingRelationshipTargets : ITaskRelationshipTargetPolicy
     {
         public HashSet<Guid> Ineligible { get; } = [];
-        public List<(Guid ProjectId, Guid UserId)> Requests { get; } = [];
-        public Task<bool> IsEligibleAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default)
-        {
-            Requests.Add((projectId, userId));
-            return Task.FromResult(userId != Guid.Empty && !Ineligible.Contains(userId));
-        }
+        public Task<bool> IsEligibleAsync(Guid projectId, Guid userId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(userId != Guid.Empty && !Ineligible.Contains(userId));
     }
 
     private sealed class AllowedProjectAuthorization : IProjectAuthorizationService

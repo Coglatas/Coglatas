@@ -2217,7 +2217,7 @@ public sealed class ProjectServiceTests
     [Trait("Scope", "TaskV1PR07B")]
     public async Task CompatibilityAssigneeAddRejectsRevokedWorkspaceMember()
     {
-        var fixture = ProjectFixture.Create(); var (manager, target, task) = PrepareCompatibilityTarget(fixture);
+        var fixture = ProjectFixture.Create(); var (_, target, task) = PrepareCompatibilityTarget(fixture);
         RevokeWorkspaceMember(fixture, target.Id);
         var result = await fixture.Service.AddAssignmentAsync(task.Id, new AddTaskAssignmentRequest(target.Id, TaskAssignmentRole.Assignee, 1));
         AssertCompatibilityRejected(fixture, task, result); Assert.Empty(fixture.Projects.Assignments); Assert.Null(task.PrimaryAssigneeUserId);

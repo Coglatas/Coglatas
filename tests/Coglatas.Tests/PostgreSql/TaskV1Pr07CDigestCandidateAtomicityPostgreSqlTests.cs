@@ -2646,7 +2646,7 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     /// gate observes actual PostgreSQL command completion, so a second
     /// generator or mutation that completes while it is held has crossed the
     /// candidate/phantom fence rather than merely being scheduled by
-    /// <see cref="Task.WhenAll"/>.
+    /// <c>Task.WhenAll</c>.
     /// </summary>
     private sealed class CandidateFenceGate : DbCommandInterceptor
     {
@@ -2693,7 +2693,7 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     /// deliberately does not rely on a second Attempt lock that no longer
     /// exists. A second generator completing while this is held has crossed
     /// the real recipient fence rather than merely being scheduled by
-    /// <see cref="Task.WhenAll"/>.
+    /// <c>Task.WhenAll</c>.
     /// </summary>
     private sealed class RecipientUserLockGate : DbCommandInterceptor
     {
