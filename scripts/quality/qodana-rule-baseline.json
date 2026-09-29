@@ -52,7 +52,7 @@
     "PropertyCanBeMadeInitOnly.Local": 2,
     "RedundantAnonymousTypePropertyName": 0,
     "RedundantArgumentDefaultValue": 16,
-    "RedundantCast": 14,
+    "RedundantCast": 0,
     "RedundantAssignment": 16,
     "RedundantExplicitParamsArrayCreation": 0,
     "RedundantExtendsListEntry": 1,

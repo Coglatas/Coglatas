@@ -35,15 +35,15 @@ INSERT INTO file_objects ("Id", "TenantId", "WorkspaceId", "ProjectId", "Uploade
 VALUES (@fileId, @tenantId, @workspaceId, @projectId, @userId, 'proof.txt', @storageKey, 'text/plain', 42, 'Active', @firstCreated);
 """, ("taskB", taskB), ("fileId", fileId), ("tenantId", graph.TenantId), ("workspaceId", graph.WorkspaceId), ("projectId", graph.ProjectId), ("userId", graph.UserId), ("storageKey", $"migration/files/{fileId:N}"), ("firstCreated", firstCreated));
 
-            foreach (var (id, _, ownerType, ownerId, createdAt, deletedAt) in new[]
+            foreach (var (id, _, ownerType, ownerId, createdAt, deletedAt) in new (Guid, Guid, string, Guid?, DateTimeOffset, DateTimeOffset?)[]
             {
-                (first, graph.TaskId, "TaskItem", (Guid?)graph.TaskId, firstCreated, (DateTimeOffset?)null),
-                (later, graph.TaskId, "TaskItem", (Guid?)graph.TaskId, tiedCreated, (DateTimeOffset?)null),
-                (latest, graph.TaskId, "TaskItem", (Guid?)graph.TaskId, tiedCreated.AddMinutes(1), (DateTimeOffset?)null),
-                (deleted, graph.TaskId, "TaskItem", (Guid?)graph.TaskId, firstCreated, (DateTimeOffset?)firstCreated.AddDays(1)),
-                (tieWinner, taskB, "TaskItem", (Guid?)taskB, tiedCreated, (DateTimeOffset?)null),
-                (tieLoser, taskB, "TaskItem", (Guid?)taskB, tiedCreated, (DateTimeOffset?)null),
-                (workspaceAttachment, graph.TaskId, "Workspace", (Guid?)graph.WorkspaceId, tiedCreated, (DateTimeOffset?)null)
+                (first, graph.TaskId, "TaskItem", graph.TaskId, firstCreated, null),
+                (later, graph.TaskId, "TaskItem", graph.TaskId, tiedCreated, null),
+                (latest, graph.TaskId, "TaskItem", graph.TaskId, tiedCreated.AddMinutes(1), null),
+                (deleted, graph.TaskId, "TaskItem", graph.TaskId, firstCreated, firstCreated.AddDays(1)),
+                (tieWinner, taskB, "TaskItem", taskB, tiedCreated, null),
+                (tieLoser, taskB, "TaskItem", taskB, tiedCreated, null),
+                (workspaceAttachment, graph.TaskId, "Workspace", graph.WorkspaceId, tiedCreated, null)
             })
             {
                 await PostgreSqlMigrationTestDatabase.ExecuteAsync(database, """
