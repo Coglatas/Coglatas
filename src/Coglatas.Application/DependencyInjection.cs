@@ -16,7 +16,6 @@ using Coglatas.Application.Notifications;
 using Coglatas.Application.Planning;
 using Coglatas.Application.Projects;
 using Coglatas.Application.Realtime;
-using Coglatas.Application.Search;
 using Coglatas.Application.Security.Redaction;
 using Coglatas.Application.StudentRecords;
 using Coglatas.Application.Tenancy;

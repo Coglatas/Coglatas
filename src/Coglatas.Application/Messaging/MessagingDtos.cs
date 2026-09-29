@@ -1,4 +1,3 @@
-using Coglatas.Application.Common;
 using Coglatas.Domain.Enums;
 using System.Text.Json.Serialization;
 
