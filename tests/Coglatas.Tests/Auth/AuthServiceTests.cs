@@ -401,15 +401,15 @@ public sealed class AuthServiceTests
         }
 
         public Dictionary<Guid, User> Users { get; } = [];
-        public Dictionary<string, Invite> Invites { get; } = [];
-        public Dictionary<Guid, Tenant> Tenants { get; } = [];
-        public Dictionary<Guid, Workspace> Workspaces { get; } = [];
+        private Dictionary<string, Invite> Invites { get; } = [];
+        private Dictionary<Guid, Tenant> Tenants { get; } = [];
+        private Dictionary<Guid, Workspace> Workspaces { get; } = [];
         public List<TenantUser> TenantUsers { get; } = [];
         public List<WorkspaceMember> WorkspaceMembers { get; } = [];
         public List<Session> Sessions { get; } = [];
         public FakeClock Clock { get; } = new(new DateTimeOffset(2026, 6, 6, 0, 0, 0, TimeSpan.Zero));
         public Pbkdf2PasswordHasher PasswordHasher { get; } = new();
-        public Sha256TokenHasher TokenHasher { get; } = new();
+        private Sha256TokenHasher TokenHasher { get; } = new();
         public FakeAuditLogger AuditLogger { get; } = new();
         public FakeCurrentUser CurrentUser { get; }
         public AuthService Service { get; }

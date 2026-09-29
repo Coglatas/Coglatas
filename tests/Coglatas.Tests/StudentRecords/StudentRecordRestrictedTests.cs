@@ -679,9 +679,9 @@ public sealed class StudentRecordRestrictedTests
                 Audit);
         }
 
-        public Guid TenantId { get; } = Guid.NewGuid();
-        public Guid WorkspaceId { get; } = Guid.NewGuid();
-        public Guid UserId { get; } = Guid.NewGuid();
+        private Guid TenantId { get; } = Guid.NewGuid();
+        private Guid WorkspaceId { get; } = Guid.NewGuid();
+        private Guid UserId { get; } = Guid.NewGuid();
 
         public StudentRecord Record { get; } = new()
         {
@@ -697,13 +697,13 @@ public sealed class StudentRecordRestrictedTests
         };
 
         public FakeCurrentUser CurrentUser { get; }
-        public FakeCurrentTenant CurrentTenant { get; }
-        public FakeStudentRecordRepository StudentRecords { get; }
-        public FakeWorkspaceRepository Workspaces { get; }
+        private FakeCurrentTenant CurrentTenant { get; }
+        private FakeStudentRecordRepository StudentRecords { get; }
+        private FakeWorkspaceRepository Workspaces { get; }
         public FakeStudentRecordSchoolAccessContextProvider SchoolAccess { get; }
         public FakeStudentRecordExportGrantRepository ExportGrants { get; }
         public FakeClock Clock { get; }
-        public FakeUnitOfWork UnitOfWork { get; }
+        private FakeUnitOfWork UnitOfWork { get; }
         public FakeAuditLogger Audit { get; }
         public StudentRecordService Service { get; }
     }
