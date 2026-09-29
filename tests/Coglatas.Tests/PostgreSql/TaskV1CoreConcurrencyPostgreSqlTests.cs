@@ -2167,13 +2167,13 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
     private sealed class ServiceHarness : IAsyncDisposable
     {
-        private readonly ServiceProvider provider;
-        private readonly string connectionString;
+        private readonly ServiceProvider _provider;
+        private readonly string _connectionString;
 
         private ServiceHarness(ServiceProvider provider, string connectionString, Graph graph, SaveRaceCoordinator race)
         {
-            this.provider = provider;
-            this.connectionString = connectionString;
+            _provider = provider;
+            _connectionString = connectionString;
             Graph = graph;
             Race = race;
         }
@@ -2246,7 +2246,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
         /// through the platform scope used only for seeding.</summary>
         public RequestScope CreateScope(Guid? actorUserId = null, Guid? tenantId = null, string? tenantSlug = null)
         {
-            var scope = provider.CreateAsyncScope();
+            var scope = _provider.CreateAsyncScope();
             scope.ServiceProvider.GetRequiredService<CurrentTenantService>().SetTenant(tenantId ?? Graph.Tenant.Id, tenantSlug ?? Graph.Tenant.Slug);
             scope.ServiceProvider.GetRequiredService<TestCurrentUser>().SetUser(actorUserId ?? Graph.User.Id);
             return new RequestScope(scope, scope.ServiceProvider.GetRequiredService<AppDbContext>(), scope.ServiceProvider.GetRequiredService<ITaskCommandService>(), scope.ServiceProvider.GetRequiredService<ITaskSubresourceService>(), scope.ServiceProvider.GetRequiredService<IProjectService>(), scope.ServiceProvider.GetRequiredService<RequestSaveOutcomeRecorder>());
@@ -2260,7 +2260,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
         public async Task<AttachmentSnapshot> SnapshotAttachmentAsync(Guid attachmentId)
         {
-            await using var db = CreatePlatformContext(connectionString);
+            await using var db = CreatePlatformContext(_connectionString);
             var attachment = await db.Attachments
                 .AsNoTracking()
                 .Include(value => value.FileObject)
@@ -2279,7 +2279,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
         public async Task<Guid> SeedOtherTenantLabelAsync()
         {
-            await using var db = CreatePlatformContext(connectionString);
+            await using var db = CreatePlatformContext(_connectionString);
             var workspace = new Workspace
             {
                 TenantId = Graph.OtherTenant.Id,
@@ -2313,7 +2313,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
         public async Task<Guid> SeedOtherTenantAttachmentAsync()
         {
-            await using var db = CreatePlatformContext(connectionString);
+            await using var db = CreatePlatformContext(_connectionString);
             var workspace = new Workspace
             {
                 TenantId = Graph.OtherTenant.Id,
@@ -2341,7 +2341,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
         public async ValueTask DisposeAsync()
         {
             Race.Dispose();
-            await provider.DisposeAsync();
+            await _provider.DisposeAsync();
         }
 
         private static async Task<Graph> SeedAsync(string connectionString)
@@ -2453,9 +2453,9 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
     private sealed class TestCurrentUser : ICurrentUser
     {
-        private Guid userId;
-        public void SetUser(Guid value) => userId = value;
-        public Guid? UserId => userId;
+        private Guid _userId;
+        public void SetUser(Guid value) => _userId = value;
+        public Guid? UserId => _userId;
         public Guid? SessionId => null;
         public string? Email => "task-concurrency@example.test";
         public SystemRole? SystemRole => null;
@@ -2507,49 +2507,49 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
     private sealed class SaveRaceCoordinator : IDisposable
     {
-        private readonly object gate = new();
-        private TaskCompletionSource? release;
-        private TaskCompletionSource? singleWriterArrival;
-        private TaskCompletionSource? singleWriterRelease;
-        private bool singleWriterHoldArmed;
-        private int remaining;
-        private int saveCallCount;
+        private readonly object _gate = new();
+        private TaskCompletionSource? _release;
+        private TaskCompletionSource? _singleWriterArrival;
+        private TaskCompletionSource? _singleWriterRelease;
+        private bool _singleWriterHoldArmed;
+        private int _remaining;
+        private int _saveCallCount;
 
-        public int SaveCallCount => Volatile.Read(ref saveCallCount);
+        public int SaveCallCount => Volatile.Read(ref _saveCallCount);
 
         public void Arm()
         {
-            lock (gate)
+            lock (_gate)
             {
-                if (remaining != 0)
+                if (_remaining != 0)
                     throw new InvalidOperationException("The previous save race has not completed.");
 
-                remaining = 2;
-                saveCallCount = 0;
-                release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                _remaining = 2;
+                _saveCallCount = 0;
+                _release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             }
         }
 
         public void ArmSingleWriterHold()
         {
-            lock (gate)
+            lock (_gate)
             {
-                if (remaining != 0 || singleWriterHoldArmed || singleWriterRelease is not null)
+                if (_remaining != 0 || _singleWriterHoldArmed || _singleWriterRelease is not null)
                     throw new InvalidOperationException("The previous save coordination has not completed.");
 
-                saveCallCount = 0;
-                singleWriterHoldArmed = true;
-                singleWriterArrival = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                singleWriterRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                _saveCallCount = 0;
+                _singleWriterHoldArmed = true;
+                _singleWriterArrival = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                _singleWriterRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             }
         }
 
         public async Task WaitForSingleWriterArrivalAsync(CancellationToken cancellationToken = default)
         {
             Task arrival;
-            lock (gate)
+            lock (_gate)
             {
-                arrival = singleWriterArrival?.Task
+                arrival = _singleWriterArrival?.Task
                     ?? throw new InvalidOperationException("A single-writer hold has not been armed.");
             }
 
@@ -2558,43 +2558,43 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
         public void ReleaseSingleWriter()
         {
-            lock (gate)
+            lock (_gate)
             {
-                if (singleWriterRelease is null)
-                    throw new InvalidOperationException("A single-writer hold is not awaiting release.");
+                if (_singleWriterRelease is null)
+                    throw new InvalidOperationException("A single-writer hold is not awaiting _release.");
 
-                singleWriterRelease.TrySetResult();
-                singleWriterRelease = null;
-                singleWriterArrival = null;
+                _singleWriterRelease.TrySetResult();
+                _singleWriterRelease = null;
+                _singleWriterArrival = null;
             }
         }
 
         public async Task WaitBeforeSaveAsync(CancellationToken cancellationToken)
         {
-            Interlocked.Increment(ref saveCallCount);
+            Interlocked.Increment(ref _saveCallCount);
             Task? wait = null;
-            lock (gate)
+            lock (_gate)
             {
-                if (singleWriterHoldArmed)
+                if (_singleWriterHoldArmed)
                 {
-                    singleWriterHoldArmed = false;
-                    singleWriterArrival!.TrySetResult();
-                    wait = singleWriterRelease!.Task;
+                    _singleWriterHoldArmed = false;
+                    _singleWriterArrival!.TrySetResult();
+                    wait = _singleWriterRelease!.Task;
                 }
                 else
                 {
-                    if (remaining == 0)
+                    if (_remaining == 0)
                         return;
 
-                    remaining--;
-                    if (remaining == 0)
+                    _remaining--;
+                    if (_remaining == 0)
                     {
-                        release!.TrySetResult();
-                        release = null;
+                        _release!.TrySetResult();
+                        _release = null;
                         return;
                     }
 
-                    wait = release!.Task;
+                    wait = _release!.Task;
                 }
             }
 
@@ -2603,16 +2603,16 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
         public void Dispose()
         {
-            lock (gate)
+            lock (_gate)
             {
-                release?.TrySetCanceled();
-                singleWriterArrival?.TrySetCanceled();
-                singleWriterRelease?.TrySetCanceled();
-                release = null;
-                singleWriterArrival = null;
-                singleWriterRelease = null;
-                singleWriterHoldArmed = false;
-                remaining = 0;
+                _release?.TrySetCanceled();
+                _singleWriterArrival?.TrySetCanceled();
+                _singleWriterRelease?.TrySetCanceled();
+                _release = null;
+                _singleWriterArrival = null;
+                _singleWriterRelease = null;
+                _singleWriterHoldArmed = false;
+                _remaining = 0;
             }
         }
     }

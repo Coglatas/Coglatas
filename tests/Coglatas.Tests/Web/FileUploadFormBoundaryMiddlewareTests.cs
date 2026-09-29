@@ -117,10 +117,15 @@ public sealed class FileUploadFormBoundaryMiddlewareTests
         }
 
         var form = new FormCollection(fields, fileCollection);
-        var context = new DefaultHttpContext();
-        context.Request.Method = HttpMethods.Post;
-        context.Request.Path = "/api/files";
-        context.Request.ContentType = "multipart/form-data; boundary=test";
+        var context = new DefaultHttpContext
+        {
+            Request =
+            {
+                Method = HttpMethods.Post,
+                Path = "/api/files",
+                ContentType = "multipart/form-data; boundary=test"
+            }
+        };
         context.Features.Set<IFormFeature>(new FormFeature(form));
         context.Response.Body = new MemoryStream();
         return context;

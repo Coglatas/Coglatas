@@ -366,12 +366,12 @@ public sealed class AuditControllerTests
         Result<AuditGridRowResponse>? gridRowResult = null,
         Result<AuditSensitiveMetadataResponse>? sensitiveMetadataResult = null) : IAuditQueryService
     {
-        private readonly IReadOnlyList<SecurityEventListItemResponse> securityEvents = securityEvents ?? [];
-        private readonly Result<AuditGridRowResponse> gridRowResult = gridRowResult ??
+        private readonly IReadOnlyList<SecurityEventListItemResponse> _securityEvents = securityEvents ?? [];
+        private readonly Result<AuditGridRowResponse> _gridRowResult = gridRowResult ??
             Result<AuditGridRowResponse>.Failure(new ApplicationErrorDetail(
                 "AuditEventNotFound",
                 "The requested audit event is not available."));
-        private readonly Result<AuditSensitiveMetadataResponse> sensitiveMetadataResult =
+        private readonly Result<AuditSensitiveMetadataResponse> _sensitiveMetadataResult =
             sensitiveMetadataResult ?? Result<AuditSensitiveMetadataResponse>.Failure(
                 new ApplicationErrorDetail(
                     "AuditEventNotFound",
@@ -412,8 +412,8 @@ public sealed class AuditControllerTests
             CancellationToken cancellationToken = default)
         {
             LastGridRowId = auditId;
-            LastGridRowResult = gridRowResult;
-            return Task.FromResult(gridRowResult);
+            LastGridRowResult = _gridRowResult;
+            return Task.FromResult(_gridRowResult);
         }
 
         public Task<Result<AuditSensitiveMetadataResponse>> GetAuditSensitiveMetadataAsync(
@@ -421,7 +421,7 @@ public sealed class AuditControllerTests
             CancellationToken cancellationToken = default)
         {
             LastSensitiveMetadataId = auditId;
-            return Task.FromResult(sensitiveMetadataResult);
+            return Task.FromResult(_sensitiveMetadataResult);
         }
 
         public Task<Result<PagedResponse<SecurityEventListItemResponse>>> ListSecurityEventsAsync(
@@ -430,10 +430,10 @@ public sealed class AuditControllerTests
         {
             return Task.FromResult(Result<PagedResponse<SecurityEventListItemResponse>>.Success(
                 new PagedResponse<SecurityEventListItemResponse>(
-                    securityEvents,
+                    _securityEvents,
                     query.Page,
                     query.PageSize,
-                    securityEvents.Count)));
+                    _securityEvents.Count)));
         }
     }
 }

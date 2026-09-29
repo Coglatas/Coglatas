@@ -736,12 +736,12 @@ public sealed class StudentRecordRestrictedTests
 
     private sealed class FakeWorkspaceRepository(Guid workspaceId, Guid userId, WorkspaceRole role) : IWorkspaceRepository
     {
-        public Task<IReadOnlyList<Workspace>> ListForUserAsync(Guid userId, bool includeAll, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<Workspace>> ListForUserAsync(Guid requestedUserId, bool includeAll, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IReadOnlyList<Workspace>>([]);
         }
 
-        public Task<Workspace?> GetByIdAsync(Guid workspaceId, CancellationToken cancellationToken = default)
+        public Task<Workspace?> GetByIdAsync(Guid requestedWorkspaceId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<Workspace?>(null);
         }
@@ -762,7 +762,7 @@ public sealed class StudentRecordRestrictedTests
             });
         }
 
-        public Task<IReadOnlyList<WorkspaceMember>> ListMembersAsync(Guid workspaceId, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<WorkspaceMember>> ListMembersAsync(Guid requestedWorkspaceId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IReadOnlyList<WorkspaceMember>>([]);
         }

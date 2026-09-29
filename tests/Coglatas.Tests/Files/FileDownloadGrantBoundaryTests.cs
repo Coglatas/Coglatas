@@ -64,8 +64,7 @@ public sealed class FileDownloadGrantBoundaryTests
     [Trait("Scope", "TaskV1PR03C")]
     public async Task TaskFileOpenReauthorizesAndDoesNotTreatDetailStateAsACapability()
     {
-        var fixture = new Fixture();
-        fixture.Authorization.CanDownload = false;
+        var fixture = new Fixture { Authorization = { CanDownload = false } };
 
         var result = await fixture.Service.GetAsync(fixture.Attachment.Id);
 

@@ -108,10 +108,8 @@ public sealed class AuthSecurityHttpTests
         await using var app = await AuthSecurityTestApp.CreateAsync();
         await app.LoginAndReadAsync();
 
-        using var request = new HttpRequestMessage(new HttpMethod(method), path)
-        {
-            Content = JsonContent.Create(new { })
-        };
+        using var request = new HttpRequestMessage(new HttpMethod(method), path);
+        request.Content = JsonContent.Create(new { });
         var response = await app.Client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -127,10 +125,8 @@ public sealed class AuthSecurityHttpTests
         await using var app = await AuthSecurityTestApp.CreateAsync();
         var token = await app.GetCsrfTokenAsync();
 
-        using var request = new HttpRequestMessage(new HttpMethod(method), "/api/not-found-for-csrf-test")
-        {
-            Content = JsonContent.Create(new { })
-        };
+        using var request = new HttpRequestMessage(new HttpMethod(method), "/api/not-found-for-csrf-test");
+        request.Content = JsonContent.Create(new { });
         request.Headers.TryAddWithoutValidation(SecurityOptions.CsrfHeaderName, token);
         var response = await app.Client.SendAsync(request);
 
@@ -156,10 +152,8 @@ public sealed class AuthSecurityHttpTests
         await app.LoginAndReadAsync();
         var csrfToken = await app.GetCsrfTokenAsync();
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/logout")
-        {
-            Content = JsonContent.Create(new { })
-        };
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/logout");
+        request.Content = JsonContent.Create(new { });
         request.Headers.TryAddWithoutValidation(SecurityOptions.CsrfHeaderName, csrfToken);
 
         using var response = await app.Client.SendAsync(request);
@@ -339,10 +333,8 @@ public sealed class AuthSecurityHttpTests
         public async Task<HttpResponseMessage> LoginAsync()
         {
             var token = await GetCsrfTokenAsync();
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
-            {
-                Content = JsonContent.Create(new LoginRequest(Email, "Password123"))
-            };
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login");
+            request.Content = JsonContent.Create(new LoginRequest(Email, "Password123"));
             request.Headers.TryAddWithoutValidation(SecurityOptions.CsrfHeaderName, token);
             return await Client.SendAsync(request);
         }

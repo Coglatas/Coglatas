@@ -133,9 +133,11 @@ public sealed class SecurityHeadersMiddlewareTests
             var address = app.Services.GetRequiredService<IServer>()
                 .Features.Get<IServerAddressesFeature>()?.Addresses.Single()
                 ?? throw new InvalidOperationException("Test server address was not available.");
-            using var handler = new HttpClientHandler { AllowAutoRedirect = false };
+            using var handler = new HttpClientHandler();
+            handler.AllowAutoRedirect = false;
             // ReSharper disable once ShortLivedHttpClient
-            using var client = new HttpClient(handler) { BaseAddress = new Uri(address) };
+            using var client = new HttpClient(handler);
+            client.BaseAddress = new Uri(address);
             using var request = new HttpRequestMessage(HttpMethod.Get, "/");
             request.Headers.Host = host;
 
@@ -162,9 +164,10 @@ public sealed class SecurityHeadersMiddlewareTests
     [Trait("Scope", "FCI-07")]
     public async Task TaskDetailReadIsExplicitlyNonCacheable()
     {
-        var context = new DefaultHttpContext();
-        context.Request.Method = HttpMethods.Get;
-        context.Request.Path = $"/api/tasks/{Guid.NewGuid():D}";
+        var context = new DefaultHttpContext
+        {
+            Request = { Method = HttpMethods.Get, Path = $"/api/tasks/{Guid.NewGuid():D}" }
+        };
         var middleware = new SecurityHeadersMiddleware(_ => Task.CompletedTask);
 
         await middleware.InvokeAsync(context);
@@ -181,9 +184,10 @@ public sealed class SecurityHeadersMiddlewareTests
     [Trait("Scope", "FCI-07")]
     public async Task TaskNoStorePolicyDoesNotLeakToOtherTaskRoutes(string path)
     {
-        var context = new DefaultHttpContext();
-        context.Request.Method = HttpMethods.Get;
-        context.Request.Path = path;
+        var context = new DefaultHttpContext
+        {
+            Request = { Method = HttpMethods.Get, Path = path }
+        };
         var middleware = new SecurityHeadersMiddleware(_ => Task.CompletedTask);
 
         await middleware.InvokeAsync(context);

@@ -204,11 +204,14 @@ public sealed class Wpc02ECanonicalRedactionProjectionTests
         var httpContext = new DefaultHttpContext
         {
             TraceIdentifier = "wpc02e-415",
-            Response = { Body = new MemoryStream() }
+            Response = { Body = new MemoryStream() },
+            Request =
+            {
+                Method = HttpMethods.Post,
+                Path = path,
+                ContentType = "text/plain"
+            }
         };
-        httpContext.Request.Method = HttpMethods.Post;
-        httpContext.Request.Path = path;
-        httpContext.Request.ContentType = "text/plain";
 
         await middleware.InvokeAsync(httpContext);
 
@@ -232,10 +235,10 @@ public sealed class Wpc02ECanonicalRedactionProjectionTests
             nextCalled = true;
             return Task.CompletedTask;
         });
-        var httpContext = new DefaultHttpContext();
-        httpContext.Request.Method = HttpMethods.Post;
-        httpContext.Request.Path = "/api/workspaces/capabilities";
-        httpContext.Request.ContentType = "text/plain";
+        var httpContext = new DefaultHttpContext
+        {
+            Request = { Method = HttpMethods.Post, Path = "/api/workspaces/capabilities", ContentType = "text/plain" }
+        };
 
         await middleware.InvokeAsync(httpContext);
 

@@ -989,19 +989,19 @@ public sealed class Ws01WorkspaceDashboardProjectionPostgreSqlTests
 
     private sealed class CommandCounterInterceptor : DbCommandInterceptor
     {
-        private readonly List<string> commands = [];
-        private bool active;
+        private readonly List<string> _commands = [];
+        private bool _active;
 
         public void Begin()
         {
-            commands.Clear();
-            active = true;
+            _commands.Clear();
+            _active = true;
         }
 
         public IReadOnlyList<string> End()
         {
-            active = false;
-            return commands.ToArray();
+            _active = false;
+            return _commands.ToArray();
         }
 
         public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
@@ -1010,9 +1010,9 @@ public sealed class Ws01WorkspaceDashboardProjectionPostgreSqlTests
             InterceptionResult<DbDataReader> result,
             CancellationToken cancellationToken = default)
         {
-            if (active)
+            if (_active)
             {
-                commands.Add(command.CommandText);
+                _commands.Add(command.CommandText);
             }
 
             return ValueTask.FromResult(result);

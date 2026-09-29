@@ -46,7 +46,8 @@ public sealed class Sec13ProductionHttpTests
                 .Features.Get<IServerAddressesFeature>()?.Addresses.Single()
                 ?? throw new InvalidOperationException("Test server address was not available.");
             // ReSharper disable once ShortLivedHttpClient
-            using var client = new HttpClient { BaseAddress = new Uri(address) };
+            using var client = new HttpClient();
+            client.BaseAddress = new Uri(address);
             using var response = await client.GetAsync("/secure");
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -121,40 +122,34 @@ public sealed class Sec13ProductionHttpTests
                 .Features.Get<IServerAddressesFeature>()?.Addresses.Single()
                 ?? throw new InvalidOperationException("Test server address was not available.");
             var baseAddress = new Uri(address);
-            using var ownerHandler = new HttpClientHandler
-            {
-                UseCookies = true,
-                CookieContainer = new CookieContainer()
-            };
+            using var ownerHandler = new HttpClientHandler();
+            ownerHandler.UseCookies = true;
+            ownerHandler.CookieContainer = new CookieContainer();
             // ReSharper disable once ShortLivedHttpClient
-            using var ownerClient = new HttpClient(ownerHandler) { BaseAddress = baseAddress };
+            using var ownerClient = new HttpClient(ownerHandler);
+            ownerClient.BaseAddress = baseAddress;
             using var csrfResponse = await ownerClient.GetAsync("/csrf");
             csrfResponse.EnsureSuccessStatusCode();
             var csrf = await csrfResponse.Content.ReadFromJsonAsync<CsrfPayload>();
             var csrfToken = csrf?.Token;
             Assert.False(string.IsNullOrWhiteSpace(csrfToken));
 
-            using var invalidRequest = new HttpRequestMessage(HttpMethod.Post, "/api/mutate")
-            {
-                Content = JsonContent.Create(new { })
-            };
+            using var invalidRequest = new HttpRequestMessage(HttpMethod.Post, "/api/mutate");
+            invalidRequest.Content = JsonContent.Create(new { });
             invalidRequest.Headers.TryAddWithoutValidation(
                 SecurityOptions.CsrfHeaderName,
                 "not-a-valid-antiforgery-token");
             using var invalidResponse = await ownerClient.SendAsync(invalidRequest);
             Assert.Equal(HttpStatusCode.Forbidden, invalidResponse.StatusCode);
 
-            using var otherHandler = new HttpClientHandler
-            {
-                UseCookies = true,
-                CookieContainer = new CookieContainer()
-            };
+            using var otherHandler = new HttpClientHandler();
+            otherHandler.UseCookies = true;
+            otherHandler.CookieContainer = new CookieContainer();
             // ReSharper disable once ShortLivedHttpClient
-            using var otherClient = new HttpClient(otherHandler) { BaseAddress = baseAddress };
-            using var mismatchRequest = new HttpRequestMessage(HttpMethod.Post, "/api/mutate")
-            {
-                Content = JsonContent.Create(new { })
-            };
+            using var otherClient = new HttpClient(otherHandler);
+            otherClient.BaseAddress = baseAddress;
+            using var mismatchRequest = new HttpRequestMessage(HttpMethod.Post, "/api/mutate");
+            mismatchRequest.Content = JsonContent.Create(new { });
             mismatchRequest.Headers.TryAddWithoutValidation(SecurityOptions.CsrfHeaderName, csrfToken);
             using var mismatchResponse = await otherClient.SendAsync(mismatchRequest);
 
