@@ -219,7 +219,7 @@ public sealed class AnnouncementDraftServiceTests
         public RecordingInvalidations Invalidations { get; }
         public AnnouncementDraftService Service { get; }
         public Guid TenantId { get; }
-        public Guid WorkspaceId { get; }
+        private Guid WorkspaceId { get; }
 
         public static async Task<Fixture> CreateAsync()
         {
@@ -293,7 +293,7 @@ public sealed class AnnouncementDraftServiceTests
     private sealed class TestAudienceService : IAnnouncementAudienceService
     {
         public Queue<bool> Outcomes { get; } = [];
-        public bool IsAllowed { get; set; } = true;
+        private bool IsAllowed { get; set; } = true;
 
         public Task<Result<IReadOnlyList<AnnouncementAudienceOptionResponse>>> ListAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(Result<IReadOnlyList<AnnouncementAudienceOptionResponse>>.Success([]));

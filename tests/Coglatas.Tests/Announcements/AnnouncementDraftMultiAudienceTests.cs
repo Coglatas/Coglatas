@@ -119,9 +119,9 @@ public sealed class AnnouncementDraftMultiAudienceTests
         public TestDistributionStore Distribution { get; }
         public RecordingNotificationService Notifications { get; }
         public AnnouncementDraftService Service { get; }
-        public Guid WorkspaceId { get; }
-        public Guid GroupId { get; }
-        public Guid ChannelId { get; }
+        private Guid WorkspaceId { get; }
+        private Guid GroupId { get; }
+        private Guid ChannelId { get; }
         public Guid OverlapUserId { get; }
 
         public static async Task<Fixture> CreateAsync()

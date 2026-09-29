@@ -541,7 +541,7 @@ public sealed class TaskDeadlineDigestServiceTests
     private sealed class FakeDigestTransaction : ITaskDeadlineDigestTransaction
     {
         public int CommitCount { get; private set; }
-        public int DisposeCount { get; private set; }
+        private int DisposeCount { get; private set; }
 
         public Task CommitAsync(CancellationToken cancellationToken = default)
         {
@@ -567,8 +567,8 @@ public sealed class TaskDeadlineDigestServiceTests
         public TaskDeadlineDigestClaim? Claimed { get; set; }
         public Func<int, TaskDeadlineDigestCurrentContext?> CurrentContexts { get; set; } = _ => null;
         public Func<int, int, int, IReadOnlyList<TaskDeadlineDigestCandidate>> CandidatePages { get; set; } = (_, _, _) => [];
-        public bool MarkSucceededResult { get; set; } = true;
-        public bool ReleaseFeatureDisabledResult { get; set; } = true;
+        private bool MarkSucceededResult { get; set; } = true;
+        private bool ReleaseFeatureDisabledResult { get; set; } = true;
         public Queue<TaskDeadlineDigestTransition> FailureTransitions { get; } = new();
         public Queue<int> UpsertResults { get; } = new();
         public Queue<TaskDeadlineDigestGenerationFenceOutcome> FenceOutcomes { get; } = new();
