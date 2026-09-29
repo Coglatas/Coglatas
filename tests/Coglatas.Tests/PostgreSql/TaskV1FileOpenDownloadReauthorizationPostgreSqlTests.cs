@@ -99,16 +99,10 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
 
     private sealed class Fixture : IAsyncDisposable
     {
-        private readonly string connectionString;
-        private readonly CurrentTenantService currentTenant;
-        private readonly TestCurrentUser currentUser;
         private readonly AppDbContext db;
 
-        private Fixture(string connectionString, CurrentTenantService currentTenant, TestCurrentUser currentUser, AppDbContext db, FileService service, StorageSpy storage, Guid tenantId, Guid workspaceId, Guid projectId, Guid taskId, Guid associationId, Guid fileObjectId, Guid userId, string storageKey)
+        private Fixture(AppDbContext db, FileService service, StorageSpy storage, Guid tenantId, Guid workspaceId, Guid projectId, Guid taskId, Guid associationId, Guid fileObjectId, Guid userId, string storageKey)
         {
-            this.connectionString = connectionString;
-            this.currentTenant = currentTenant;
-            this.currentUser = currentUser;
             this.db = db;
             Service = service;
             Storage = storage;
@@ -172,7 +166,7 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
             var authorization = new FileAuthorizationService(fileRepository, projectAuthorization, null!, null!, workspaceAuthorization);
             var storage = new StorageSpy();
             var service = new FileService(fileRepository, new FileDownloadGrantRepository(db), storage, authorization, new UploadPolicy(), new FeatureFlags(), new Quota(), currentUser, currentTenant, new Clock(), new DbAuditLogger(db, new Clock(), currentUser, currentTenant), new Sha256TokenHasher(), new NoopInvalidations(), new EfUnitOfWork(db));
-            return new Fixture(connectionString, currentTenant, currentUser, db, service, storage, tenant.Id, workspace.Id, project.Id, task.Id, association.Id, file.Id, user.Id, storageKey);
+            return new Fixture(db, service, storage, tenant.Id, workspace.Id, project.Id, task.Id, association.Id, file.Id, user.Id, storageKey);
         }
 
         public async Task SetWorkspaceMembershipAsync(MembershipStatus status)
