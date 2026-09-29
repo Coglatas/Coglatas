@@ -19,7 +19,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `GOV-RULESET-001` | `ruleset` | `default-branch`, `scheduled` | `blocking` | `@NYGsatoshi` | `github-live-settings` | forbidden | Default branch protection and ruleset contract |
 | `GOV-CHECKS-001` | `required-status-checks` | `pr`, `default-branch` | `blocking` | `@NYGsatoshi` | `status-context` | forbidden | Required pull-request status checks |
-| `GOV-SIGNATURE-001` | `required-signatures` | `default-branch` | `blocking` | `@NYGsatoshi` | `github-live-settings` | forbidden | Required commit signatures |
+| `GOV-SIGNATURE-001` | `required-signatures` | `default-branch` | `blocking` | `@NYGsatoshi` | `github-live-settings` | forbidden | Commit signature policy |
 | `GOV-REVIEW-001` | `pr-review-codeowners` | `pr`, `default-branch` | `blocking` | `@NYGsatoshi` | `github-live-settings` | forbidden | Pull request review and CODEOWNERS contract |
 | `GOV-BYPASS-001` | `bypass-actors` | `default-branch`, `scheduled` | `blocking` | `@NYGsatoshi` | `github-live-settings` | forbidden | Bypass actor policy |
 | `GOV-WORKFLOW-PERM-001` | `workflow-permissions` | `pr`, `scheduled` | `blocking` | `@NYGsatoshi` | `workflow-static` | forbidden | Workflow token permission floor |
@@ -51,18 +51,12 @@ Keep the protected default-branch rulesets explicit and reviewable instead of le
 
 ### `GOV-CHECKS-001` — Required pull-request status checks
 
-Pin every required status context, including trusted evaluator statuses, so rename, skip, missing, or stale states fail closed from one repository-owned contract.
+Pin the four ordinary merge-required CI contexts so rename, skip, missing, or stale states fail closed from one repository-owned contract.
 
 ```json
 {
   "missing_or_stale": "fail",
   "required": [
-    {
-      "context": "External PR approval policy",
-      "job": "evaluate",
-      "kind": "commit-status",
-      "workflow": ".github/workflows/external-pr-approval-evaluator.yml"
-    },
     {
       "context": "build-test",
       "job": "build-test",
@@ -92,19 +86,19 @@ Pin every required status context, including trusted evaluator statuses, so rena
 }
 ```
 
-### `GOV-SIGNATURE-001` — Required commit signatures
+### `GOV-SIGNATURE-001` — Commit signature policy
 
-Require signed commits on the protected default branch.
+Do not make commit signatures a merge-blocking requirement; preserve original PR commit history and rely on required CI plus repository permissions for merge protection.
 
 ```json
 {
-  "required": true
+  "required": false
 }
 ```
 
 ### `GOV-REVIEW-001` — Pull request review and CODEOWNERS contract
 
-Require current-head CODEOWNER approval for external pull requests while keeping owner-authored changes mergeable without bypass in the current single-maintainer topology; native rules enforce PR/thread semantics and the trusted evaluator owns authoritative approval state.
+Keep external-contributor review expectations explicit while owner-authored changes remain mergeable without a synthetic commit-status gate; native rules enforce PR and thread semantics.
 
 ```json
 {
@@ -135,7 +129,6 @@ Require current-head CODEOWNER approval for external pull requests while keeping
     ".github/CODEOWNERS",
     ".github/workflows/ci.yml",
     ".github/workflows/publication-readiness.yml",
-    ".github/workflows/external-pr-auto-sign.yml",
     ".github/workflows/external-pr-approval-evaluator.yml",
     "scripts/ci/check-governance-review-status-invariants.py",
     "scripts/ci/evaluate-governance-pr-review.py",
@@ -191,20 +184,7 @@ Default workflows to read-only and make every write-capable workflow an explicit
 {
   "default": "read-only",
   "persist_credentials": false,
-  "write_permissions_allowlist": [
-    {
-      "permissions": [
-        "contents:write"
-      ],
-      "workflow": ".github/workflows/external-pr-auto-sign.yml"
-    },
-    {
-      "permissions": [
-        "statuses:write"
-      ],
-      "workflow": ".github/workflows/external-pr-approval-evaluator.yml"
-    }
-  ]
+  "write_permissions_allowlist": []
 }
 ```
 
