@@ -43,8 +43,7 @@ public sealed class TaskSubresourceServiceTests
     [Trait("Scope", "Issue369")]
     public async Task ActivityReadDoesNotQueryRowsAfterProjectAuthorizationIsDenied()
     {
-        var fixture = new Fixture();
-        fixture.ProjectAuthorization.ViewAllowed = false;
+        var fixture = new Fixture { ProjectAuthorization = { ViewAllowed = false } };
 
         var result = await fixture.Service.ListActivityAsync(fixture.Task.Id);
 

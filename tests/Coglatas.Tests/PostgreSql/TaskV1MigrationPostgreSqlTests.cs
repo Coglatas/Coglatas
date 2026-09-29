@@ -10,7 +10,7 @@ namespace Coglatas.Tests.PostgreSql;
 [Trait("Scope", "TaskV1Prompt2C")]
 public sealed class TaskV1MigrationPostgreSqlTests
 {
-    private const string Pr03cBaseMigration = "20260722230000_MigrateLegacyTaskComments";
+    private const string Pr03CBaseMigration = "20260722230000_MigrateLegacyTaskComments";
     private const string BeforeTenantTableRepairMigration = "20260726150000_EnforceManualWatchOptOutExclusivity";
     private const string TenantTableRepairMigration = "20260728010000_CreateMissingTenantSettingsTable";
 
@@ -56,7 +56,7 @@ public sealed class TaskV1MigrationPostgreSqlTests
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
         await WithTemporaryDatabaseAsync(connectionString, async testConnectionString =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(testConnectionString, Pr03cBaseMigration);
+            await PostgreSqlMigrationTestDatabase.MigrateAsync(testConnectionString, Pr03CBaseMigration);
             await AssertHistoricalTablesAsync(testConnectionString, expected: false);
 
             await PostgreSqlMigrationTestDatabase.MigrateAsync(testConnectionString);

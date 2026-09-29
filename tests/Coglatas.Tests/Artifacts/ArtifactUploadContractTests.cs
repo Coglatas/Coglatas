@@ -138,7 +138,7 @@ public sealed class ArtifactUploadContractTests
     [InlineData("Empty files are not allowed.", StatusCodes.Status400BadRequest)]
     public async Task Upload_preserves_missing_resource_and_validation_distinction(string error, int status)
     {
-        using var stream = new MemoryStream(new byte[] { 1 });
+        using var stream = new MemoryStream([1]);
         var controller = new ArtifactsController(new ArtifactStub(error));
         var form = new UploadArtifactVersionForm
         {
