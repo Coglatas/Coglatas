@@ -8,23 +8,23 @@ namespace Coglatas.Application.Projects;
 /// </summary>
 public sealed class UnavailableProjectActivationWorkflowStore : IProjectActivationWorkflowStore
 {
-    public Task<Coglatas.Domain.Entities.TaskWorkflowDefinition?> GetDefinitionAsync(
+    public Task<Domain.Entities.TaskWorkflowDefinition?> GetDefinitionAsync(
         Guid projectId,
         CancellationToken cancellationToken = default) =>
-        Task.FromResult<Coglatas.Domain.Entities.TaskWorkflowDefinition?>(null);
+        Task.FromResult<Domain.Entities.TaskWorkflowDefinition?>(null);
 
-    public Task<IReadOnlyList<Coglatas.Domain.Entities.TaskWorkflowStage>> ListStagesAsync(
+    public Task<IReadOnlyList<Domain.Entities.TaskWorkflowStage>> ListStagesAsync(
         Guid projectId,
         CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<Coglatas.Domain.Entities.TaskWorkflowStage>>([]);
+        Task.FromResult<IReadOnlyList<Domain.Entities.TaskWorkflowStage>>([]);
 
     public Task AddDefinitionAsync(
-        Coglatas.Domain.Entities.TaskWorkflowDefinition definition,
+        Domain.Entities.TaskWorkflowDefinition definition,
         CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
 
     public Task AddStageAsync(
-        Coglatas.Domain.Entities.TaskWorkflowStage stage,
+        Domain.Entities.TaskWorkflowStage stage,
         CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
 }

@@ -39,7 +39,7 @@ public sealed class AuditFindingDecisionsController(IAuditFindingDecisionService
     }
 
     private IActionResult Error(
-        Coglatas.Application.Common.ApplicationErrorDetail? detail,
+        Application.Common.ApplicationErrorDetail? detail,
         string? fallback,
         string canonicalCode)
     {
