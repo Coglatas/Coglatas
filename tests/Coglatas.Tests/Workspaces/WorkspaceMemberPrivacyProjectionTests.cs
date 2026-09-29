@@ -289,7 +289,7 @@ public sealed class WorkspaceMemberPrivacyProjectionTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "issue-529@example.test";
+        public string Email => "issue-529@example.test";
         public SystemRole? SystemRole => global::Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }

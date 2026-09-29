@@ -524,7 +524,7 @@ public sealed class TaskV1Pr07NotificationFoundationPostgreSqlTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => null;
-        public string? Email => "pr07@example.test";
+        public string Email => "pr07@example.test";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }

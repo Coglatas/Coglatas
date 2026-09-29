@@ -417,7 +417,7 @@ public sealed class FileDownloadGrantBoundaryTests
         public Guid? UserIdValue { get; set; } = userId;
         public Guid? UserId => UserIdValue;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "file-reader@example.test";
+        public string Email => "file-reader@example.test";
         public SystemRole? SystemRole => global::Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => UserIdValue.HasValue;
     }
@@ -427,7 +427,7 @@ public sealed class FileDownloadGrantBoundaryTests
         public Guid TenantIdValue { get; set; } = tenantId;
         public Guid TenantId => TenantIdValue;
         public bool IsAvailable => true;
-        public string? TenantSlug => "tenant-a";
+        public string TenantSlug => "tenant-a";
         public bool IsPlatformScope => false;
     }
 

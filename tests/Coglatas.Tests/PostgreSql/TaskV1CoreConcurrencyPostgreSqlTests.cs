@@ -2457,7 +2457,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
         public void SetUser(Guid value) => _userId = value;
         public Guid? UserId => _userId;
         public Guid? SessionId => null;
-        public string? Email => "task-concurrency@example.test";
+        public string Email => "task-concurrency@example.test";
         public SystemRole? SystemRole => null;
         public bool IsAuthenticated => true;
     }

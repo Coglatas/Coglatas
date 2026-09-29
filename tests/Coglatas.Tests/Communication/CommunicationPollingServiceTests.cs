@@ -552,7 +552,7 @@ public sealed class CommunicationPollingServiceTests
         public Guid TenantIdValue { get; set; }
         public Guid TenantId => TenantIdValue;
         public bool IsAvailable => TenantIdValue != Guid.Empty;
-        public string? TenantSlug => "tenant-test";
+        public string TenantSlug => "tenant-test";
         public bool IsPlatformScope => false;
     }
 

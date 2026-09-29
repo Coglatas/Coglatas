@@ -280,7 +280,7 @@ public sealed class AnnouncementDraftServiceTests
     {
         public Guid? UserId { get; set; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "author@example.test";
+        public string Email => "author@example.test";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.Teacher;
         public bool IsAuthenticated => UserId.HasValue;
     }

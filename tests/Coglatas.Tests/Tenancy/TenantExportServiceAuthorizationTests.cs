@@ -123,7 +123,7 @@ public sealed class TenantExportServiceAuthorizationTests
     {
         public Guid TenantId => tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "tenant";
+        public string TenantSlug => "tenant";
         public bool IsPlatformScope => false;
     }
 
@@ -131,7 +131,7 @@ public sealed class TenantExportServiceAuthorizationTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.Empty;
-        public string? Email => "export-test@example.invalid";
+        public string Email => "export-test@example.invalid";
         public SystemRole? SystemRole => null;
         public bool IsAuthenticated => true;
     }
