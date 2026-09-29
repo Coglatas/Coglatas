@@ -44,9 +44,9 @@ public sealed class TaskV1MigrationPostgreSqlTests
             Assert.True(await ScalarAsync<bool>(testConnectionString, "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE tablename = 'attachments' AND indexname = 'IX_attachments_OwnerType_OwnerId_FileObjectId_active_task');"));
             Assert.True(await ScalarAsync<bool>(testConnectionString, "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE tablename = 'project_task_labels' AND indexname = 'IX_project_task_labels_TenantId_ProjectId_NormalizedName');"));
             Assert.True(await ScalarAsync<bool>(testConnectionString, "SELECT EXISTS (SELECT 1 FROM pg_attribute attribute JOIN pg_class table_class ON table_class.oid = attribute.attrelid WHERE table_class.relname = 'project_task_labels' AND attribute.attname = 'NormalizedName' AND attribute.attgenerated = 's');"));
-            Assert.True(context.Model.FindEntityType(typeof(Coglatas.Domain.Entities.WorkItemWatchState))!.FindProperty(nameof(Coglatas.Domain.Entities.WorkItemWatchState.VersionNo))!.IsConcurrencyToken);
-            Assert.NotNull(context.Model.FindEntityType(typeof(Coglatas.Domain.Entities.WorkItemWatchState))!.FindProperty(nameof(Coglatas.Domain.Entities.WorkItemWatchState.IsManualWatch)));
-            Assert.True(context.Model.FindEntityType(typeof(Coglatas.Domain.Entities.ProjectTaskLabel))!.FindProperty(nameof(Coglatas.Domain.Entities.ProjectTaskLabel.VersionNo))!.IsConcurrencyToken);
+            Assert.True(context.Model.FindEntityType(typeof(Domain.Entities.WorkItemWatchState))!.FindProperty(nameof(Domain.Entities.WorkItemWatchState.VersionNo))!.IsConcurrencyToken);
+            Assert.NotNull(context.Model.FindEntityType(typeof(Domain.Entities.WorkItemWatchState))!.FindProperty(nameof(Domain.Entities.WorkItemWatchState.IsManualWatch)));
+            Assert.True(context.Model.FindEntityType(typeof(Domain.Entities.ProjectTaskLabel))!.FindProperty(nameof(Domain.Entities.ProjectTaskLabel.VersionNo))!.IsConcurrencyToken);
         });
     }
 

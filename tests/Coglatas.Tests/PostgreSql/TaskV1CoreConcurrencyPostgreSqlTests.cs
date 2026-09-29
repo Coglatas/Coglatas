@@ -1878,19 +1878,19 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
         DateOnly? plannedEnd = null) =>
         new(title, null, priority, plannedStart, plannedEnd, progress, expectedVersion);
 
-    private static async Task<(RequestScope Scope, Coglatas.Application.Common.Result<T> Result)> ExecuteAsync<T>(
+    private static async Task<(RequestScope Scope, Application.Common.Result<T> Result)> ExecuteAsync<T>(
         RequestScope scope,
-        Func<RequestScope, Task<Coglatas.Application.Common.Result<T>>> command) =>
+        Func<RequestScope, Task<Application.Common.Result<T>>> command) =>
         (scope, await command(scope));
 
-    private static async Task<(RequestScope Scope, Coglatas.Application.Common.Result Result)> ExecuteAsync(
+    private static async Task<(RequestScope Scope, Application.Common.Result Result)> ExecuteAsync(
         RequestScope scope,
-        Func<RequestScope, Task<Coglatas.Application.Common.Result>> command) =>
+        Func<RequestScope, Task<Application.Common.Result>> command) =>
         (scope, await command(scope));
 
     private static async Task<(CommentRaceOperation Operation, RequestScope Scope, bool IsSuccess, string? Error)> ExecuteCommentUpdateAsync(
         RequestScope scope,
-        Func<RequestScope, Task<Coglatas.Application.Common.Result<TaskCommentResponse>>> command)
+        Func<RequestScope, Task<Application.Common.Result<TaskCommentResponse>>> command)
     {
         var result = await command(scope);
         return (CommentRaceOperation.Update, scope, result.IsSuccess, result.Error);
@@ -1898,7 +1898,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
     private static async Task<(CommentRaceOperation Operation, RequestScope Scope, bool IsSuccess, string? Error)> ExecuteCommentDeleteAsync(
         RequestScope scope,
-        Func<RequestScope, Task<Coglatas.Application.Common.Result>> command)
+        Func<RequestScope, Task<Application.Common.Result>> command)
     {
         var result = await command(scope);
         return (CommentRaceOperation.Delete, scope, result.IsSuccess, result.Error);
@@ -1906,7 +1906,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
     private static async Task<(RequestScope Scope, bool IsSuccess, string? Error)> ExecuteChecklistUpdateAsync(
         RequestScope scope,
-        Func<RequestScope, Task<Coglatas.Application.Common.Result<TaskChecklistResponse>>> command)
+        Func<RequestScope, Task<Application.Common.Result<TaskChecklistResponse>>> command)
     {
         var result = await command(scope);
         return (scope, result.IsSuccess, result.Error);
@@ -1914,7 +1914,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
     private static async Task<(RequestScope Scope, bool IsSuccess, string? Error)> ExecuteChecklistDeleteAsync(
         RequestScope scope,
-        Func<RequestScope, Task<Coglatas.Application.Common.Result>> command)
+        Func<RequestScope, Task<Application.Common.Result>> command)
     {
         var result = await command(scope);
         return (scope, result.IsSuccess, result.Error);
@@ -1972,7 +1972,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
         Guid childId,
         long expectedVersion,
         string childAction,
-        Func<RequestScope, Task<Coglatas.Application.Common.Result<TaskCommandResponse>>> command,
+        Func<RequestScope, Task<Application.Common.Result<TaskCommandResponse>>> command,
         bool includeDeleted = false)
     {
         var graph = harness.Graph;
@@ -2487,12 +2487,12 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
                 FeatureKeys.TasksNotificationsV1,
                 StringComparison.Ordinal));
 
-        public async Task<Coglatas.Application.Common.Result> RequireEnabledAsync(
+        public async Task<Application.Common.Result> RequireEnabledAsync(
             string featureKey,
             CancellationToken cancellationToken = default) =>
             await IsEnabledAsync(featureKey, cancellationToken)
-                ? Coglatas.Application.Common.Result.Success()
-                : Coglatas.Application.Common.Result.Failure($"Feature '{featureKey}' is disabled.");
+                ? Application.Common.Result.Success()
+                : Application.Common.Result.Failure($"Feature '{featureKey}' is disabled.");
 
         public Task<IReadOnlyList<string>> GetEnabledFeaturesAsync(
             Guid tenantId,

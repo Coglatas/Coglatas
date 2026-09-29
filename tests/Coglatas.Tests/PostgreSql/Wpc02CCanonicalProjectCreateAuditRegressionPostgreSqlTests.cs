@@ -389,7 +389,7 @@ public sealed class Wpc02CCanonicalProjectCreateAuditRegressionPostgreSqlTests
         Email = $"{suffix}@example.test".ToLowerInvariant(),
         NormalizedEmail = $"{suffix}@example.test".ToUpperInvariant(),
         Status = UserStatus.Active,
-        SystemRole = Coglatas.Domain.Enums.SystemRole.NormalUser
+        SystemRole = SystemRole.NormalUser
     };
 
     private static Workspace NewWorkspace(Guid tenantId, Guid creatorUserId, string suffix) => new()
@@ -438,7 +438,7 @@ public sealed class Wpc02CCanonicalProjectCreateAuditRegressionPostgreSqlTests
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => null;
         public string? Email => null;
-        public Coglatas.Domain.Enums.SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.NormalUser;
+        public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.NormalUser;
         public bool IsAuthenticated => true;
     }
 
