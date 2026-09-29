@@ -207,15 +207,14 @@ class GovernanceLivePolicyGov03IntegrationTests(unittest.TestCase):
             {item["code"] for item in report["observations"]},
         )
 
-    def test_status_sweep_and_retry_contract_is_wired(self):
+    def test_retired_approval_evaluator_is_non_blocking_compatibility_only(self):
         evaluator = (ROOT / ".github/workflows/external-pr-approval-evaluator.yml").read_text(encoding="utf-8")
         audit = (ROOT / ".github/workflows/governance-live-policy-audit.yml").read_text(encoding="utf-8")
         fetcher = (ROOT / "scripts/ci/fetch-governance-live-state.sh").read_text(encoding="utf-8")
-        self.assertIn("Governance live policy audit", evaluator)
-        self.assertIn("state=open&per_page=100", evaluator)
-        self.assertIn("post_status_with_retry", evaluator)
-        self.assertIn("not atomic", evaluator)
-        self.assertIn("evaluate-governance-live-policy-ext.py", evaluator)
+        self.assertIn("Governance approval gate retired", evaluator)
+        self.assertIn("publishes no commit status", evaluator)
+        self.assertNotIn("statuses: write", evaluator)
+        self.assertNotIn("human-merge-approval", evaluator)
         self.assertIn("branch_protection_rule", audit)
         self.assertIn('cron: "17 * * * *"', audit)
         self.assertIn("/protection", fetcher)
