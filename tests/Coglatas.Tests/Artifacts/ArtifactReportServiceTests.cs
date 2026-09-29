@@ -199,7 +199,7 @@ public sealed class ArtifactReportServiceTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "report-test";
+        public string TenantSlug => "report-test";
         public bool IsPlatformScope => false;
     }
 
@@ -207,7 +207,7 @@ public sealed class ArtifactReportServiceTests
     {
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "report@example.invalid";
+        public string Email => "report@example.invalid";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }

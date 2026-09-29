@@ -232,7 +232,7 @@ public sealed class ArtifactReportRefinementCommitGuardTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "refinement-guard";
+        public string TenantSlug => "refinement-guard";
         public bool IsPlatformScope => false;
     }
 

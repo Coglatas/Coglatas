@@ -1167,7 +1167,7 @@ public sealed class TaskV1Pr07DAuthorizedDeliveryTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "actor@example.invalid";
+        public string Email => "actor@example.invalid";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.NormalUser;
         public bool IsAuthenticated => true;
     }

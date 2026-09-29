@@ -293,7 +293,7 @@ public sealed class FileWorkspaceWorkflowTests
     {
         public Guid? UserId => UserIdValue;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "fixture@example.test";
+        public string Email => "fixture@example.test";
         public SystemRole? SystemRole => global::Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }
@@ -302,7 +302,7 @@ public sealed class FileWorkspaceWorkflowTests
     {
         public Guid TenantId => TenantIdValue;
         public bool IsAvailable => true;
-        public string? TenantSlug => "tenant-a";
+        public string TenantSlug => "tenant-a";
         public bool IsPlatformScope => false;
     }
 

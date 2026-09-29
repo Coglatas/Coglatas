@@ -349,7 +349,7 @@ public sealed class ArtifactReportRefinementSectionTests
     {
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "section-refinement@example.invalid";
+        public string Email => "section-refinement@example.invalid";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }
@@ -358,7 +358,7 @@ public sealed class ArtifactReportRefinementSectionTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "section-refinement";
+        public string TenantSlug => "section-refinement";
         public bool IsPlatformScope => false;
     }
 

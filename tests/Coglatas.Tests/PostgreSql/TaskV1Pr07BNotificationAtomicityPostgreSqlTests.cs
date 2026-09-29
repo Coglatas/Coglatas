@@ -974,7 +974,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
         public void SetUser(Guid value) => _userId = value;
         public Guid? UserId => _userId;
         public Guid? SessionId => null;
-        public string? Email => "pr07b-atomicity@example.test";
+        public string Email => "pr07b-atomicity@example.test";
         public SystemRole? SystemRole => null;
         public bool IsAuthenticated => true;
     }

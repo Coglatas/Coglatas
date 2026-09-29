@@ -556,7 +556,7 @@ public sealed class MessageCanonicalAttachmentPostgreSqlTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => null;
-        public string? Email => "issue528@example.test";
+        public string Email => "issue528@example.test";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }

@@ -212,7 +212,7 @@ public sealed class AnnouncementDraftMultiAudienceTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => null;
-        public string? Email => "author@example.test";
+        public string Email => "author@example.test";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.Teacher;
         public bool IsAuthenticated => true;
     }

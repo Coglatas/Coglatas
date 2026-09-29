@@ -326,7 +326,7 @@ public sealed class FileSharingServiceTests
     {
         public Guid TenantId => Id;
         public bool IsAvailable => true;
-        public string? TenantSlug => "test";
+        public string TenantSlug => "test";
         public bool IsPlatformScope => false;
     }
 

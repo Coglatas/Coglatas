@@ -179,7 +179,7 @@ public sealed class IntegrationServiceTests
     private sealed record FakeCurrentTenant(Guid TenantId) : ICurrentTenant
     {
         public bool IsAvailable => true;
-        public string? TenantSlug => "tenant";
+        public string TenantSlug => "tenant";
         public bool IsPlatformScope => false;
     }
 
@@ -187,7 +187,7 @@ public sealed class IntegrationServiceTests
     {
         public Guid? UserId => UserIdValue;
         public Guid? SessionId => null;
-        public string? Email => "admin@example.com";
+        public string Email => "admin@example.com";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.NormalUser;
         public bool IsAuthenticated => true;
     }

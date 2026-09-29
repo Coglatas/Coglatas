@@ -248,7 +248,7 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "task-file@example.test";
+        public string Email => "task-file@example.test";
         public SystemRole? SystemRole => global::Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }

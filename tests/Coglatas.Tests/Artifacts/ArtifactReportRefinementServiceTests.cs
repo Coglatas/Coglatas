@@ -468,7 +468,7 @@ public sealed class ArtifactReportRefinementServiceTests
     {
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "refinement@example.invalid";
+        public string Email => "refinement@example.invalid";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }
@@ -477,7 +477,7 @@ public sealed class ArtifactReportRefinementServiceTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "refinement-test";
+        public string TenantSlug => "refinement-test";
         public bool IsPlatformScope => false;
     }
 

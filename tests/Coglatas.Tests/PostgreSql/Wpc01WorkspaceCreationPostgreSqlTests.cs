@@ -1890,7 +1890,7 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "wpc-owner@example.test";
+        public string Email => "wpc-owner@example.test";
         public SystemRole? SystemRole => systemRole;
         public bool IsAuthenticated => true;
     }

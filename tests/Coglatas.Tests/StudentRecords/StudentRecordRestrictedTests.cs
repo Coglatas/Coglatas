@@ -783,7 +783,7 @@ public sealed class StudentRecordRestrictedTests
         public Guid? UserIdValue { get; set; } = userId;
         public Guid? UserId => UserIdValue;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "student-record-reader@example.test";
+        public string Email => "student-record-reader@example.test";
         public SystemRole? SystemRole => global::Coglatas.Domain.Enums.SystemRole.Admin;
         public bool IsAuthenticated => true;
     }
@@ -792,7 +792,7 @@ public sealed class StudentRecordRestrictedTests
     {
         public Guid TenantId => tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "tenant-a";
+        public string TenantSlug => "tenant-a";
         public bool IsPlatformScope => false;
     }
 

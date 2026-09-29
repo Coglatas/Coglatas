@@ -162,7 +162,7 @@ public sealed class MessageNotificationDeliveryPreferenceTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "test";
+        public string TenantSlug => "test";
         public bool IsPlatformScope => false;
     }
 
