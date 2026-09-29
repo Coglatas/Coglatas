@@ -222,7 +222,7 @@ public sealed class AuditFindingReviewerMentionsServiceTests
                 Role = TenantUserRole.Member,
                 Status = TenantUserStatus.Active,
                 JoinedAt = DateTimeOffset.UtcNow,
-                Tenant = tenant,
+                Tenant = _tenant,
                 User = user,
             });
             await Context.SaveChangesAsync();
