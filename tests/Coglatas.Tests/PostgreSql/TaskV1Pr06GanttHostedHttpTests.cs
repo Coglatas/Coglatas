@@ -1267,7 +1267,6 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
             return new HostedGraph(
                 tenantA,
-                tenantB,
                 manager,
                 contributor,
                 viewer,
@@ -1495,7 +1494,6 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
     private sealed record HostedGraph(
         Tenant TenantA,
-        Tenant TenantB,
         User Manager,
         User Contributor,
         User Viewer,

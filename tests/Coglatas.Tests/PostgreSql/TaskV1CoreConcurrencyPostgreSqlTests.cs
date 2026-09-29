@@ -2403,7 +2403,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
                 new NotificationUserState { TenantId = tenant.Id, UserId = mentionUser.Id, Version = 0, UpdatedAt = DateTimeOffset.UtcNow },
                 TaskWatchStateInitializer.ForCreator(task, user.Id, new DateTimeOffset(2026, 7, 26, 0, 0, 0, TimeSpan.Zero)));
             await db.SaveChangesAsync();
-            return new Graph(tenant, otherTenant, workspace, project, otherProject, user, mentionUser, collaboratorUser, reviewerUser, manualWatchUser, optOutUser, sameProjectUnrelatedUser, otherWorkspaceUser, otherTenantUser, task, unrelated, sourceAttachment, todo, inProgress, done, cancelled);
+            return new Graph(tenant, otherTenant, workspace, project, otherProject, user, mentionUser, collaboratorUser, reviewerUser, manualWatchUser, optOutUser, otherWorkspaceUser, otherTenantUser, task, unrelated, sourceAttachment, done);
         }
 
         private static User UserFor(string role, string suffix) => new()
@@ -2435,16 +2435,12 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
         User ReviewerUser,
         User ManualWatchUser,
         User OptOutUser,
-        User SameProjectUnrelatedUser,
         User OtherWorkspaceUser,
         User OtherTenantUser,
         TaskItem Task,
         TaskItem UnrelatedTask,
         Attachment SourceAttachment,
-        TaskWorkflowStage TodoStage,
-        TaskWorkflowStage InProgressStage,
-        TaskWorkflowStage DoneStage,
-        TaskWorkflowStage CancelledStage);
+        TaskWorkflowStage DoneStage);
 
     private sealed record RequestScope(AsyncServiceScope Scope, AppDbContext Db, ITaskCommandService Commands, ITaskSubresourceService Subresources, IProjectService Compatibility, RequestSaveOutcomeRecorder SaveRecorder) : IAsyncDisposable
     {
