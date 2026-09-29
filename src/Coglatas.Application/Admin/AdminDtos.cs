@@ -1,6 +1,4 @@
 using Coglatas.Application.Audit;
-using Coglatas.Application.Common;
-using Coglatas.Domain.Entities;
 using Coglatas.Domain.Enums;
 
 namespace Coglatas.Application.Admin;

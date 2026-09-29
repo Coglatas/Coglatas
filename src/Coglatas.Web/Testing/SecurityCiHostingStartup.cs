@@ -2,10 +2,6 @@ using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
 using Coglatas.Domain.Enums;
 using Coglatas.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 [assembly: HostingStartup(typeof(Coglatas.Web.Testing.SecurityCiHostingStartup))]
 
