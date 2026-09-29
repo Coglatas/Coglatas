@@ -2629,7 +2629,7 @@ public sealed class ProjectServiceTests
         public Task<IReadOnlyList<Guid>> ListCurrentReaderUserIdsAsync(Guid projectId, CancellationToken cancellationToken = default) =>
             Task.FromResult(CurrentReaderUserIds.TryGetValue(projectId, out var userIds)
                 ? userIds
-                : (IReadOnlyList<Guid>)Members
+                : Members
                     .Where(member => member.ProjectId == projectId)
                     .Select(member => member.UserId)
                     .Distinct()

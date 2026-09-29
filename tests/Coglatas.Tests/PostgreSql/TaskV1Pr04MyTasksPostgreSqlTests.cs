@@ -719,7 +719,7 @@ public sealed class TaskV1Pr04MyTasksPostgreSqlTests
         }
 
         public System.Threading.Tasks.Task<Stream> OpenReadAsync(string storageKey, CancellationToken cancellationToken = default) =>
-            System.Threading.Tasks.Task.FromResult<Stream>(Stream.Null);
+            System.Threading.Tasks.Task.FromResult(Stream.Null);
 
         public System.Threading.Tasks.Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default) =>
             System.Threading.Tasks.Task.CompletedTask;
