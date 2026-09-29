@@ -1629,9 +1629,8 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
     {
         await using var harness = await ServiceHarness.CreateAsync();
         var graph = harness.Graph;
-        ProjectTaskLabelResponse label;
         await using var command = harness.CreateScope();
-        label = (await command.Subresources.CreateLabelAsync(graph.Project.Id, new CreateProjectTaskLabelRequest("Release", null))).Value!;
+        var label = (await command.Subresources.CreateLabelAsync(graph.Project.Id, new CreateProjectTaskLabelRequest("Release", null))).Value!;
         var before = await SnapshotAsync(command.Db, graph.Task.Id);
 
         var version = (await command.Commands.GetAsync(graph.Task.Id)).Value!.Version;
