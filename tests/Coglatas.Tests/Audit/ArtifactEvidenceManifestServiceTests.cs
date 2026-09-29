@@ -265,17 +265,17 @@ public sealed class ArtifactEvidenceManifestServiceTests
         }
 
         public Guid TenantId { get; }
-        public AppDbContext Context { get; }
+        private AppDbContext Context { get; }
         public Artifact Artifact { get; }
         public ArtifactVersion Version { get; }
         public ArtifactVersion SecondVersion { get; }
         public ArtifactRepository Artifacts { get; }
         public ArtifactEvidenceRepository Evidence { get; }
-        public FileRepository Files { get; }
+        private FileRepository Files { get; }
         public StubArtifactAuthorization ArtifactAuthorization { get; }
         public StubFileAuthorization FileAuthorization { get; }
         public StubAuditAuthorization AuditAuthorization { get; }
-        public StubCurrentUser CurrentUser { get; }
+        private StubCurrentUser CurrentUser { get; }
         public FakeAuditLogger AuditLogger { get; }
         public DbUnitOfWork UnitOfWork { get; }
         public ArtifactEvidenceManifestService Service { get; }
