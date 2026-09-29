@@ -38,8 +38,17 @@ def run(command: Sequence[str], *, timeout: float = 60.0) -> str:
     return value
 
 
-def compose_command(project: str, compose_file: Path, *args: str) -> list[str]:
-    return ["docker", "compose", "-p", project, "-f", str(compose_file), *args]
+def compose_command(
+    project: str,
+    compose_file: Path,
+    compose_override: Path | None,
+    *args: str,
+) -> list[str]:
+    command = ["docker", "compose", "-p", project, "-f", str(compose_file)]
+    if compose_override is not None:
+        command.extend(["-f", str(compose_override)])
+    command.extend(args)
+    return command
 
 
 def first_line(value: str) -> str:
@@ -85,17 +94,26 @@ def locked_playwright_version(root: Path) -> str:
     return entry["version"]
 
 
-def image_id(project: str, compose_file: Path, service: str) -> str:
-    container_id = run(compose_command(project, compose_file, "ps", "-q", service))
+def image_id(project: str, compose_file: Path, compose_override: Path | None, service: str) -> str:
+    container_id = run(compose_command(project, compose_file, compose_override, "ps", "-q", service))
     if not container_id:
         raise PerformanceContractError(f"service {service} has no container id")
     return run(["docker", "inspect", "--format", "{{.Image}}", first_line(container_id)])
+
+
+def built_compose_image_id(project: str, service: str) -> str:
+    # Compose only lists images for created containers. performance-browser is
+    # deliberately build-only during PERF-02 environment validation, so inspect
+    # Compose's deterministic default image name instead.
+    image_name = f"{project}-{service}"
+    return run(["docker", "image", "inspect", "--format", "{{.Id}}", image_name])
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Collect machine-readable PERF-02 environment fingerprint.")
     parser.add_argument("--compose-project", required=True)
     parser.add_argument("--compose-file", type=Path, required=True)
+    parser.add_argument("--compose-override", type=Path)
     parser.add_argument("--profile", choices=("small", "medium", "large"), required=True)
     parser.add_argument("--fixture-evidence", type=Path, required=True)
     parser.add_argument("--manifest", type=Path)
@@ -111,34 +129,33 @@ def main() -> int:
         postgres_version = run(compose_command(
             args.compose_project,
             args.compose_file,
+            args.compose_override,
             "exec", "-T", "postgres",
             "psql", "-U", "coglatas_performance", "-d", "coglatas_performance",
             "-Atc", "SHOW server_version",
         ))
         dotnet_runtime = run(compose_command(
-            args.compose_project, args.compose_file, "exec", "-T", "app", "dotnet", "--info"
+            args.compose_project, args.compose_file, args.compose_override, "exec", "-T", "app", "dotnet", "--info"
         ))
         dotnet_sdk = run(compose_command(
-            args.compose_project, args.compose_file, "run", "--rm", "--no-deps", "migrate", "dotnet", "--info"
+            args.compose_project, args.compose_file, args.compose_override, "run", "--rm", "--no-deps", "migrate", "dotnet", "--info"
         ))
         node_version = run(compose_command(
-            args.compose_project, args.compose_file, "run", "--rm", "--no-deps", "performance-browser", "node", "--version"
+            args.compose_project, args.compose_file, args.compose_override, "run", "--rm", "--no-deps", "performance-browser", "node", "--version"
         ))
         npm_version = run(compose_command(
-            args.compose_project, args.compose_file, "run", "--rm", "--no-deps", "performance-browser", "npm", "--version"
+            args.compose_project, args.compose_file, args.compose_override, "run", "--rm", "--no-deps", "performance-browser", "npm", "--version"
         ))
         browser_version = run(compose_command(
-            args.compose_project, args.compose_file, "run", "--rm", "--no-deps", "performance-browser",
+            args.compose_project, args.compose_file, args.compose_override, "run", "--rm", "--no-deps", "performance-browser",
             "bash", "-lc",
             'for f in /ms-playwright/chromium-*/chrome-linux*/chrome; do '
             'if [ -x "$f" ]; then "$f" --version; exit 0; fi; done; exit 1',
         ))
 
-        app_image = image_id(args.compose_project, args.compose_file, "app")
-        postgres_image = image_id(args.compose_project, args.compose_file, "postgres")
-        browser_image = run(compose_command(
-            args.compose_project, args.compose_file, "images", "-q", "performance-browser"
-        ))
+        app_image = image_id(args.compose_project, args.compose_file, args.compose_override, "app")
+        postgres_image = image_id(args.compose_project, args.compose_file, args.compose_override, "postgres")
+        browser_image = built_compose_image_id(args.compose_project, "performance-browser")
 
         output = {
             "schemaVersion": 1,
