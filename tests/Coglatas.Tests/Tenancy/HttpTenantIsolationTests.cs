@@ -5106,25 +5106,25 @@ public sealed class HttpTenantIsolationTests
 
     private sealed class InMemoryFileStorageService : IFileStorageService
     {
-        private readonly Dictionary<string, byte[]> files = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, byte[]> _files = new(StringComparer.Ordinal);
 
         public async Task<Result> SaveAsync(string storageKey, Stream stream, string contentType, CancellationToken cancellationToken = default)
         {
             using var memory = new MemoryStream();
             await stream.CopyToAsync(memory, cancellationToken);
-            files[storageKey] = memory.ToArray();
+            _files[storageKey] = memory.ToArray();
             return Result.Success();
         }
 
         public Task<Stream> OpenReadAsync(string storageKey, CancellationToken cancellationToken = default)
         {
-            files.TryGetValue(storageKey, out var bytes);
+            _files.TryGetValue(storageKey, out var bytes);
             return Task.FromResult<Stream>(new MemoryStream(bytes ?? "test file"u8.ToArray()));
         }
 
         public Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default)
         {
-            files.Remove(storageKey);
+            _files.Remove(storageKey);
             return Task.CompletedTask;
         }
 

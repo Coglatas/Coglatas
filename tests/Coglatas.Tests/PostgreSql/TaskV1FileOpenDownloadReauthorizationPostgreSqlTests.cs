@@ -99,11 +99,11 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
 
     private sealed class Fixture : IAsyncDisposable
     {
-        private readonly AppDbContext db;
+        private readonly AppDbContext _db;
 
         private Fixture(AppDbContext db, FileService service, StorageSpy storage, Guid tenantId, Guid workspaceId, Guid projectId, Guid taskId, Guid associationId, Guid fileObjectId, Guid userId, string storageKey)
         {
-            this.db = db;
+            _db = db;
             Service = service;
             Storage = storage;
             TenantId = tenantId;
@@ -171,71 +171,71 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
 
         public async Task SetWorkspaceMembershipAsync(MembershipStatus status)
         {
-            var member = await db.WorkspaceMembers.SingleAsync(value => value.WorkspaceId == WorkspaceId && value.UserId == UserId);
+            var member = await _db.WorkspaceMembers.SingleAsync(value => value.WorkspaceId == WorkspaceId && value.UserId == UserId);
             member.Status = status;
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
         public async Task MarkAssociationDeletedAsync()
         {
-            var item = await db.Attachments.SingleAsync(value => value.Id == AssociationId);
+            var item = await _db.Attachments.SingleAsync(value => value.Id == AssociationId);
             item.MarkDeleted(DateTimeOffset.UtcNow, UserId, "removed");
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
         public async Task SetFileStatusAsync(FileObjectStatus status)
         {
-            var item = await db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
+            var item = await _db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
             item.Status = status;
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
         public async Task MarkFileDeletedAsync()
         {
-            var item = await db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
+            var item = await _db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
             item.MarkDeleted(DateTimeOffset.UtcNow, UserId, "deleted");
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
         public async Task SetScanStatusAsync(FileScanStatus status)
         {
-            var item = await db.Attachments.SingleAsync(value => value.Id == AssociationId);
+            var item = await _db.Attachments.SingleAsync(value => value.Id == AssociationId);
             item.ScanStatus = status;
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
         public async Task SetFileWorkspaceAsync()
         {
             var marker = Guid.NewGuid().ToString("N");
             var workspace = new Workspace { TenantId = TenantId, Name = $"Other {marker}", Slug = $"other-{marker}", CreatedByUserId = UserId };
-            db.Workspaces.Add(workspace);
-            await db.SaveChangesAsync();
-            var item = await db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
+            _db.Workspaces.Add(workspace);
+            await _db.SaveChangesAsync();
+            var item = await _db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
             item.WorkspaceId = workspace.Id;
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
         public async Task SetFileProjectAsync()
         {
             var marker = Guid.NewGuid().ToString("N");
             var project = new Project { TenantId = TenantId, WorkspaceId = WorkspaceId, OwnerUserId = UserId, CreatedByUserId = UserId, Name = $"Other {marker}", Slug = $"other-{marker}" };
-            db.Projects.Add(project);
-            await db.SaveChangesAsync();
-            var item = await db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
+            _db.Projects.Add(project);
+            await _db.SaveChangesAsync();
+            var item = await _db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
             item.ProjectId = project.Id;
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
-        public Task<List<AuditLog>> AuditRowsAsync() => db.AuditLogs.AsNoTracking().ToListAsync();
+        public Task<List<AuditLog>> AuditRowsAsync() => _db.AuditLogs.AsNoTracking().ToListAsync();
 
-        public async ValueTask DisposeAsync() => await db.DisposeAsync();
+        public async ValueTask DisposeAsync() => await _db.DisposeAsync();
 
         private static AppDbContext CreateContext(string connectionString, Tenant? tenant)
         {

@@ -721,17 +721,17 @@ public sealed class AuthServiceTests
 
     private sealed class FakeCurrentUser : ICurrentUser
     {
-        private User? user;
+        private User? _user;
 
-        public Guid? UserId => user?.Id;
-        public Guid? SessionId => user is null ? null : Guid.NewGuid();
-        public string? Email => user?.Email;
-        public SystemRole? SystemRole => user?.SystemRole;
-        public bool IsAuthenticated => user is not null;
+        public Guid? UserId => _user?.Id;
+        public Guid? SessionId => _user is null ? null : Guid.NewGuid();
+        public string? Email => _user?.Email;
+        public SystemRole? SystemRole => _user?.SystemRole;
+        public bool IsAuthenticated => _user is not null;
 
         public void SetUser(User currentUser)
         {
-            user = currentUser;
+            _user = currentUser;
         }
     }
 

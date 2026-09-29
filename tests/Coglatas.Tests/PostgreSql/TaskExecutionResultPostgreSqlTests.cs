@@ -418,13 +418,13 @@ public sealed class TaskExecutionResultPostgreSqlTests
 
     private sealed class IncrementingClock(DateTimeOffset current) : IClock
     {
-        private DateTimeOffset value = current;
+        private DateTimeOffset _value = current;
         public DateTimeOffset UtcNow
         {
             get
             {
-                var result = value;
-                value = value.AddMilliseconds(1);
+                var result = _value;
+                _value = _value.AddMilliseconds(1);
                 return result;
             }
         }

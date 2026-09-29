@@ -57,11 +57,11 @@ public sealed class MessageNotificationPreferenceServiceTests
 
     private sealed class RecordingStore : IMessageNotificationPreferenceStore
     {
-        private bool enabled;
+        private bool _enabled;
 
         public RecordingStore(bool enabled)
         {
-            this.enabled = enabled;
+            _enabled = enabled;
         }
 
         public List<Call> Calls { get; } = [];
@@ -72,7 +72,7 @@ public sealed class MessageNotificationPreferenceServiceTests
             CancellationToken cancellationToken = default)
         {
             Calls.Add(new Call("get", tenantId, userId, null));
-            return Task.FromResult<bool?>(enabled);
+            return Task.FromResult<bool?>(_enabled);
         }
 
         public Task<bool> SetEnabledAsync(
@@ -83,7 +83,7 @@ public sealed class MessageNotificationPreferenceServiceTests
             CancellationToken cancellationToken = default)
         {
             Calls.Add(new Call("set", tenantId, userId, updatedAt));
-            enabled = value;
+            _enabled = value;
             return Task.FromResult(true);
         }
     }

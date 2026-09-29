@@ -422,7 +422,7 @@ public sealed class ArtifactReportRefinementServiceTests
             Task.FromResult<ResearchPlanExecutionSnapshot?>(new(revisionId, revisionNo));
         public Task<ResearchPlan?> GetForTaskAsync(Guid taskItemId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<ResearchPlan?> GetForTaskForUpdateAsync(Guid taskItemId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<ResearchPlanRevision?> GetRevisionAsync(Guid researchPlanId, Guid revisionId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<ResearchPlanRevision?> GetRevisionAsync(Guid researchPlanId, Guid requestedRevisionId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<long?> GetLatestRevisionNumberAsync(Guid researchPlanId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddPlanAsync(ResearchPlan plan, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task AddRevisionAsync(ResearchPlanRevision revision, CancellationToken cancellationToken = default) => throw new NotSupportedException();
