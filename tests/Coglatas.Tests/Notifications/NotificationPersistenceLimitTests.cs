@@ -1,4 +1,3 @@
-using System.Text;
 using Coglatas.Application.Common.Tenancy;
 using Coglatas.Domain.Entities;
 using Coglatas.Domain.Enums;

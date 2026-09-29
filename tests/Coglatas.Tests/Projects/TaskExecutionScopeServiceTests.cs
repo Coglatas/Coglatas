@@ -1,5 +1,3 @@
-using Coglatas.Application;
-using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
 using Coglatas.Application.Projects;

@@ -3,7 +3,6 @@ using System.Text.Json;
 using Coglatas.Application.Common;
 using Coglatas.Application.Projects;
 using Coglatas.Domain.Entities;
-using Coglatas.Domain.Enums;
 using Coglatas.Web.Controllers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

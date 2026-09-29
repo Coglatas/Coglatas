@@ -1,5 +1,3 @@
-using Coglatas.Application.Common.Tenancy;
-using Coglatas.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;

@@ -1,11 +1,6 @@
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
-using Coglatas.Application.Groups;
-using Coglatas.Application.Messaging;
-using Coglatas.Application.Projects;
 using Coglatas.Application.Search;
-using Coglatas.Application.Tenancy;
-using Coglatas.Application.Workspaces;
 using Coglatas.Domain.Entities;
 using Coglatas.Domain.Enums;
 using Coglatas.Infrastructure.Persistence;
