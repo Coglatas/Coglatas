@@ -36,7 +36,7 @@ public sealed class WorkspaceNeedsAttentionContractTests
             0,
             0,
             0,
-            0) with
+            0)
         {
             NeedsAttentionCount = 1,
             NeedsAttentionItems = [attention]
@@ -82,7 +82,7 @@ public sealed class WorkspaceNeedsAttentionContractTests
             0,
             0,
             0,
-            0) with
+            0)
         {
             NeedsAttentionCount = 0,
             NeedsAttentionItems = []

@@ -331,14 +331,9 @@ public sealed class FormServiceTests
                 source = source.Where(form => form.ProjectId == query.ProjectId.Value);
             }
 
-            if (query.Status.HasValue)
-            {
-                source = source.Where(form => form.Status == query.Status.Value);
-            }
-            else
-            {
-                source = source.Where(form => form.Status != FormStatus.Archived && !form.DeletedAt.HasValue);
-            }
+            source = query.Status.HasValue
+                ? source.Where(form => form.Status == query.Status.Value)
+                : source.Where(form => form.Status != FormStatus.Archived && !form.DeletedAt.HasValue);
 
             if (query.FormType.HasValue)
             {

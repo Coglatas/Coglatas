@@ -234,7 +234,6 @@ public sealed class BrowserSmokeResponseGateMiddleware(
 {
     public async Task InvokeAsync(HttpContext context, ICurrentUser currentUser)
     {
-        BrowserSmokeResponseGateLease? lease = null;
         if (currentUser.IsAuthenticated &&
             currentUser.UserId is { } userId &&
             context.Request.Cookies.TryGetValue(BrowserSmokeResponseGateRegistry.CookieName, out var gateCookie) &&
@@ -244,7 +243,7 @@ public sealed class BrowserSmokeResponseGateMiddleware(
                 userId,
                 context.Request.Method,
                 context.Request.Path.Value ?? string.Empty,
-                out lease))
+                out var lease))
         {
             context.Response.Headers[BrowserSmokeResponseGateRegistry.ResponseHeaderName] = gateCookie;
             context.Response.OnStarting(async () =>

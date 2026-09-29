@@ -280,13 +280,12 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
             await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var write = NewScheduleWrite(graph, Now.AddHours(1));
-            TaskDeadlineDigestClaim claim;
             await using (var context = CreateTenantContext(database, graph.Tenant))
             {
                 var tenant = TenantScope(graph.Tenant);
                 var repository = new TaskDeadlineDigestRepository(context, tenant);
                 Assert.Equal(1, await repository.UpsertSchedulesAsync([write], Now));
-                claim = Assert.Single(await repository.ClaimDueAsync(
+                var claim = Assert.Single(await repository.ClaimDueAsync(
                     "claimed-schedule",
                     Now.AddHours(2),
                     batchSize: 1,

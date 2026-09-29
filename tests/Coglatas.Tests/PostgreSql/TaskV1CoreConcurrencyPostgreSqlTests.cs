@@ -336,7 +336,6 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
         await using var harness = await ServiceHarness.CreateAsync(useRealNotifications: true);
         var graph = harness.Graph;
         var taskId = graph.Task.Id;
-        var before = await SnapshotAsync(harness);
         await using var first = harness.CreateScope();
         await using var second = harness.CreateScope();
         harness.Race.Arm();
@@ -1630,9 +1629,8 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
     {
         await using var harness = await ServiceHarness.CreateAsync();
         var graph = harness.Graph;
-        ProjectTaskLabelResponse label;
         await using var command = harness.CreateScope();
-        label = (await command.Subresources.CreateLabelAsync(graph.Project.Id, new CreateProjectTaskLabelRequest("Release", null))).Value!;
+        var label = (await command.Subresources.CreateLabelAsync(graph.Project.Id, new CreateProjectTaskLabelRequest("Release", null))).Value!;
         var before = await SnapshotAsync(command.Db, graph.Task.Id);
 
         var version = (await command.Commands.GetAsync(graph.Task.Id)).Value!.Version;
@@ -2063,7 +2061,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
         {
             var persisted = await verify.Db.ProjectTaskLabels.SingleAsync(value => value.Id == label.Id);
             Assert.Equal(label.Version + 1, persisted.VersionNo);
-            if (winner.Result.Value is ProjectTaskLabelResponse archiveWinner && archiveWinner.IsArchived == archiveCommand)
+            if (winner.Result.Value is { } archiveWinner && archiveWinner.IsArchived == archiveCommand)
                 Assert.Equal(archiveCommand, persisted.IsArchived);
             else
                 Assert.Equal("Updated", persisted.Name);
