@@ -80,14 +80,9 @@ public sealed class TenantExportServiceAuthorizationTests
         }
     }
 
-    private sealed class SequenceTenantAuthorizationService : ITenantAuthorizationService
+    private sealed class SequenceTenantAuthorizationService(params bool[] canManageResponses) : ITenantAuthorizationService
     {
-        private readonly Queue<bool> _responses;
-
-        public SequenceTenantAuthorizationService(params bool[] canManageResponses)
-        {
-            _responses = new Queue<bool>(canManageResponses);
-        }
+        private readonly Queue<bool> _responses = new(canManageResponses);
 
         public int CanManageCalls { get; private set; }
 
