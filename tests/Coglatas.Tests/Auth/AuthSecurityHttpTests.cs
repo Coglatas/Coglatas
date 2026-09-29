@@ -4,7 +4,6 @@ using System.Text.Json;
 using Coglatas.Application;
 using Coglatas.Application.Auth;
 using Coglatas.Application.Common.Interfaces;
-using Coglatas.Application.Common.Tenancy;
 using Coglatas.Application.Notifications;
 using Coglatas.Domain.Entities;
 using Coglatas.Domain.Enums;
@@ -24,7 +23,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -235,7 +233,7 @@ public sealed class AuthSecurityHttpTests
         private WebApplication App { get; }
         private string DataProtectionKeysPath { get; }
         public HttpClient Client { get; }
-        public Guid UserId { get; }
+        private Guid UserId { get; }
         public string Email { get; }
 
         public static async Task<AuthSecurityTestApp> CreateAsync(
@@ -472,7 +470,7 @@ public sealed class AuthSecurityHttpTests
             services.AddScoped<CurrentAuthorizationTargetResolver>();
             services.AddScoped<INotificationTargetResolver>(provider => provider.GetRequiredService<CurrentAuthorizationTargetResolver>());
             services.AddScoped<INotificationOpenService, NotificationOpenService>();
-            services.AddScoped<Coglatas.Application.Search.ISearchService, DbSearchService>();
+            services.AddScoped<Application.Search.ISearchService, DbSearchService>();
             services.AddScoped<Coglatas.Application.Audit.IAuditQueryService, DbAuditQueryService>();
             services.AddSingleton<IClock, SystemClock>();
         }

@@ -564,11 +564,11 @@ public sealed class TaskDeadlineDigestServiceTests
         public string? TenantTimeZoneId { get; init; } = "UTC";
         public Func<int, int, IReadOnlyList<TaskDeadlineDigestScheduleCandidate>> ScheduleCandidates { get; init; } = (_, _) => [];
         public IReadOnlyList<TaskDeadlineDigestClaim> Claims { get; init; } = [];
-        public TaskDeadlineDigestClaim? Claimed { get; set; }
+        public TaskDeadlineDigestClaim? Claimed { get; init; }
         public Func<int, TaskDeadlineDigestCurrentContext?> CurrentContexts { get; set; } = _ => null;
         public Func<int, int, int, IReadOnlyList<TaskDeadlineDigestCandidate>> CandidatePages { get; set; } = (_, _, _) => [];
-        private bool MarkSucceededResult { get; set; } = true;
-        private bool ReleaseFeatureDisabledResult { get; set; } = true;
+        private bool MarkSucceededResult { get; } = true;
+        private bool ReleaseFeatureDisabledResult { get; } = true;
         public Queue<TaskDeadlineDigestTransition> FailureTransitions { get; } = new();
         public Queue<int> UpsertResults { get; } = new();
         public Queue<TaskDeadlineDigestGenerationFenceOutcome> FenceOutcomes { get; } = new();

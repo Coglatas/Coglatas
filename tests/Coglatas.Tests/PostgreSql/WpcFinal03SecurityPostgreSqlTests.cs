@@ -1,4 +1,3 @@
-using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
 using Coglatas.Application.Files;
 using Coglatas.Application.Groups;

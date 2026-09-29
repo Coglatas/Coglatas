@@ -382,7 +382,7 @@ public sealed class FileDownloadGrantBoundaryTests
         public Task<Stream> OpenReadAsync(string storageKey, CancellationToken cancellationToken = default)
         {
             OpenReadCount++;
-            return Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("file content")));
+            return Task.FromResult<Stream>(new MemoryStream("file content"u8.ToArray()));
         }
         public Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<bool> ExistsAsync(string storageKey, CancellationToken cancellationToken = default) => Task.FromResult(true);

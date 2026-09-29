@@ -118,13 +118,13 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
 
         public FileService Service { get; }
         public StorageSpy Storage { get; }
-        public Guid TenantId { get; }
-        public Guid WorkspaceId { get; }
+        private Guid TenantId { get; }
+        private Guid WorkspaceId { get; }
         public Guid ProjectId { get; }
         public Guid TaskId { get; }
         public Guid AssociationId { get; }
-        public Guid FileObjectId { get; }
-        public Guid UserId { get; }
+        private Guid FileObjectId { get; }
+        private Guid UserId { get; }
         public string StorageKey { get; }
 
         public static async Task<Fixture> CreateAsync()
@@ -258,6 +258,6 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
     private sealed class UploadPolicy : IFileUploadPolicy { public long MaxFileSizeBytes => 1024; public IReadOnlyCollection<string> AllowedExtensions => [".txt"]; public IReadOnlyCollection<string> AllowedContentTypes => ["text/plain"]; }
     private sealed class FeatureFlags : IFeatureFlagService { public Task<bool> IsEnabledAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult(true); public Task<Result> RequireEnabledAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task<IReadOnlyList<string>> GetEnabledFeaturesAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<string>>([]); }
     private sealed class Quota : IQuotaService { public Task<TenantUsageSnapshot> GetCurrentUsageAsync(Guid tenantId, CancellationToken cancellationToken = default) => throw new NotSupportedException(); public Task<Result> CanCreateUserAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task<Result> CanCreateProjectAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task<Result> CanUploadFileAsync(Guid tenantId, long size, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task<Result> CanInviteGuestAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task RecordApiRequestAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.CompletedTask; }
-    private sealed class StorageSpy : IFileStorageService { public int OpenReadCount { get; private set; } public Task<Result> SaveAsync(string key, Stream stream, string contentType, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task<Stream> OpenReadAsync(string key, CancellationToken cancellationToken = default) { OpenReadCount++; return Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("safe"))); } public Task DeleteAsync(string key, CancellationToken cancellationToken = default) => Task.CompletedTask; public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult(true); public Task<string?> CreateSignedReadUrlAsync(string key, TimeSpan expiresIn, CancellationToken cancellationToken = default) => Task.FromResult<string?>(null); }
+    private sealed class StorageSpy : IFileStorageService { public int OpenReadCount { get; private set; } public Task<Result> SaveAsync(string key, Stream stream, string contentType, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task<Stream> OpenReadAsync(string key, CancellationToken cancellationToken = default) { OpenReadCount++; return Task.FromResult<Stream>(new MemoryStream("safe"u8.ToArray())); } public Task DeleteAsync(string key, CancellationToken cancellationToken = default) => Task.CompletedTask; public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult(true); public Task<string?> CreateSignedReadUrlAsync(string key, TimeSpan expiresIn, CancellationToken cancellationToken = default) => Task.FromResult<string?>(null); }
     private sealed class NoopInvalidations : IBusinessInvalidationPublisher { public Task TaskChangedAsync(TaskItem task, Guid actor, string change, IEnumerable<string>? fields = null, IEnumerable<Guid>? affected = null, CancellationToken cancellationToken = default) => Task.CompletedTask; public Task ProjectChangedAsync(Project project, Guid actor, string change, CancellationToken cancellationToken = default) => Task.CompletedTask; public Task AnnouncementChangedAsync(Announcement announcement, Guid actor, string change, IEnumerable<Guid> audience, CancellationToken cancellationToken = default) => Task.CompletedTask; public Task FileChangedAsync(FileObject file, Attachment attachment, Guid actor, string change, CancellationToken cancellationToken = default) => Task.CompletedTask; }
 }

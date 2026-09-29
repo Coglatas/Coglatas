@@ -1,4 +1,3 @@
-using Coglatas.Application;
 using Coglatas.Application.Announcements;
 using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;

@@ -115,13 +115,13 @@ public sealed class AuditFindingReviewerMentionsServiceTests
             Service = service;
         }
 
-        public Guid TenantId { get; }
+        private Guid TenantId { get; }
         public Guid ActorUserId { get; }
-        public Guid ArtifactVersionId { get; }
+        private Guid ArtifactVersionId { get; }
         public AppDbContext Context { get; }
-        public StubClaimsEvidenceService Claims { get; }
+        private StubClaimsEvidenceService Claims { get; }
         public StubAuditAuthorization Authorization { get; }
-        public StubCapabilityGrantEvaluator Capabilities { get; }
+        private StubCapabilityGrantEvaluator Capabilities { get; }
         public StubNotificationService Notifications { get; }
         public StubAuditLogger Audit { get; }
         public DbAuditFindingReviewerMentionsService Service { get; }

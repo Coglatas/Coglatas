@@ -1,5 +1,3 @@
-using Coglatas.Application;
-using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
 using Coglatas.Application.Projects;
@@ -580,8 +578,8 @@ public sealed class TaskExecutionScopeServiceTests
 
     private sealed class ControllableProjectAuthorization : IProjectAuthorizationService
     {
-        private bool CanView { get; set; } = true;
-        public bool CanManage { get; set; } = true;
+        private bool CanView { get; } = true;
+        public bool CanManage { get; init; } = true;
 
         public Task<bool> CanViewProject(Guid userId, Guid projectId, CancellationToken cancellationToken = default) =>
             Task.FromResult(CanView);

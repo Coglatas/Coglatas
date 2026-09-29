@@ -2,7 +2,6 @@ using Coglatas.Application.Common.Interfaces;
 using Coglatas.Domain.Entities;
 using Coglatas.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Coglatas.Tests.Files;
 

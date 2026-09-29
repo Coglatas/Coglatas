@@ -14,7 +14,6 @@ using Coglatas.Domain.Enums;
 using Coglatas.Infrastructure.Audit;
 using Coglatas.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Coglatas.Tests.PostgreSql;
 
@@ -1887,7 +1886,7 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
 
     private sealed class TestCurrentUser(
         Guid userId,
-        SystemRole systemRole = Coglatas.Domain.Enums.SystemRole.NormalUser) : ICurrentUser
+        SystemRole systemRole = SystemRole.NormalUser) : ICurrentUser
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.NewGuid();

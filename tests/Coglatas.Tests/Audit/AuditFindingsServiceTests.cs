@@ -371,13 +371,13 @@ public sealed class AuditFindingsServiceTests
             Service = service;
         }
 
-        public Guid TenantId { get; }
+        private Guid TenantId { get; }
         public Guid UserId { get; }
         public Guid ArtifactVersionId { get; }
         public AppDbContext Context { get; }
         public StubClaimsEvidenceService Claims { get; }
         public StubAuditAuthorization Authorization { get; }
-        public StubCapabilityGrantEvaluator Capabilities { get; }
+        private StubCapabilityGrantEvaluator Capabilities { get; }
         public StubAuditLogger Audit { get; }
         public StubNotificationService Notifications { get; }
         public DbAuditFindingsService Service { get; }

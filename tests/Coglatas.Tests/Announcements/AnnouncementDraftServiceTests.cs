@@ -293,7 +293,7 @@ public sealed class AnnouncementDraftServiceTests
     private sealed class TestAudienceService : IAnnouncementAudienceService
     {
         public Queue<bool> Outcomes { get; } = [];
-        private bool IsAllowed { get; set; } = true;
+        private bool IsAllowed { get; } = true;
 
         public Task<Result<IReadOnlyList<AnnouncementAudienceOptionResponse>>> ListAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(Result<IReadOnlyList<AnnouncementAudienceOptionResponse>>.Success([]));

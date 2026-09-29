@@ -707,7 +707,7 @@ public sealed class TaskV1Pr04MyTasksPostgreSqlTests
     {
         public int SaveCount { get; private set; }
 
-        public async System.Threading.Tasks.Task<Result> SaveAsync(
+        public async Task<Result> SaveAsync(
             string storageKey,
             Stream stream,
             string contentType,
@@ -718,16 +718,16 @@ public sealed class TaskV1Pr04MyTasksPostgreSqlTests
             return Result.Success();
         }
 
-        public System.Threading.Tasks.Task<Stream> OpenReadAsync(string storageKey, CancellationToken cancellationToken = default) =>
+        public Task<Stream> OpenReadAsync(string storageKey, CancellationToken cancellationToken = default) =>
             System.Threading.Tasks.Task.FromResult(Stream.Null);
 
-        public System.Threading.Tasks.Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default) =>
+        public Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default) =>
             System.Threading.Tasks.Task.CompletedTask;
 
-        public System.Threading.Tasks.Task<bool> ExistsAsync(string storageKey, CancellationToken cancellationToken = default) =>
+        public Task<bool> ExistsAsync(string storageKey, CancellationToken cancellationToken = default) =>
             System.Threading.Tasks.Task.FromResult(true);
 
-        public System.Threading.Tasks.Task<string?> CreateSignedReadUrlAsync(
+        public Task<string?> CreateSignedReadUrlAsync(
             string storageKey,
             TimeSpan expiresIn,
             CancellationToken cancellationToken = default) =>
