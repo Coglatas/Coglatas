@@ -53,7 +53,7 @@
     "RedundantAnonymousTypePropertyName": 0,
     "RedundantArgumentDefaultValue": 16,
     "RedundantAssignment": 19,
-    "RedundantCast": 22,
+    "RedundantCast": 14,
     "RedundantExplicitParamsArrayCreation": 0,
     "RedundantExtendsListEntry": 1,
     "RedundantNameQualifier": 89,

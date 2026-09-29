@@ -112,7 +112,7 @@ public static class TaskDeadlineDigestPolicy
             0 => TaskDeadlineDigestCategory.DueToday,
             1 => TaskDeadlineDigestCategory.DeadlineInOneLocalDay,
             3 => TaskDeadlineDigestCategory.DeadlineInThreeLocalDays,
-            _ => (TaskDeadlineDigestCategory?)null
+            _ => null
         };
     }
 
