@@ -27,7 +27,7 @@
     "ConvertToPrimaryConstructor": 8,
     "ConvertToUsingDeclaration": 3,
     "ConvertTypeCheckPatternToNullCheck": 2,
-    "InconsistentNaming": 154,
+    "InconsistentNaming": 144,
     "InlineOutVariableDeclaration": 0,
     "InvalidXmlDocComment": 0,
     "JoinDeclarationAndInitializer": 0,
