@@ -235,15 +235,15 @@ cleanup_runtime() {
   security_scan_cleanup >/dev/null 2>&1 || true
   "${compose[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
 
-  if [[ -n "$runtime_state_dir" && -d "$runtime_state_dir" ]]; then
-    rm -rf -- "$runtime_state_dir"
-  fi
+  rm -f -- "$runtime_state_file" "$runtime_state_dir/health-ready.json"
+  rmdir -- "$runtime_state_dir" >/dev/null 2>&1 || true
 }
 
 stage_prepare() {
-  rm -rf -- "$runtime_state_dir"
   mkdir -p "$runtime_state_dir"
   chmod 700 "$runtime_state_dir"
+  [[ ! -e "$runtime_state_file" ]] ||
+    fail "residual runtime state file exists before preparation: $runtime_state_file"
 
   "${compose[@]}" config --quiet
   "${compose[@]}" config --format json | python3 -c '
@@ -344,14 +344,17 @@ stage_sec06() {
   export COGLATAS_SECURITY_CI_FIXTURE_ENABLED=true
   export SECURITY_SCAN_TRANSPORT_KIND=compose
 
-  prepare_zap_network
-  set +e
-  security_zap_run_matrix "$zap_network" "$SECURITY_SCAN_STATE_DIR" "$app_container"
-  local scan_status=$?
-  set -e
-
-  release_zap_network
-  (( scan_status == 0 )) || return "$scan_status"
+  # Keep errexit semantics inside the ZAP runner while guaranteeing that its
+  # temporary internal network is released even when the scanner stage fails.
+  (
+    app_container=""
+    zap_network_owned=0
+    prepare_zap_network
+    trap 'release_zap_network' EXIT
+    security_zap_run_matrix "$zap_network" "$SECURITY_SCAN_STATE_DIR" "$app_container"
+    release_zap_network
+    trap - EXIT
+  )
 }
 
 stage_aud02() {
