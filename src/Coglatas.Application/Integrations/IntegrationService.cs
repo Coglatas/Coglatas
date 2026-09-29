@@ -26,7 +26,7 @@ public sealed class IntegrationService(
         var auth = await RequireTenantAdminAsync(cancellationToken);
         if (!auth.IsSuccess)
         {
-            return Result<IReadOnlyList<IntegrationAccountResponse>>.Failure(auth.Error!);
+            return ForwardFailure<IReadOnlyList<IntegrationAccountResponse>>(auth);
         }
 
         var items = await integrations.ListIntegrationAccountsAsync(cancellationToken);
@@ -39,9 +39,14 @@ public sealed class IntegrationService(
     public async Task<Result<IntegrationAccountResponse>> CreateIntegrationAsync(CreateIntegrationAccountRequest request, CancellationToken cancellationToken = default)
     {
         var auth = await RequireTenantAdminAsync(cancellationToken);
-        if (!auth.IsSuccess || !TryCurrentUser(out var userId))
+        if (!auth.IsSuccess)
         {
-            return Result<IntegrationAccountResponse>.Failure(auth.Error ?? "Authentication is required.");
+            return ForwardFailure<IntegrationAccountResponse>(auth);
+        }
+
+        if (!TryCurrentUser(out var userId))
+        {
+            return AuthenticationRequired<IntegrationAccountResponse>();
         }
 
         var validation = ValidateIntegrationRequest(request.DisplayName, request.SettingsJson);
@@ -82,9 +87,14 @@ public sealed class IntegrationService(
     public async Task<Result<IntegrationAccountResponse>> UpdateIntegrationAsync(Guid integrationId, UpdateIntegrationAccountRequest request, CancellationToken cancellationToken = default)
     {
         var auth = await RequireTenantAdminAsync(cancellationToken);
-        if (!auth.IsSuccess || !TryCurrentUser(out var userId))
+        if (!auth.IsSuccess)
         {
-            return Result<IntegrationAccountResponse>.Failure(auth.Error ?? "Authentication is required.");
+            return ForwardFailure<IntegrationAccountResponse>(auth);
+        }
+
+        if (!TryCurrentUser(out var userId))
+        {
+            return AuthenticationRequired<IntegrationAccountResponse>();
         }
 
         var integration = await integrations.GetIntegrationAccountAsync(integrationId, cancellationToken);
@@ -110,9 +120,14 @@ public sealed class IntegrationService(
     public async Task<Result> DeleteIntegrationAsync(Guid integrationId, CancellationToken cancellationToken = default)
     {
         var auth = await RequireTenantAdminAsync(cancellationToken);
-        if (!auth.IsSuccess || !TryCurrentUser(out var userId))
+        if (!auth.IsSuccess)
         {
-            return Result.Failure(auth.Error ?? "Authentication is required.");
+            return auth;
+        }
+
+        if (!TryCurrentUser(out var userId))
+        {
+            return AuthenticationRequired();
         }
 
         var integration = await integrations.GetIntegrationAccountAsync(integrationId, cancellationToken);
@@ -133,7 +148,7 @@ public sealed class IntegrationService(
         var auth = await RequireFeatureAndTenantAdminAsync(FeatureKeys.WebhookIntegration, cancellationToken);
         if (!auth.IsSuccess)
         {
-            return Result<IReadOnlyList<WebhookEndpointResponse>>.Failure(auth.Error!);
+            return ForwardFailure<IReadOnlyList<WebhookEndpointResponse>>(auth);
         }
 
         var items = await integrations.ListWebhookEndpointsAsync(cancellationToken);
@@ -146,9 +161,14 @@ public sealed class IntegrationService(
     public async Task<Result<WebhookEndpointResponse>> CreateWebhookAsync(CreateWebhookEndpointRequest request, CancellationToken cancellationToken = default)
     {
         var auth = await RequireFeatureAndTenantAdminAsync(FeatureKeys.WebhookIntegration, cancellationToken);
-        if (!auth.IsSuccess || !TryCurrentUser(out var userId))
+        if (!auth.IsSuccess)
         {
-            return Result<WebhookEndpointResponse>.Failure(auth.Error ?? "Authentication is required.");
+            return ForwardFailure<WebhookEndpointResponse>(auth);
+        }
+
+        if (!TryCurrentUser(out var userId))
+        {
+            return AuthenticationRequired<WebhookEndpointResponse>();
         }
 
         var validation = ValidateWebhookRequest(request.Name, request.Url, request.EnabledEventsJson);
@@ -190,9 +210,14 @@ public sealed class IntegrationService(
     public async Task<Result<WebhookEndpointResponse>> UpdateWebhookAsync(Guid webhookId, UpdateWebhookEndpointRequest request, CancellationToken cancellationToken = default)
     {
         var auth = await RequireFeatureAndTenantAdminAsync(FeatureKeys.WebhookIntegration, cancellationToken);
-        if (!auth.IsSuccess || !TryCurrentUser(out var userId))
+        if (!auth.IsSuccess)
         {
-            return Result<WebhookEndpointResponse>.Failure(auth.Error ?? "Authentication is required.");
+            return ForwardFailure<WebhookEndpointResponse>(auth);
+        }
+
+        if (!TryCurrentUser(out var userId))
+        {
+            return AuthenticationRequired<WebhookEndpointResponse>();
         }
 
         var webhook = await integrations.GetWebhookEndpointAsync(webhookId, cancellationToken);
@@ -224,9 +249,14 @@ public sealed class IntegrationService(
     public async Task<Result> DeleteWebhookAsync(Guid webhookId, CancellationToken cancellationToken = default)
     {
         var auth = await RequireFeatureAndTenantAdminAsync(FeatureKeys.WebhookIntegration, cancellationToken);
-        if (!auth.IsSuccess || !TryCurrentUser(out var userId))
+        if (!auth.IsSuccess)
         {
-            return Result.Failure(auth.Error ?? "Authentication is required.");
+            return auth;
+        }
+
+        if (!TryCurrentUser(out var userId))
+        {
+            return AuthenticationRequired();
         }
 
         var webhook = await integrations.GetWebhookEndpointAsync(webhookId, cancellationToken);
@@ -260,7 +290,7 @@ public sealed class IntegrationService(
         var auth = await RequireFeatureAndTenantAdminAsync(FeatureKeys.ApiAccess, cancellationToken);
         if (!auth.IsSuccess)
         {
-            return Result<IReadOnlyList<ApiTokenResponse>>.Failure(auth.Error!);
+            return ForwardFailure<IReadOnlyList<ApiTokenResponse>>(auth);
         }
 
         var tokens = await integrations.ListApiTokensAsync(cancellationToken);
@@ -270,9 +300,14 @@ public sealed class IntegrationService(
     public async Task<Result<CreateApiTokenResponse>> CreateApiTokenAsync(CreateApiTokenRequest request, CancellationToken cancellationToken = default)
     {
         var auth = await RequireFeatureAndTenantAdminAsync(FeatureKeys.ApiAccess, cancellationToken);
-        if (!auth.IsSuccess || !TryCurrentUser(out var userId))
+        if (!auth.IsSuccess)
         {
-            return Result<CreateApiTokenResponse>.Failure(auth.Error ?? "Authentication is required.");
+            return ForwardFailure<CreateApiTokenResponse>(auth);
+        }
+
+        if (!TryCurrentUser(out var userId))
+        {
+            return AuthenticationRequired<CreateApiTokenResponse>();
         }
 
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 160)
@@ -319,9 +354,14 @@ public sealed class IntegrationService(
     public async Task<Result> RevokeApiTokenAsync(Guid tokenId, CancellationToken cancellationToken = default)
     {
         var auth = await RequireFeatureAndTenantAdminAsync(FeatureKeys.ApiAccess, cancellationToken);
-        if (!auth.IsSuccess || !TryCurrentUser(out var userId))
+        if (!auth.IsSuccess)
         {
-            return Result.Failure(auth.Error ?? "Authentication is required.");
+            return auth;
+        }
+
+        if (!TryCurrentUser(out var userId))
+        {
+            return AuthenticationRequired();
         }
 
         var token = await integrations.GetApiTokenAsync(tokenId, cancellationToken);
@@ -386,12 +426,13 @@ public sealed class IntegrationService(
     {
         if (!TryCurrentUser(out var userId))
         {
-            return Result.Failure("Authentication is required.");
+            return AuthenticationRequired();
         }
 
         if (!currentTenant.IsAvailable)
         {
-            return Result.Failure("Tenant scope is required.");
+            const string message = "Tenant scope is required.";
+            return Result.Failure(message, new ApplicationErrorDetail("ValidationFailed", message));
         }
 
         if (await tenantAuthorization.IsPlatformAdminAsync(userId, cancellationToken))
@@ -399,9 +440,33 @@ public sealed class IntegrationService(
             return Result.Success();
         }
 
-        return await tenantAuthorization.CanManageTenantAsync(userId, currentTenant.TenantId, cancellationToken)
-            ? Result.Success()
-            : Result.Failure("Tenant admin permission is required.");
+        if (!await tenantAuthorization.CanManageTenantAsync(userId, currentTenant.TenantId, cancellationToken))
+        {
+            const string message = "Tenant admin permission is required.";
+            return Result.Failure(message, new ApplicationErrorDetail("Forbidden", message));
+        }
+
+        return Result.Success();
+    }
+
+    private static Result<T> ForwardFailure<T>(Result result)
+    {
+        var message = result.Error ?? result.ErrorDetail?.Message ?? "Request failed.";
+        return result.ErrorDetail is null
+            ? Result<T>.Failure(message)
+            : Result<T>.Failure(message, result.ErrorDetail);
+    }
+
+    private static Result AuthenticationRequired()
+    {
+        const string message = "Authentication is required.";
+        return Result.Failure(message, new ApplicationErrorDetail("AuthenticationRequired", message));
+    }
+
+    private static Result<T> AuthenticationRequired<T>()
+    {
+        const string message = "Authentication is required.";
+        return Result<T>.Failure(message, new ApplicationErrorDetail("AuthenticationRequired", message));
     }
 
     private Result ValidateIntegrationRequest(string displayName, string? settingsJson)

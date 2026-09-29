@@ -39,6 +39,7 @@ grep -Fq -- '--max-redirects 0' "$runner" || fail "redirect escape guard is miss
 grep -Fq -- '--output-sanitize true' "$runner" || fail "Schemathesis output sanitization must remain enabled"
 grep -Fq -- '--workdir /tmp' "$runner" || fail "Schemathesis runtime metadata must stay inside the writable tmpfs"
 grep -Fq -- '--config-file /work/scripts/security/schemathesis.toml' "$runner" || fail "Schemathesis policy config is not wired into the container"
+grep -Fq "pr) printf '%s\\n' anonymous alpha-restricted alpha-owner ;;" "$runner" || fail "PR lane must include lower-privilege authenticated coverage"
 grep -Fq 'negative_data_rejection.expected-statuses' "$config" || fail "negative-data rejection policy is missing"
 grep -Eq '^[[:space:]]*415,' "$config" || fail "unsupported media type must count as a rejected invalid request"
 grep -Fq 'security_scan_fetch_csrf' "$runner" || fail "SEC-03 CSRF harness is not reused"
