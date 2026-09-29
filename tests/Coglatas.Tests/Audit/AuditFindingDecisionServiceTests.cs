@@ -248,11 +248,11 @@ public sealed class AuditFindingDecisionServiceTests
 
     private sealed class StubClaimsEvidenceService(Guid artifactVersionId) : IAuditClaimsEvidenceService
     {
-        private readonly Dictionary<Guid, AuditClaimEvidenceResponse> claims = new();
+        private readonly Dictionary<Guid, AuditClaimEvidenceResponse> _claims = new();
 
         public void AddClaim(ArtifactClaim claim)
         {
-            claims[claim.Id] = new AuditClaimEvidenceResponse(
+            _claims[claim.Id] = new AuditClaimEvidenceResponse(
                 claim.Id,
                 claim.Ordinal,
                 claim.Text,
@@ -277,7 +277,7 @@ public sealed class AuditFindingDecisionServiceTests
                 artifactVersionId,
                 1,
                 "Audit report",
-                claims.Values.OrderBy(claim => claim.Ordinal).ToArray())));
+                _claims.Values.OrderBy(claim => claim.Ordinal).ToArray())));
         }
     }
 

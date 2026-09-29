@@ -118,13 +118,13 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
 
         public FileService Service { get; }
         public StorageSpy Storage { get; }
-        public Guid TenantId { get; }
-        public Guid WorkspaceId { get; }
+        private Guid TenantId { get; }
+        private Guid WorkspaceId { get; }
         public Guid ProjectId { get; }
         public Guid TaskId { get; }
         public Guid AssociationId { get; }
-        public Guid FileObjectId { get; }
-        public Guid UserId { get; }
+        private Guid FileObjectId { get; }
+        private Guid UserId { get; }
         public string StorageKey { get; }
 
         public static async Task<Fixture> CreateAsync()

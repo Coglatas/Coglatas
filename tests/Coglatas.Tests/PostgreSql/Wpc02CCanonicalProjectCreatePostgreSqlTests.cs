@@ -608,7 +608,7 @@ public sealed class Wpc02CCanonicalProjectCreatePostgreSqlTests
 
     private sealed class ServiceScope(AppDbContext db, CanonicalProjectCreateService service) : IAsyncDisposable
     {
-        public AppDbContext Db { get; } = db;
+        private AppDbContext Db { get; } = db;
         public CanonicalProjectCreateService Service { get; } = service;
         public ValueTask DisposeAsync() => Db.DisposeAsync();
     }

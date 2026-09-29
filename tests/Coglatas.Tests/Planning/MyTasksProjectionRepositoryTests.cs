@@ -123,7 +123,7 @@ public sealed class MyTasksProjectionRepositoryTests
         public AppDbContext Context { get; } = context;
         public Workspace Workspace { get; } = workspace;
         public Group Group { get; } = group;
-        public Project Project { get; } = project;
+        private Project Project { get; } = project;
         public User User { get; } = user;
         public User OtherUser { get; } = otherUser;
 
