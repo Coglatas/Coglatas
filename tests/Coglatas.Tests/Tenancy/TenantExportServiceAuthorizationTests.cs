@@ -51,7 +51,7 @@ public sealed class TenantExportServiceAuthorizationTests
         public bool BuildCalled { get; private set; }
 
         public Task<Tenant?> GetTenantAsync(Guid requestedTenantId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<Tenant?>(requestedTenantId == tenantId ? new Tenant(tenantId) : null);
+            Task.FromResult(requestedTenantId == tenantId ? new Tenant(tenantId) : null);
 
         public Task<ExportJob?> GetExportJobAsync(Guid exportJobId, CancellationToken cancellationToken = default) =>
             Task.FromResult<ExportJob?>(null);
