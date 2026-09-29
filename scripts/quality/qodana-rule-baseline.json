@@ -20,7 +20,7 @@
     "ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract": 16,
     "ConditionalAccessQualifierIsNonNullableAccordingToAPIContract": 19,
     "ConditionalTernaryEqualBranch": 2,
-    "ConvertClosureToMethodGroup": 7,
+    "ConvertClosureToMethodGroup": 0,
     "ConvertIfStatementToConditionalTernaryExpression": 1,
     "ConvertIfStatementToNullCoalescingAssignment": 1,
     "ConvertIfStatementToNullCoalescingExpression": 1,
