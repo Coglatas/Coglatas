@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
