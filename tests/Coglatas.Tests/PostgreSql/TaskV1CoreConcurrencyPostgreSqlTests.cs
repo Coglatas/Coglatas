@@ -714,7 +714,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
 
         await using var retry = harness.CreateScope();
         var current = (await retry.Subresources.GetCommentForCompatibilityAsync(comment.Id)).Value!;
-        var retried = await retry.Subresources.UpdateCommentAsync(comment.Id, new UpdateTaskCommentRequest("retry body", null, current!.Version));
+        var retried = await retry.Subresources.UpdateCommentAsync(comment.Id, new UpdateTaskCommentRequest("retry body", null, current.Version));
         Assert.True(retried.IsSuccess);
     }
 

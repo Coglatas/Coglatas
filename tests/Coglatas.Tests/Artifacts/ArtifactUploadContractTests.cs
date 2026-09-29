@@ -60,7 +60,7 @@ public sealed class ArtifactUploadContractTests
             }
         };
 
-        await new SecurityOpenApiOperationTransformer().TransformAsync(operation, context, default);
+        await new SecurityOpenApiOperationTransformer().TransformAsync(operation, context, CancellationToken.None);
 
         Assert.NotNull(schema.Required);
         Assert.Contains("file", schema.Required);
@@ -98,7 +98,7 @@ public sealed class ArtifactUploadContractTests
             }
         };
 
-        await new SecurityOpenApiOperationTransformer().TransformAsync(operation, context, default);
+        await new SecurityOpenApiOperationTransformer().TransformAsync(operation, context, CancellationToken.None);
 
         Assert.NotNull(operation.RequestBody.Content);
         Assert.Contains("application/json", operation.RequestBody.Content.Keys);
@@ -123,14 +123,14 @@ public sealed class ArtifactUploadContractTests
     public async Task Missing_file_is_rejected_before_calling_service()
     {
         var controller = new ArtifactsController(null!);
-        Assert.IsType<BadRequestObjectResult>(await controller.UploadVersion(Guid.NewGuid(), new(), default));
+        Assert.IsType<BadRequestObjectResult>(await controller.UploadVersion(Guid.NewGuid(), new(), CancellationToken.None));
     }
 
     [Fact]
     public async Task Attachment_missing_file_is_rejected_before_calling_service()
     {
         var controller = new AttachmentsController(null!);
-        Assert.IsType<BadRequestObjectResult>(await controller.Upload(new(), default));
+        Assert.IsType<BadRequestObjectResult>(await controller.Upload(new(), CancellationToken.None));
     }
 
     [Theory]
@@ -149,7 +149,7 @@ public sealed class ArtifactUploadContractTests
             }
         };
 
-        var result = Assert.IsType<ObjectResult>(await controller.UploadVersion(Guid.NewGuid(), form, default));
+        var result = Assert.IsType<ObjectResult>(await controller.UploadVersion(Guid.NewGuid(), form, CancellationToken.None));
 
         Assert.Equal(status, result.StatusCode);
     }
