@@ -87,8 +87,13 @@ public sealed class TaskWorkspaceTimeZoneResolverTests
         {
             var tenantId = Guid.NewGuid();
             var workspaceId = Guid.NewGuid();
-            var workspaces = new FakeWorkspaces();
-            workspaces.Items[workspaceId] = new Workspace { TenantId = workspaceTenantId ?? tenantId, TimeZone = workspaceZone };
+            var workspaces = new FakeWorkspaces
+            {
+                Items =
+                {
+                    [workspaceId] = new Workspace { TenantId = workspaceTenantId ?? tenantId, TimeZone = workspaceZone }
+                }
+            };
             var tenants = new FakeTenantPlans();
             if (tenantZone is not null)
                 tenants.Settings[tenantId] = new TenantSettings { TenantId = tenantId, TimeZone = tenantZone };
