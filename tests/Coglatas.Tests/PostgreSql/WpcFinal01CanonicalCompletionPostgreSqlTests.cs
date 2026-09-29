@@ -1031,21 +1031,21 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
 
     private sealed class MembershipScope(AppDbContext db, ProjectMembershipService service) : IAsyncDisposable
     {
-        public AppDbContext Db { get; } = db;
+        private AppDbContext Db { get; } = db;
         public ProjectMembershipService Service { get; } = service;
         public ValueTask DisposeAsync() => Db.DisposeAsync();
     }
 
     private sealed class VisibilityScope(AppDbContext db, ProjectVisibilityService service) : IAsyncDisposable
     {
-        public AppDbContext Db { get; } = db;
+        private AppDbContext Db { get; } = db;
         public ProjectVisibilityService Service { get; } = service;
         public ValueTask DisposeAsync() => Db.DisposeAsync();
     }
 
     private sealed class ActivationScope(AppDbContext db, ProjectActivationService service) : IAsyncDisposable
     {
-        public AppDbContext Db { get; } = db;
+        private AppDbContext Db { get; } = db;
         public ProjectActivationService Service { get; } = service;
         public ValueTask DisposeAsync() => Db.DisposeAsync();
     }
