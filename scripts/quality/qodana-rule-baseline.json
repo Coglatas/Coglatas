@@ -57,7 +57,7 @@
     "RedundantExplicitParamsArrayCreation": 0,
     "RedundantExtendsListEntry": 1,
     "RedundantNameQualifier": 11,
-    "RedundantSuppressNullableWarningExpression": 1,
+    "RedundantSuppressNullableWarningExpression": 0,
     "RedundantSwitchExpressionArms": 7,
     "RedundantTypeArgumentsOfMethod": 0,
     "RedundantTypeDeclarationBody": 1,
