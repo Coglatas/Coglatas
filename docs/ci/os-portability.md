@@ -26,7 +26,7 @@ The matrix also reuses COMPAT-04's `os-portability` profile through Playwright d
 | Docker and real-backend browser tests | Not assumed on hosted Windows/macOS | Existing Linux trusted/real-backend gates |
 | Screenshot baseline approval | Not performed | Pinned Linux Docker screenshot lane |
 
-This separation prevents an OS x browser x database Cartesian product in pull requests. `strategy.fail-fast: false` allows every OS to report its own result; no OS is ignored and the workflow contains no `continue-on-error` escape.
+The OS portability matrix runs only for relevant `main` pushes (or an explicit manual dispatch), not for pull requests. This keeps the expensive three-OS build/test fan-out out of the PR critical path while preserving post-merge portability evidence. `strategy.fail-fast: false` allows every OS to report its own result; no OS is ignored and the workflow contains no `continue-on-error` escape.
 
 Runner routing uses a self-bounding expression whose only possible outputs are the three declared GitHub-hosted labels. The exact expression and all three labels are registered in `governance/workflow-trust-policy.json`; the portability contract validates that binding before dependency installation.
 
