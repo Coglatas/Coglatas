@@ -1065,7 +1065,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
     private sealed class SaveRaceCoordinator : IDisposable
     {
-        private readonly System.Threading.Lock _gate = new();
+        private readonly Lock _gate = new();
         private TaskCompletionSource? _release;
         private bool _armed;
         private int _remaining;
