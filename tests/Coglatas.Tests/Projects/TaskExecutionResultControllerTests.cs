@@ -99,7 +99,7 @@ public sealed class TaskExecutionResultControllerTests
 
     private sealed class StubResultService : ITaskExecutionResultService
     {
-        public Result<TaskExecutionResultResponse> Latest { get; set; } =
+        public Result<TaskExecutionResultResponse> Latest { get; init; } =
             Result<TaskExecutionResultResponse>.Failure(new ApplicationErrorDetail(
                 "TASK_EXECUTION_RESULT_NOT_FOUND",
                 "The execution result was not found."));
