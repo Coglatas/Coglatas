@@ -25,34 +25,6 @@
   },
   "write_permissions": [
     {
-      "workflow": ".github/workflows/external-pr-auto-sign.yml",
-      "jobs": [
-        "sign"
-      ],
-      "events": [
-        "workflow_dispatch",
-        "workflow_run"
-      ],
-      "permissions": [
-        "contents:write"
-      ],
-      "reason": "From the trusted default-branch workflow_run path, run inside the static pr-auto-sign Environment with no required reviewer, re-read same-repository PR metadata only through the GitHub API, recreate unsigned PR commits as GPG-signed Git objects while preserving source trees, authors, merge-parent order, and graph boundaries, require GitHub verification.reason=valid, then atomically replace the PR ref with updateRefs beforeOid compare-and-swap. The final ref mutation uses the Environment-held narrowly scoped PAT so the resulting pull_request synchronize event starts ordinary CI without GitHub's GITHUB_TOKEN approval gate. The signer never checks out, fetches, or executes PR-controlled code."
-    },
-    {
-      "workflow": ".github/workflows/external-pr-approval-evaluator.yml",
-      "jobs": [
-        "evaluate"
-      ],
-      "events": [
-        "workflow_dispatch",
-        "workflow_run"
-      ],
-      "permissions": [
-        "statuses:write"
-      ],
-      "reason": "After required CI succeeds on the exact GitHub-Verified PR head, wait on the protected human-merge-approval Environment, re-read authoritative same-repository PR metadata and required check-runs, then publish only the External PR approval policy status on that unchanged head. The evaluator never rewrites the PR ref and never checks out, fetches, or executes PR-controlled code."
-    },
-    {
       "workflow": ".github/workflows/codeql.yml",
       "jobs": [
         "analyze"
