@@ -142,9 +142,7 @@ public sealed class ResearchPlanServiceTests
             AppDbContext db,
             CurrentTenantService currentTenant,
             Tenant tenant,
-            Workspace workspace,
             User actor,
-            Project project,
             TaskItem taskItem,
             ControllableProjectAuthorization authorization,
             RecordingAuditLogger audit)
@@ -152,9 +150,7 @@ public sealed class ResearchPlanServiceTests
             Db = db;
             CurrentTenant = currentTenant;
             Tenant = tenant;
-            Workspace = workspace;
             Actor = actor;
-            Project = project;
             TaskItem = taskItem;
             Authorization = authorization;
             Audit = audit;
@@ -164,9 +160,7 @@ public sealed class ResearchPlanServiceTests
         public AppDbContext Db { get; }
         private CurrentTenantService CurrentTenant { get; }
         private Tenant Tenant { get; }
-        public Workspace Workspace { get; }
         private User Actor { get; }
-        public Project Project { get; }
         public TaskItem TaskItem { get; }
         private ControllableProjectAuthorization Authorization { get; }
         public RecordingAuditLogger Audit { get; }
@@ -249,9 +243,7 @@ public sealed class ResearchPlanServiceTests
                 db,
                 currentTenant,
                 tenant,
-                workspace,
                 actor,
-                project,
                 taskItem,
                 new ControllableProjectAuthorization { CanManage = canManage },
                 new RecordingAuditLogger());

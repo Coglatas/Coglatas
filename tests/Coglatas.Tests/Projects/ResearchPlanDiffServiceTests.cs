@@ -142,8 +142,6 @@ public sealed class ResearchPlanDiffServiceTests
             RecordingAuditLogger audit)
         {
             Db = db;
-            CurrentTenant = currentTenant;
-            Actor = actor;
             TaskItem = taskItem;
             Audit = audit;
             var clock = new FixedClock();
@@ -160,8 +158,6 @@ public sealed class ResearchPlanDiffServiceTests
         }
 
         public AppDbContext Db { get; }
-        public CurrentTenantService CurrentTenant { get; }
-        public User Actor { get; }
         public TaskItem TaskItem { get; }
         public RecordingAuditLogger Audit { get; }
         public ResearchPlanService Service { get; }

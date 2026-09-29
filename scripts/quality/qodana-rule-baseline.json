@@ -69,7 +69,7 @@
     "SimplifyLinqExpressionUseAll": 8,
     "TooWideLocalVariableScope": 0,
     "UnusedAutoPropertyAccessor.Global": 42,
-    "UnusedAutoPropertyAccessor.Local": 14,
+    "UnusedAutoPropertyAccessor.Local": 0,
     "UnusedMember.Global": 142,
     "UnusedMember.Local": 5,
     "UnusedMemberInSuper.Global": 6,

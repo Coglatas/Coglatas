@@ -87,7 +87,6 @@ public sealed class AnnouncementDraftMultiAudienceTests
     {
         private Fixture(
             AppDbContext db,
-            CurrentTenantService tenant,
             MutableClock clock,
             TestAudienceService audiences,
             TestDistributionStore distribution,
@@ -99,7 +98,6 @@ public sealed class AnnouncementDraftMultiAudienceTests
             Guid overlapUserId)
         {
             Db = db;
-            Tenant = tenant;
             Clock = clock;
             Audiences = audiences;
             Distribution = distribution;
@@ -112,7 +110,6 @@ public sealed class AnnouncementDraftMultiAudienceTests
         }
 
         public AppDbContext Db { get; }
-        public CurrentTenantService Tenant { get; }
         public MutableClock Clock { get; }
         public TestAudienceService Audiences { get; }
         public TestDistributionStore Distribution { get; }
@@ -179,7 +176,6 @@ public sealed class AnnouncementDraftMultiAudienceTests
 
             return new Fixture(
                 db,
-                tenant,
                 clock,
                 audiences,
                 distribution,
