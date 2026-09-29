@@ -2572,7 +2572,7 @@ public sealed class TaskV1CoreConcurrencyPostgreSqlTests
         public async Task WaitBeforeSaveAsync(CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref _saveCallCount);
-            Task? wait = null;
+            Task wait;
             lock (_gate)
             {
                 if (_singleWriterHoldArmed)

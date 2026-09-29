@@ -1085,7 +1085,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
         public async Task WaitBeforeSaveAsync(CancellationToken cancellationToken)
         {
-            Task? wait = null;
+            Task wait;
             lock (_gate)
             {
                 if (!_armed)

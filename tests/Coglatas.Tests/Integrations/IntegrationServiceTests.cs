@@ -138,7 +138,6 @@ public sealed class IntegrationServiceTests
         private List<IntegrationAccount> Accounts { get; } = [];
         private List<WebhookEndpoint> Webhooks { get; } = [];
         public List<ApiToken> Tokens { get; } = [];
-        public Guid TenantId { get; set; }
 
         public Task<IReadOnlyList<IntegrationAccount>> ListIntegrationAccountsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<IntegrationAccount>>(Accounts);
         public Task<IntegrationAccount?> GetIntegrationAccountAsync(Guid integrationId, CancellationToken cancellationToken = default) => Task.FromResult(Accounts.FirstOrDefault(account => account.Id == integrationId));
