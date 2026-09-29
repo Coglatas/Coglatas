@@ -75,6 +75,44 @@ public sealed class InvalidModelStateResponseFactoryTests
     }
 
     [Fact]
+    public void FileFolderListValidationDoesNotReflectAttackerControlledValues()
+    {
+        var services = new ServiceCollection();
+        services.AddWebServices(new ConfigurationBuilder().Build());
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<ApiBehaviorOptions>>().Value;
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = provider,
+            Request =
+            {
+                Method = HttpMethods.Get,
+                Path = "/api/file-folders"
+            }
+        };
+        var actionContext = new ActionContext(
+            httpContext,
+            new RouteData(),
+            new ActionDescriptor(),
+            new ModelStateDictionary());
+
+        const string scannerPayload = "4111111111111111";
+        actionContext.ModelState.AddModelError(
+            "workspaceId",
+            $"The value '{scannerPayload}' is not valid for workspaceId.");
+
+        var result = options.InvalidModelStateResponseFactory(actionContext);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var details = Assert.IsType<ValidationProblemDetails>(badRequest.Value);
+        Assert.Equal("The supplied value is invalid.", Assert.Single(details.Errors["workspaceId"]));
+        Assert.DoesNotContain(
+            scannerPayload,
+            System.Text.Json.JsonSerializer.Serialize(details),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TenantSwitchValidationDoesNotReflectAttackerControlledValues()
     {
         var services = new ServiceCollection();
