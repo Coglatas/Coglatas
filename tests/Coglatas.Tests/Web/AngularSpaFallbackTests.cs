@@ -249,9 +249,10 @@ public sealed class AngularSpaFallbackTests : IDisposable
 
     private static DefaultHttpContext CreateContext(string path, string method = "GET")
     {
-        var context = new DefaultHttpContext();
-        context.Request.Method = method;
-        context.Request.Path = path;
+        var context = new DefaultHttpContext
+        {
+            Request = { Method = method, Path = path }
+        };
         return context;
     }
 }

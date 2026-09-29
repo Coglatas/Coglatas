@@ -25,8 +25,10 @@ public sealed class StrictQueryParameterFilterTests
                 ParameterInfo = parameter
             }]
         };
-        var httpContext = new DefaultHttpContext();
-        httpContext.Request.QueryString = new QueryString("?page=1&x-schemathesis-unknown-property=42");
+        var httpContext = new DefaultHttpContext
+        {
+            Request = { QueryString = new QueryString("?page=1&x-schemathesis-unknown-property=42") }
+        };
         var context = new ActionExecutingContext(
             new ActionContext(httpContext, new RouteData(), descriptor),
             [],
@@ -54,8 +56,10 @@ public sealed class StrictQueryParameterFilterTests
                 ParameterInfo = parameter
             }]
         };
-        var httpContext = new DefaultHttpContext();
-        httpContext.Request.QueryString = new QueryString("?page=1&pageSize=25");
+        var httpContext = new DefaultHttpContext
+        {
+            Request = { QueryString = new QueryString("?page=1&pageSize=25") }
+        };
         var actionContext = new ActionContext(httpContext, new RouteData(), descriptor);
         var controller = new QueryFixture();
         var context = new ActionExecutingContext(
@@ -90,8 +94,10 @@ public sealed class StrictQueryParameterFilterTests
                 ParameterInfo = parameter
             }]
         };
-        var httpContext = new DefaultHttpContext();
-        httpContext.Request.QueryString = new QueryString("?toDateExclusive=");
+        var httpContext = new DefaultHttpContext
+        {
+            Request = { QueryString = new QueryString("?toDateExclusive=") }
+        };
         var context = new ActionExecutingContext(
             new ActionContext(httpContext, new RouteData(), descriptor),
             [],

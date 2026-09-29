@@ -47,8 +47,7 @@ public sealed class FileWorkspaceWorkflowTests
     [Fact]
     public async Task StorageFailureDoesNotPersistFileMetadata()
     {
-        var fixture = new Fixture();
-        fixture.Storage.SaveResult = Result.Failure("storage rejected");
+        var fixture = new Fixture { Storage = { SaveResult = Result.Failure("storage rejected") } };
 
         var upload = await fixture.UploadTextAsync("workspace-note.txt", "hello");
 
@@ -60,8 +59,7 @@ public sealed class FileWorkspaceWorkflowTests
     [Fact]
     public async Task MetadataFailureCleansUpStoredBytes()
     {
-        var fixture = new Fixture();
-        fixture.UnitOfWork.ThrowOnSave = true;
+        var fixture = new Fixture { UnitOfWork = { ThrowOnSave = true } };
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.UploadTextAsync("workspace-note.txt", "hello"));
 
@@ -85,8 +83,7 @@ public sealed class FileWorkspaceWorkflowTests
     [Fact]
     public async Task WorkspaceUploadRequiresContributeAuthorization()
     {
-        var fixture = new Fixture();
-        fixture.Authorization.CanUploadResult = false;
+        var fixture = new Fixture { Authorization = { CanUploadResult = false } };
 
         var upload = await fixture.UploadTextAsync("workspace-note.txt", "hello");
 

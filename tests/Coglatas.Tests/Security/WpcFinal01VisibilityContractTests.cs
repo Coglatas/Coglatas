@@ -29,11 +29,14 @@ public sealed class WpcFinal01VisibilityContractTests
         var httpContext = new DefaultHttpContext
         {
             TraceIdentifier = "wpc-final01-visibility-415",
-            Response = { Body = new MemoryStream() }
+            Response = { Body = new MemoryStream() },
+            Request =
+            {
+                Method = HttpMethods.Put,
+                Path = path,
+                ContentType = "text/plain"
+            }
         };
-        httpContext.Request.Method = HttpMethods.Put;
-        httpContext.Request.Path = path;
-        httpContext.Request.ContentType = "text/plain";
 
         await middleware.InvokeAsync(httpContext);
 
