@@ -111,5 +111,4 @@ public sealed class InvalidModelStateResponseFactoryTests
             System.Text.Json.JsonSerializer.Serialize(details),
             StringComparison.Ordinal);
     }
-
 }
