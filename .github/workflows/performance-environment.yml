@@ -101,8 +101,8 @@ jobs:
           import json
           from pathlib import Path
 
-          first = json.loads(Path('/tmp/perf02-fixture-first.json').read_text(encoding='utf-8'))
-          second = json.loads(Path(f"artifacts/performance/{first['profile']}/fixture.json").read_text(encoding='utf-8'))
+          first = json.loads(Path('/tmp/perf02-fixture-first.json').read_text(encoding='utf-8-sig'))
+          second = json.loads(Path(f"artifacts/performance/{first['profile']}/fixture.json").read_text(encoding='utf-8-sig'))
           for key in ('fixtureVersion', 'seedManifestVersion', 'profile', 'seed', 'fixtureHash', 'cardinalities', 'focus', 'identities'):
               if first[key] != second[key]:
                   raise SystemExit(f'PERF-02 repeat-start drift in {key}')
