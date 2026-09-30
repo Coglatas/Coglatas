@@ -1019,8 +1019,8 @@ describe('Messaging MVP0 backend wiring', () => {
             workspaceId: 'workspace-a',
           });
         }
-        await Promise.resolve();
         expect(facade.page().sendState.status).toBe(outcome === 'failure' ? 'failed' : 'sent');
+        await vi.waitFor(() => { expect(facade.page().status).toBe('loading'); });
         flushConversationOpen(httpMock);
         await completion;
         expect(facade.page().sending).toBe(false);
