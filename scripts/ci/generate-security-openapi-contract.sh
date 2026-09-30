@@ -7,10 +7,18 @@ cd "$repo_root"
 spec="${1:-artifacts/openapi/coglatas-openapi.json}"
 scratch_parent="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
 determinism_runs="${COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS:-2}"
+selftests="${COGLATAS_SECURITY_AVMIG_SELFTESTS:-1}"
 case "$determinism_runs" in
   1|2) ;;
   *)
     echo "COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS must be 1 or 2." >&2
+    exit 2
+    ;;
+esac
+case "$selftests" in
+  0|1) ;;
+  *)
+    echo "COGLATAS_SECURITY_AVMIG_SELFTESTS must be 0 or 1." >&2
     exit 2
     ;;
 esac
@@ -52,12 +60,16 @@ generate_openapi() {
 }
 
 # Mutation tests prove the verifier itself fails closed before it is trusted as
-# a CI boundary. They cover protected/anonymous CookieAuth semantics plus the
-# non-OpenAPI SignalR and CSRF source sentinels, including adversarial decoys.
-python3 scripts/ci/test_av_mig_contract_boundary.py
-python3 scripts/ci/test_av_mig_contract_boundary_hardening.py
-python3 scripts/ci/test_av_mig_contract_boundary_adversarial.py
-python3 scripts/ci/test_av_mig_production_cli.py
+# a CI boundary. Fast PRs may defer these expensive verifier/tooling self-tests;
+# the real generated contract is still verified below on every routed SEC-01 PR.
+if [[ "$selftests" == "1" ]]; then
+  python3 scripts/ci/test_av_mig_contract_boundary.py
+  python3 scripts/ci/test_av_mig_contract_boundary_hardening.py
+  python3 scripts/ci/test_av_mig_contract_boundary_adversarial.py
+  python3 scripts/ci/test_av_mig_production_cli.py
+else
+  echo "AV-MIG verifier mutation self-tests deferred by fast PR routing."
+fi
 
 # The mutation harness may intentionally use a synthetic symbol set. Production
 # verification must always resolve the effective Release/net10.0 symbols from
@@ -88,5 +100,9 @@ dotnet src/Coglatas.Web/bin/Release/net10.0/Coglatas.Web.dll \
   --AvMigContractVerify true \
   --AvMigContractPolicy "$repo_root/docs/migration/avalonia/p0-api-boundary.json"
 
-python3 scripts/ci/test_av_mig_runtime_cli.py
+if [[ "$selftests" == "1" ]]; then
+  python3 scripts/ci/test_av_mig_runtime_cli.py
+else
+  echo "AV-MIG runtime mutation self-tests deferred by fast PR routing."
+fi
 sha256sum "$spec"

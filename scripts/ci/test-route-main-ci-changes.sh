@@ -172,6 +172,7 @@ head="$(commit_all "$repo" head)"
 output="$(route_repo "$repo" "$base" "$head")"
 assert_eq true "$(value_of "$output" security)" "runtime source security"
 assert_eq true "$(value_of "$output" avmig_contract)" "runtime source AV-MIG contract"
+assert_eq false "$(value_of "$output" avmig_selftests)" "runtime source verifier self-tests"
 assert_eq false "$(value_of "$output" security_dotnet)" "runtime source dependency scan"
 assert_eq true "$(value_of "$output" security_compose)" "runtime source security compose"
 
@@ -206,8 +207,23 @@ for avmig_input in \
   head="$(commit_all "$repo" head)"
   output="$(route_repo "$repo" "$base" "$head")"
   assert_eq true "$(value_of "$output" avmig_contract)" "AV-MIG build input $avmig_input"
+  assert_eq true "$(value_of "$output" avmig_selftests)" "AV-MIG build input verifier self-tests $avmig_input"
   assert_eq true "$(value_of "$output" security_dotnet)" "AV-MIG build input dependency scan $avmig_input"
 done
+
+# Program/AppHub changes are concrete mutation targets and must rerun the
+# expensive verifier self-tests before merge.
+repo="$tmp_root/avmig-mutation-target"
+init_repo "$repo"
+mkdir -p "$repo/src/Coglatas.Web/Realtime"
+printf 'app.MapHub<AppHub>("/hubs/app");\n' > "$repo/src/Coglatas.Web/Program.cs"
+printf '[Authorize] public sealed class AppHub {}\n' > "$repo/src/Coglatas.Web/Realtime/AppHub.cs"
+base="$(commit_all "$repo" base)"
+printf 'app.MapHub<AppHub>("/hubs/app"); // changed\n' > "$repo/src/Coglatas.Web/Program.cs"
+head="$(commit_all "$repo" head)"
+output="$(route_repo "$repo" "$base" "$head")"
+assert_eq true "$(value_of "$output" avmig_contract)" "AV-MIG mutation target contract"
+assert_eq true "$(value_of "$output" avmig_selftests)" "AV-MIG mutation target self-tests"
 
 # Cross-cutting Common changes intentionally fail safe to the full backend suite.
 repo="$tmp_root/common"

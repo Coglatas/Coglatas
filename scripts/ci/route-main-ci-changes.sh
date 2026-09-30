@@ -22,6 +22,7 @@ keys=(
   frontend_storybook
   frontend_playwright
   avmig_contract
+  avmig_selftests
   security
   security_dotnet
   security_compose
@@ -80,6 +81,7 @@ frontend_license_guard=false
 frontend_storybook=false
 frontend_playwright=false
 avmig_contract=false
+avmig_selftests=false
 security=false
 security_dotnet=false
 security_compose=false
@@ -362,6 +364,7 @@ while IFS= read -r path; do
       frontend_license_guard=true
       frontend_storybook=true
       frontend_playwright=true
+      avmig_selftests=true
       security=true
       security_dotnet=true
       security_compose=true
@@ -563,6 +566,17 @@ while IFS= read -r path; do
       ;;
   esac
 
+  # Expensive verifier mutation suites validate the verifier/tooling itself.
+  # Ordinary API/Application changes still generate and verify the real contract,
+  # but only verifier/policy/toolchain or mutation-target changes rerun self-tests.
+  case "$path" in
+    global.json|NuGet.config|Directory.Build.*|src/*.csproj|docs/migration/avalonia/p0-api-boundary.json|scripts/ci/*av_mig*|scripts/ci/generate-security-openapi-contract.sh|tools/AvMig.SourceInspector/*|src/Coglatas.Web/Program.cs|src/Coglatas.Web/Realtime/AppHub.cs)
+      avmig_contract=true
+      avmig_selftests=true
+      security=true
+      ;;
+  esac
+
   # Security routing.
   # PRs run the fast static/contract gate for runtime/API implementation changes;
   # live authenticated Core/Schemathesis/ZAP stacks are deferred to main/manual.
@@ -654,6 +668,7 @@ if [[ -n "$summary_file" ]]; then
     echo "  - Storybook: $frontend_storybook"
     echo "  - Playwright: $frontend_playwright"
     echo "- AV-MIG contract: $avmig_contract"
+    echo "  - verifier mutation self-tests: $avmig_selftests"
     echo "- security: $security"
     echo "  - .NET dependency scan: $security_dotnet"
     echo "  - Compose validation: $security_compose"
