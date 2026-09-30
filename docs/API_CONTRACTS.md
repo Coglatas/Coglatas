@@ -393,6 +393,12 @@ text query is optional when any filter is active. `toDateExclusive` cannot be
 combined with legacy inclusive `toDate`, and invalid UUID, enum, or date query
 binding returns fixed `SearchRequestInvalid` HTTP 400 without reflecting input.
 
+Search date bounds (`fromDate`, inclusive `toDate`, and exclusive
+`toDateExclusive`) accept valid DateTimeOffset values with UTC offsets. The
+service normalizes them to UTC before PostgreSQL queries, preserving the same
+instants and the inclusive/exclusive boundary behavior. Model binding and
+existing range validation remain unchanged.
+
 `GET /api/search/message-authors` accepts either a trimmed `q` of 2 to 120
 characters with `limit` capped at 20, or `selectedUserId` with `limit=1` for
 validated route replay. It returns only `{ userId, displayName }` and no count,

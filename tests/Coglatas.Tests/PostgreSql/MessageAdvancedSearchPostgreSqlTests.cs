@@ -367,6 +367,24 @@ public sealed class MessageAdvancedSearchPostgreSqlTests
             new TestCurrentUser(actor.Id),
             new MessagingRepository(dbContext));
 
+        var fuzzedUpperBound = DateTimeOffset.Parse(
+            "2873-10-04T06:33:40-06:53",
+            System.Globalization.CultureInfo.InvariantCulture);
+        var offsetSearch = await service.SearchAsync(new SearchRequest(
+            WorkspaceId: workspace.Id,
+            ToDate: fuzzedUpperBound,
+            PageSize: 50));
+        var utcSearch = await service.SearchAsync(new SearchRequest(
+            WorkspaceId: workspace.Id,
+            ToDate: fuzzedUpperBound.ToUniversalTime(),
+            PageSize: 50));
+        Assert.True(offsetSearch.IsSuccess, offsetSearch.Error);
+        Assert.True(utcSearch.IsSuccess, utcSearch.Error);
+        Assert.Equal(utcSearch.Value!.TotalCount, offsetSearch.Value!.TotalCount);
+        Assert.Equal(
+            utcSearch.Value.Items.Select(item => item.Id),
+            offsetSearch.Value.Items.Select(item => item.Id));
+
         var read = await service.SearchAsync(new SearchRequest(
             Type: SearchResultType.Message,
             WorkspaceId: workspace.Id,
@@ -388,6 +406,23 @@ public sealed class MessageAdvancedSearchPostgreSqlTests
         Assert.Equal(
             new[] { unreadMessage.Id, canonicalAttachmentMessage.Id, malformedAttachmentMessage.Id }.OrderBy(id => id),
             unread.Value!.Items.Select(item => item.Id).OrderBy(id => id));
+
+        TimeSpan[] offsets = [TimeSpan.FromHours(9), TimeSpan.FromMinutes(-413)];
+        foreach (var offset in offsets)
+        {
+            var offsetUnread = await service.SearchAsync(new SearchRequest(
+                Type: SearchResultType.Message,
+                WorkspaceId: workspace.Id,
+                FromDate: now.AddMinutes(3).ToOffset(offset),
+                ToDate: now.AddMinutes(5).ToOffset(offset),
+                PageSize: 50,
+                MessageRead: MessageReadFilter.Unread));
+            Assert.True(offsetUnread.IsSuccess, offsetUnread.Error);
+            Assert.Equal(unread.Value!.TotalCount, offsetUnread.Value!.TotalCount);
+            Assert.Equal(
+                unread.Value.Items.Select(item => item.Id),
+                offsetUnread.Value.Items.Select(item => item.Id));
+        }
 
         var allUnread = await service.SearchAsync(new SearchRequest(
             Type: SearchResultType.Message,
@@ -558,6 +593,19 @@ public sealed class MessageAdvancedSearchPostgreSqlTests
             PageSize: 50));
         Assert.True(dateBoundary.IsSuccess, dateBoundary.Error);
         Assert.Equal(beforeDayEndMessage.Id, Assert.Single(dateBoundary.Value!.Items).Id);
+
+        foreach (var offset in offsets)
+        {
+            var offsetBoundary = await service.SearchAsync(new SearchRequest(
+                Q: "date-boundary-marker",
+                Type: SearchResultType.Message,
+                FromDate: new DateTimeOffset(2026, 8, 30, 0, 0, 0, TimeSpan.Zero).ToOffset(offset),
+                ToDateExclusive: dayEndExclusive.ToOffset(offset),
+                PageSize: 50));
+            Assert.True(offsetBoundary.IsSuccess, offsetBoundary.Error);
+            Assert.Equal(beforeDayEndMessage.Id, Assert.Single(offsetBoundary.Value!.Items).Id);
+            Assert.Equal(dateBoundary.Value.TotalCount, offsetBoundary.Value.TotalCount);
+        }
 
         var withAttachment = await service.SearchAsync(new SearchRequest(
             Type: SearchResultType.Message,
