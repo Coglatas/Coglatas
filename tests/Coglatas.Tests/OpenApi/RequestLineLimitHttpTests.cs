@@ -18,6 +18,7 @@ public sealed class RequestLineLimitHttpTests
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseKestrel().UseUrls("http://127.0.0.1:0");
         builder.Logging.ClearProviders();
+        builder.Services.AddHttpClient();
         await using var app = builder.Build();
         var pipelineEntered = false;
         app.Run(_ =>
@@ -29,7 +30,8 @@ public sealed class RequestLineLimitHttpTests
         var address = app.Services.GetRequiredService<IServer>()
             .Features.Get<IServerAddressesFeature>()?.Addresses.Single()
             ?? throw new InvalidOperationException("Request-line probe server address was not available.");
-        using var client = new HttpClient { BaseAddress = new Uri(address) };
+        using var client = app.Services.GetRequiredService<IHttpClientFactory>().CreateClient();
+        client.BaseAddress = new Uri(address);
 
         using var response = await client.GetAsync(path + "?StageCategory=" + new string('x', 9_000));
 
