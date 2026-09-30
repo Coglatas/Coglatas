@@ -24,7 +24,7 @@ services:
   app:
     build: !reset null
     image: ${COGLATAS_SECURITY_RUNTIME_IMAGE:?COGLATAS_SECURITY_RUNTIME_IMAGE is required}
-    working_dir: /src
+    working_dir: /src/src/Coglatas.Web
     environment:
       NUGET_PACKAGES: /root/.nuget/packages
     volumes: !reset []
@@ -33,4 +33,4 @@ services:
       bash -lc "mkdir -p
       /app/storage/uploads
       /app/data/protection-keys &&
-      dotnet src/Coglatas.Web/bin/Release/net10.0/Coglatas.Web.dll"
+      dotnet bin/Release/net10.0/Coglatas.Web.dll"
