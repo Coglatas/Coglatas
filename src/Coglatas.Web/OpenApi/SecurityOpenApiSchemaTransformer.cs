@@ -7,6 +7,7 @@ using Coglatas.Application.Integrations;
 using Coglatas.Application.Messaging;
 using Coglatas.Application.Projects;
 using Coglatas.Application.TenantAdministration;
+using Coglatas.Web.Controllers;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
@@ -77,8 +78,8 @@ public sealed class SecurityOpenApiSchemaTransformer : IOpenApiSchemaTransformer
 
     private static void ConfigureRequestShape(OpenApiSchema schema, Type requestType)
     {
-        if (requestType == typeof(Coglatas.Web.Controllers.UploadAttachmentForm) ||
-            requestType == typeof(Coglatas.Web.Controllers.UploadArtifactVersionForm))
+        if (requestType == typeof(UploadAttachmentForm) ||
+            requestType == typeof(UploadArtifactVersionForm))
         {
             // Upload forms accept only their declared scalar fields and the File part.
             // Closing the schema keeps positive fuzz cases aligned with the actual
