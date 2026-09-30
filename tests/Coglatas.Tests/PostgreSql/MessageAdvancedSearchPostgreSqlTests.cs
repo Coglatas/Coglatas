@@ -367,6 +367,24 @@ public sealed class MessageAdvancedSearchPostgreSqlTests
             new TestCurrentUser(actor.Id),
             new MessagingRepository(dbContext));
 
+        var fuzzedUpperBound = DateTimeOffset.Parse(
+            "2873-10-04T06:33:40-06:53",
+            System.Globalization.CultureInfo.InvariantCulture);
+        var offsetSearch = await service.SearchAsync(new SearchRequest(
+            WorkspaceId: workspace.Id,
+            ToDate: fuzzedUpperBound,
+            PageSize: 50));
+        var utcSearch = await service.SearchAsync(new SearchRequest(
+            WorkspaceId: workspace.Id,
+            ToDate: fuzzedUpperBound.ToUniversalTime(),
+            PageSize: 50));
+        Assert.True(offsetSearch.IsSuccess, offsetSearch.Error);
+        Assert.True(utcSearch.IsSuccess, utcSearch.Error);
+        Assert.Equal(utcSearch.Value!.TotalCount, offsetSearch.Value!.TotalCount);
+        Assert.Equal(
+            utcSearch.Value.Items.Select(item => item.Id),
+            offsetSearch.Value.Items.Select(item => item.Id));
+
         var read = await service.SearchAsync(new SearchRequest(
             Type: SearchResultType.Message,
             WorkspaceId: workspace.Id,
