@@ -93,6 +93,22 @@ public sealed class WorkspacesControllerTests
         Assert.Equal(typeof(ApiSuccessEnvelope<WorkspaceDetailResponse>), response.Type);
     }
 
+    [Theory]
+    [InlineData(StatusCodes.Status409Conflict)]
+    [InlineData(StatusCodes.Status503ServiceUnavailable)]
+    public void CreateDocumentsCanonicalConflictAndDependencyErrors(int statusCode)
+    {
+        var method = typeof(WorkspacesController).GetMethod(nameof(WorkspacesController.Create));
+        Assert.NotNull(method);
+
+        var response = Assert.Single(
+            method.GetCustomAttributes(typeof(ProducesResponseTypeAttribute), inherit: false)
+                .Cast<ProducesResponseTypeAttribute>(),
+            attribute => attribute.StatusCode == statusCode);
+
+        Assert.Equal(typeof(ApiErrorEnvelope), response.Type);
+    }
+
     [Fact]
     public async Task CreateForwardsIdempotencyIdentityAndReturnsCreatedResult()
     {
