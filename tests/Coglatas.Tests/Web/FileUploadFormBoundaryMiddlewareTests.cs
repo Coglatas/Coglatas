@@ -190,12 +190,20 @@ public sealed class FileUploadFormBoundaryMiddlewareTests
             "payload",
             $"--{boundary}--",
             "");
-        var context = new DefaultHttpContext();
-        context.Request.Method = HttpMethods.Post;
-        context.Request.Path = $"/api/artifacts/{Guid.NewGuid():D}/versions";
-        context.Request.ContentType = $"multipart/form-data; boundary={boundary}";
-        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
-        context.Response.Body = new MemoryStream();
+        var context = new DefaultHttpContext
+        {
+            Request =
+            {
+                Method = HttpMethods.Post,
+                Path = $"/api/artifacts/{Guid.NewGuid():D}/versions",
+                ContentType = $"multipart/form-data; boundary={boundary}",
+                Body = new MemoryStream(Encoding.UTF8.GetBytes(body))
+            },
+            Response =
+            {
+                Body = new MemoryStream()
+            }
+        };
 
         await middleware.InvokeAsync(context);
 
@@ -232,7 +240,7 @@ public sealed class FileUploadFormBoundaryMiddlewareTests
             return Task.CompletedTask;
         });
         var context = CreateContext(
-            new Dictionary<string, StringValues> { ["ChangeNote"] = new StringValues(new[] { "one", "two" }) },
+            new Dictionary<string, StringValues> { ["ChangeNote"] = new(["one", "two"]) },
             $"/api/artifacts/{Guid.NewGuid():D}/versions",
             ("File", "sample.txt", "text/plain", "payload"u8.ToArray()));
 
