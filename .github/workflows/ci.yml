@@ -35,6 +35,12 @@ jobs:
       - name: Enforce required PR check topology
         run: python3 scripts/ci/check-required-pr-checks.py
 
+      - name: Validate parallel CI helper syntax
+        run: |
+          bash -n scripts/ci/parallel-lane-lib.sh
+          bash -n scripts/ci/run-frontend-parallel.sh
+          bash -n scripts/ci/run-security-runtime-parallel.sh
+
       - name: Enforce Coglatas rename completion
         run: python3 scripts/ci/check-coglatas-rename.py
 
@@ -287,33 +293,17 @@ jobs:
         if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
         run: bash scripts/ci/npm-ci-retry.sh frontend
 
-      - name: Build Angular production bundle without repository secrets
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_build == 'true'
-        run: npm --prefix frontend run build
-
-      - name: Run Angular unit tests
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_unit == 'true'
-        run: npm --prefix frontend test
-
-      - name: Validate frontend architecture
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_architecture == 'true'
-        run: |
-          npm --prefix frontend run check:architecture
-          npm --prefix frontend run test:architecture
-
-      - name: Validate Syncfusion license guard
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_license_guard == 'true'
-        run: npm --prefix frontend run test:syncfusion-license
-
-      - name: Build Storybook
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_storybook == 'true'
+      - name: Run frontend checks in parallel
+        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
+        shell: bash
         env:
-          NODE_OPTIONS: --max-old-space-size=4096
-        run: npm --prefix frontend run build-storybook
-
-      - name: Run Angular Playwright smoke in Docker
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_playwright == 'true'
-        run: npm run test:ui:angular:docker
+          FRONTEND_BUILD: ${{ steps.route.outputs.frontend_build }}
+          FRONTEND_UNIT: ${{ steps.route.outputs.frontend_unit }}
+          FRONTEND_ARCHITECTURE: ${{ steps.route.outputs.frontend_architecture }}
+          FRONTEND_LICENSE_GUARD: ${{ steps.route.outputs.frontend_license_guard }}
+          FRONTEND_STORYBOOK: ${{ steps.route.outputs.frontend_storybook }}
+          FRONTEND_PLAYWRIGHT: ${{ steps.route.outputs.frontend_playwright }}
+        run: bash scripts/ci/run-frontend-parallel.sh
 
       - name: Upload browser artifacts on failure
         if: failure() && (github.event_name != 'pull_request' || steps.route.outputs.frontend_playwright == 'true')
@@ -368,13 +358,13 @@ jobs:
           printf 'COGLATAS_SECURITY_CI_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
 
       - name: Set up .NET SDK
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true'
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true' || steps.route.outputs.avmig_contract == 'true'
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
 
       - name: Restore
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true'
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true' || steps.route.outputs.avmig_contract == 'true'
         run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
 
       - name: Reject vulnerable NuGet packages
@@ -391,9 +381,15 @@ jobs:
           fi
           exit "$status"
 
-      - name: Verify AV-MIG production contracts and mutation suites
+      - name: Generate and verify SEC-01 / AV-MIG contract
         if: github.event_name != 'pull_request' || steps.route.outputs.avmig_contract == 'true'
         shell: bash
+        env:
+          # PRs verify the generated contract once; main/manual repeat generation.
+          COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS: ${{ github.event_name == 'pull_request' && '1' || '2' }}
+          # Verifier mutation suites run on PR only when verifier/policy/toolchain
+          # or their concrete Program/AppHub mutation targets changed.
+          COGLATAS_SECURITY_AVMIG_SELFTESTS: ${{ github.event_name != 'pull_request' && '1' || (steps.route.outputs.avmig_selftests == 'true' && '1' || '0') }}
         run: bash scripts/ci/generate-security-openapi-contract.sh
 
       - name: Validate Compose files
@@ -460,62 +456,27 @@ jobs:
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
         run: bash scripts/security/test-aud02-lifecycle.sh
 
-      - name: Generate SEC-01 contract for runtime security gates
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/generate-security-openapi-contract.sh
+      - name: Report security validation mode
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "PR fast security mode: runtime DAST/fuzz/restart gates are deferred to main."
+          echo "Dependency scans when manifests change, Compose/SEC harness contracts, one-pass SEC-01/AV-MIG when routed, verifier self-tests when verifier inputs change, Trivy, and Gitleaks remain enforced."
 
-      - name: Prepare security runtime
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+      - name: Build reusable security runtime image
+        if: github.event_name != 'pull_request'
         shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/run-security-runtime-smoke.sh prepare
+        run: |
+          set -euo pipefail
+          image="coglatas-security-runtime:${GITHUB_SHA}"
+          docker build --file Dockerfile.security.runtime --tag "$image" .
+          printf 'COGLATAS_SECURITY_RUNTIME_IMAGE=%s\n' "$image" >> "$GITHUB_ENV"
 
-      - name: Run SEC-03 scanner boundary and authentication
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+      - name: Run isolated security runtime lanes in parallel
+        if: github.event_name != 'pull_request'
         shell: bash
         env:
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/run-security-runtime-smoke.sh sec03
-
-      - name: Run SEC-05 authorization negative matrix
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/run-security-runtime-smoke.sh sec05
-
-      - name: Run SEC-04 Schemathesis contract fuzzing
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/run-security-runtime-smoke.sh sec04
-
-      - name: Run SEC-06 authenticated ZAP API DAST
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/run-security-runtime-smoke.sh sec06
-
-      - name: Verify AUD-02 restart lifecycle
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/run-security-runtime-smoke.sh aud02
-
-      - name: Cleanup security runtime
-        if: always() && (github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true')
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-          COGLATAS_SECURITY_RUNTIME_FAILED: ${{ job.status != 'success' }}
-        run: bash scripts/ci/run-security-runtime-smoke.sh cleanup
+        run: bash scripts/ci/run-security-runtime-parallel.sh
 
       - name: Scan repository filesystem with Trivy
         if: github.event_name != 'pull_request' || steps.route.outputs.security_image == 'true'
@@ -564,7 +525,7 @@ jobs:
           exit "$status"
 
       - name: Upload SEC-06 sanitized ZAP evidence
-        if: always() && (github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true')
+        if: always() && github.event_name != 'pull_request'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sec06-zap-evidence
