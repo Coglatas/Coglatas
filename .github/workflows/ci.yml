@@ -92,7 +92,7 @@ jobs:
         run: |
           set -euo pipefail
           spec="artifacts/openapi/coglatas-openapi.json"
-          first="\${RUNNER_TEMP}/coglatas-openapi.first.json"
+          first="${RUNNER_TEMP}/coglatas-openapi.first.json"
           generate_openapi() {
             dotnet build src/Coglatas.Web/Coglatas.Web.csproj \
               --configuration Release \
@@ -285,7 +285,7 @@ jobs:
           BACKEND_TEST_FILTER: ${{ steps.route.outputs.backend_test_filter }}
         run: |
           set -euo pipefail
-          results="artifacts/test-results/shard-\${SHARD}"
+          results="artifacts/test-results/shard-${SHARD}"
           mkdir -p "$results"
           filter="$SHARD_FILTER"
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" && "$BACKEND_TEST_SCOPE" == "scoped" ]]; then
@@ -297,12 +297,12 @@ jobs:
             --disable-build-servers
             -m:1
             --verbosity normal
-            --logger "trx;LogFileName=backend-tests-shard-\${SHARD}.trx"
+            --logger "trx;LogFileName=backend-tests-shard-${SHARD}.trx"
             --results-directory "$results"
             --collect "XPlat Code Coverage"
             --filter "$filter"
           )
-          dotnet test tests/Coglatas.Tests/Coglatas.Tests.csproj "\${args[@]}"
+          dotnet test tests/Coglatas.Tests/Coglatas.Tests.csproj "${args[@]}"
       - name: Upload shard results
         if: always() && steps.execute.outputs.run == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -456,16 +456,7 @@ jobs:
                 scripts/ci/verify-mvp-a-final-checks.py
               bash -n scripts/ci/mvp-a-authz-boundary-acceptance.sh
               bash -n scripts/ci/run-mvp-a-authz-boundary-acceptance.sh
-              python3 - <<'PY'
-              from pathlib import Path
-              source = Path("scripts/ci/mvp-a-authz-boundary-acceptance.sh").read_text(encoding="utf-8")
-              start_marker = "node --input-type=module <<'NODE'\n"
-              start = source.index(start_marker) + len(start_marker)
-              end = source.rindex("\nNODE\n")
-              Path("/tmp/mvp-a-authz-boundary-acceptance.mjs").write_text(source[start:end], encoding="utf-8")
-              PY
-              node --check /tmp/mvp-a-authz-boundary-acceptance.mjs
-              python3 scripts/ci/verify-mvp-a-required-a11y-tests.py
+              bash scripts/ci/validate-frontend-ci-helpers.sh
               if [[ "$GITHUB_EVENT_NAME" != "pull_request" || "$FRONTEND_ARCHITECTURE" == "true" ]]; then
                 npm --prefix frontend run check:architecture
                 npm --prefix frontend run test:architecture
@@ -648,14 +639,14 @@ jobs:
               echo "::error::Unable to resolve the PR merge base for Gitleaks."
               exit 1
             }
-            extra_args+=(--log-opts="\${merge_base}..\${PR_HEAD_SHA}")
+            extra_args+=(--log-opts="${merge_base}..${PR_HEAD_SHA}")
           fi
           set +e
           docker run --rm \
             -v "$PWD:/repo" \
             zricethezav/gitleaks:v8.24.3 \
             detect --source /repo --redact --verbose \
-            "\${extra_args[@]}" \
+            "${extra_args[@]}" \
             --report-format json \
             --report-path /repo/gitleaks-report.json
           status=$?
