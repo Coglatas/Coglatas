@@ -45,6 +45,23 @@ public sealed class SecurityOpenApiOperationTransformerTests
         Assert.Empty(operation.Security);
     }
 
+    [Theory]
+    [InlineData("api/me/tasks")]
+    [InlineData("api/me/tasks/counts")]
+    [InlineData("api/auth/login")]
+    public async Task Operations_document_empty_request_uri_too_long_response(string relativePath)
+    {
+        var operation = new OpenApiOperation();
+        var context = CreateContext();
+        context.Description.RelativePath = relativePath;
+
+        await new SecurityOpenApiOperationTransformer().TransformAsync(operation, context, CancellationToken.None);
+
+        var response = Assert.IsType<OpenApiResponse>(operation.Responses!["414"]);
+        Assert.False(string.IsNullOrWhiteSpace(response.Description));
+        Assert.True(response.Content is null || response.Content.Count == 0);
+    }
+
     private static OpenApiOperationTransformerContext CreateContext(params object[] endpointMetadata) =>
         new()
         {

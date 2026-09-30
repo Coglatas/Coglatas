@@ -4,6 +4,16 @@ This document is the active API convention guide. For endpoint examples, use `do
 
 Implementation note: this document describes the intended contract. The current controllers do not consistently follow one error shape or HTTP status mapping. Global exceptions return `ErrorResponse(Code, Message, TraceId)`, while many controller failures return `{ "error": "..." }` and map authorization/not-found failures to `400`. TASK-V1-PR06 adds a narrow safe envelope for Gantt routes. WPC-01 now does the same for Workspace capabilities/create, their authentication/model-binding/CSRF/exception boundary, Project activation-transition conflicts, disabled legacy Project create, and masked Project detail. Neither change resolves the repository-wide mismatch. Track that broader mismatch in `docs/KNOWN_ISSUES.md`; exact controller/service findings are in `docs/BACKEND_LOGIC_AUDIT.md`.
 
+## Transport request-line limit
+
+Kestrel rejects oversized request lines before routing, authentication, or
+application middleware. The default limit is 8,192 bytes. HTTP 414 (URI Too Long)
+can therefore occur on any API operation, including authenticated routes, with
+an empty body and no application JSON error envelope. The generated OpenAPI
+contract documents this transport response without promising JSON content.
+Clients must handle an empty 414 response. This does not change the server limit
+or relax validation, authentication, or authorization.
+
 ## Announcement HTTP failures
 
 The `/api/announcements` endpoints preserve the existing `{ "error": "..." }`
