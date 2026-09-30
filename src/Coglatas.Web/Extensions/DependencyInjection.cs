@@ -200,9 +200,14 @@ public static class DependencyInjection
 
     private static ValidationProblemDetails CreateSanitizedValidationProblemDetails(ActionContext context)
     {
-        var details = new ValidationProblemDetails(CreateSanitizedModelState(context.ModelState));
-        details.Extensions["traceId"] = System.Diagnostics.Activity.Current?.Id ??
-            context.HttpContext.TraceIdentifier;
+        var details = new ValidationProblemDetails(CreateSanitizedModelState(context.ModelState))
+        {
+            Extensions =
+            {
+                ["traceId"] = System.Diagnostics.Activity.Current?.Id ??
+                    context.HttpContext.TraceIdentifier
+            }
+        };
         return details;
     }
 
