@@ -47,6 +47,8 @@ public sealed class WorkspacesController(
 
     [HttpPost("api/workspaces")]
     [ProducesResponseType(typeof(ApiSuccessEnvelope<WorkspaceDetailResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiErrorEnvelope), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiErrorEnvelope), StatusCodes.Status503ServiceUnavailable)]
     public async Task<IActionResult> Create(
         CreateWorkspaceRequest request,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
