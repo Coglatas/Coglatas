@@ -1395,12 +1395,21 @@ export class MessagingFacade {
     this.realtimeCatchUpCleanup = this.realtime.registerCatchUp(MESSAGING_REALTIME_OWNER, () => this.catchUpConversation(conversationId));
   }
 
-  private catchUpConversation(conversationId: string): Promise<void> | void {
+  private async catchUpConversation(conversationId: string): Promise<void> {
     if (this.loadedConversationId() !== conversationId) {
       return;
     }
-    const routeKind = this.pageState().routeKind;
-    const generation = this.beginRequestGeneration();
+    const currentGeneration = this.requestGeneration;
+    // Routine transport catch-up must not abort an already-dispatched command.
+    // Security and route boundaries still cancel requests synchronously.
+    if (this.protectedRequests.size > 0) {
+      await this.waitForProtectedRequests(currentGeneration, conversationId);
+    }
+    if (!this.isCurrentRequest(currentGeneration, conversationId)) {
+      return;
+    }
+    const generation = this.beginRequestGeneration(),
+      routeKind = this.pageState().routeKind;
     this.pageState.set(emptyMessagingPage(routeKind, 'loading'));
     return this.loadConversationData(
       conversationId,
@@ -1410,6 +1419,15 @@ export class MessagingFacade {
       false,
       this.loadedAnchorMessageId,
     );
+  }
+
+  private async waitForProtectedRequests(generation: number, conversationId: string): Promise<void> {
+    if (!this.isCurrentRequest(generation, conversationId) || this.protectedRequests.size === 0) {
+      return;
+    }
+    await Promise.all([...this.protectedRequests].map((request) =>
+      new Promise<void>((resolve) => { request.add(resolve); })));
+    await this.waitForProtectedRequests(generation, conversationId);
   }
 
   private catchUpConversationList(routeKind: MessagingRouteKind): Promise<void> | void {
