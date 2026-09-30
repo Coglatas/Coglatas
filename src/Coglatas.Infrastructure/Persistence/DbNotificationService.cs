@@ -397,8 +397,18 @@ public sealed class DbNotificationService(
         if (targets is null)
         {
             var total = await query.CountAsync(cancellationToken);
+            var firstRequestedIndex = ((long)page - 1L) * pageSize;
+            if (firstRequestedIndex >= total)
+            {
+                return new PagedResponse<NotificationListItemResponse>(
+                    Array.Empty<NotificationListItemResponse>(),
+                    page,
+                    pageSize,
+                    total);
+            }
+
             var notifications = await query
-                .Skip((page - 1) * pageSize)
+                .Skip(checked((int)firstRequestedIndex))
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
             var items = notifications.Select(ToListItem).ToList();
@@ -517,7 +527,7 @@ public sealed class DbNotificationService(
         CancellationToken cancellationToken)
     {
         var items = new List<NotificationListItemResponse>(pageSize);
-        var firstRequestedVisibleIndex = checked((page - 1) * pageSize);
+        var firstRequestedVisibleIndex = ((long)page - 1L) * pageSize;
         var visibleCount = 0;
         var rawOffset = 0;
 
