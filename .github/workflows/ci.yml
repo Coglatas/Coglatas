@@ -38,7 +38,6 @@ jobs:
       - name: Validate parallel CI helper syntax
         run: |
           bash -n scripts/ci/parallel-lane-lib.sh
-          bash -n scripts/ci/run-backend-test-shards.sh
           bash -n scripts/ci/run-frontend-parallel.sh
           bash -n scripts/ci/run-security-runtime-parallel.sh
 
@@ -174,13 +173,27 @@ jobs:
         if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
         run: dotnet ef migrations has-pending-model-changes --project src/Coglatas.Infrastructure --startup-project src/Coglatas.Web --configuration Release --no-build
 
-      - name: Run backend test shards in parallel
+      - name: Test
         if: github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true'
         shell: bash
         env:
           BACKEND_TEST_SCOPE: ${{ steps.route.outputs.backend_test_scope }}
           BACKEND_TEST_FILTER: ${{ steps.route.outputs.backend_test_filter }}
-        run: bash scripts/ci/run-backend-test-shards.sh
+        run: |
+          args=(
+            --configuration Release
+            --no-build
+            --disable-build-servers
+            -m:1
+            --verbosity normal
+            --logger "trx;LogFileName=backend-tests.trx"
+            --results-directory artifacts/test-results
+            --collect "XPlat Code Coverage"
+          )
+          if [[ "$BACKEND_TEST_SCOPE" == "scoped" && -n "$BACKEND_TEST_FILTER" ]]; then
+            args+=(--filter "$BACKEND_TEST_FILTER")
+          fi
+          dotnet test Coglatas.slnx "${args[@]}"
 
       - name: Generate .NET coverage report
         if: github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true'
@@ -443,6 +456,15 @@ jobs:
         env:
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
         run: bash scripts/ci/generate-security-openapi-contract.sh
+
+      - name: Build reusable security runtime image
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="coglatas-security-runtime:${GITHUB_SHA}"
+          docker build --file Dockerfile.security.runtime --tag "$image" .
+          printf 'COGLATAS_SECURITY_RUNTIME_IMAGE=%s\n' "$image" >> "$GITHUB_ENV"
 
       - name: Run isolated security runtime lanes in parallel
         if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'

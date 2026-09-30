@@ -4,6 +4,7 @@ set -Eeuo pipefail
 : "${COGLATAS_SECURITY_CI_PASSWORD:?COGLATAS_SECURITY_CI_PASSWORD is required for the SEC-03/SEC-04/SEC-05/SEC-06/AUD-02 runtime gate}"
 
 stage="${1:-all}"
+: "${COGLATAS_SECURITY_RUNTIME_IMAGE:?COGLATAS_SECURITY_RUNTIME_IMAGE is required for the security runtime stack}"
 project="${COGLATAS_SECURITY_CI_PROJECT:-coglatas-security-runtime-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-0}}"
 
 if [[ -n "${COGLATAS_SECURITY_RUNTIME_STATE_DIR:-}" ]]; then
@@ -251,19 +252,27 @@ import json
 import sys
 
 document = json.load(sys.stdin)
+expected_image = sys.argv[1]
 app = document["services"]["app"]
+migrate = document["services"]["migrate"]
 if "build" in app:
     raise SystemExit("security runtime app must not retain the production Docker build")
-if app.get("image") != "mcr.microsoft.com/dotnet/sdk:10.0.401":
-    raise SystemExit("security runtime app must use the pinned .NET SDK image")
+if app.get("image") != expected_image:
+    raise SystemExit(f"security runtime app must use the prebuilt image {expected_image!r}")
+if migrate.get("image") != expected_image:
+    raise SystemExit(f"security runtime migrate must use the prebuilt image {expected_image!r}")
 if app.get("ports"):
     raise SystemExit("security runtime app must not publish host ports")
+for service_name, service in (("app", app), ("migrate", migrate)):
+    for mount in service.get("volumes", []):
+        if isinstance(mount, dict) and mount.get("type") == "bind":
+            raise SystemExit(f"security runtime {service_name} must not bind-mount repository source")
 environment = app.get("environment", {})
 if str(environment.get("COGLATAS_SECURITY_CI_FIXTURE_ENABLED", "")).lower() != "true":
     raise SystemExit("security runtime fixture must remain enabled")
 if str(environment.get("ASPNETCORE_ENVIRONMENT", "")).lower() != "test":
     raise SystemExit("security runtime app must remain Test-only")
-'
+' "$COGLATAS_SECURITY_RUNTIME_IMAGE"
 
   AUD02_STAGE=init
   AUD02_FIXTURE_IDENTITY_BEFORE=""

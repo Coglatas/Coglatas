@@ -1,32 +1,36 @@
 # SEC-02 CI runtime override.
 #
-# The ordinary security overlay intentionally inherits the production Dockerfile,
-# which requires the private Syncfusion build credential for the Angular bundle.
-# Public PR security CI must not receive that credential, so this override runs the
-# same ASP.NET Core project from the pinned .NET SDK image while preserving the
-# SEC-02 PostgreSQL, tenancy, storage, and Test-only fixture configuration.
+# Public PR security CI must not receive the private Syncfusion build credential.
+# The parent security-scan job builds Dockerfile.security.runtime once, then the
+# isolated Core/Schemathesis/ZAP stacks reuse that immutable local image.
 #
 # This file is CI-only. It does not publish a host port and is not a deployment
 # profile.
 
 services:
+  migrate:
+    image: ${COGLATAS_SECURITY_RUNTIME_IMAGE:?COGLATAS_SECURITY_RUNTIME_IMAGE is required}
+    working_dir: /src
+    volumes: !reset []
+    environment:
+      NUGET_PACKAGES: /root/.nuget/packages
+    command: >
+      bash -lc "dotnet ef database update
+      --project src/Coglatas.Infrastructure
+      --startup-project src/Coglatas.Web
+      --configuration Release
+      --no-build"
+
   app:
     build: !reset null
-    image: mcr.microsoft.com/dotnet/sdk:10.0.401
+    image: ${COGLATAS_SECURITY_RUNTIME_IMAGE:?COGLATAS_SECURITY_RUNTIME_IMAGE is required}
     working_dir: /src
     environment:
       NUGET_PACKAGES: /root/.nuget/packages
-    volumes:
-      - ./:/src
-      - real_backend_smoke_nuget:/root/.nuget/packages
+    volumes: !reset []
     healthcheck: !reset null
     command: >
       bash -lc "mkdir -p
-      /src/src/Coglatas.Web/wwwroot
       /app/storage/uploads
       /app/data/protection-keys &&
-      dotnet restore src/Coglatas.Web/Coglatas.Web.csproj /p:RestoreFallbackFolders= &&
-      dotnet run --project src/Coglatas.Web/Coglatas.Web.csproj
-      --configuration Release
-      --no-restore
-      --no-launch-profile"
+      dotnet src/Coglatas.Web/bin/Release/net10.0/Coglatas.Web.dll"

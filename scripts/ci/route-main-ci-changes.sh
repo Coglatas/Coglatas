@@ -346,7 +346,7 @@ while IFS= read -r path; do
   [[ -n "$path" ]] || continue
 
   case "$path" in
-    .github/workflows/ci.yml|scripts/ci/route-main-ci-changes.sh|scripts/ci/parallel-lane-lib.sh|scripts/ci/run-backend-test-shards.sh|scripts/ci/run-frontend-parallel.sh|scripts/ci/run-security-runtime-parallel.sh)
+    .github/workflows/ci.yml|scripts/ci/route-main-ci-changes.sh|scripts/ci/parallel-lane-lib.sh|scripts/ci/run-frontend-parallel.sh|scripts/ci/run-security-runtime-parallel.sh)
       backend=true
       backend_ef=true
       backend_tests=true
@@ -568,7 +568,7 @@ while IFS= read -r path; do
   # Compose gate on pull requests as well as main. Otherwise contract and fuzz
   # regressions are discovered only after merge.
   case "$path" in
-    src/Coglatas.Application/*|src/Coglatas.Domain/*|src/Coglatas.Infrastructure/*|src/Coglatas.Web/*|scripts/security/*|scripts/ci/run-security-runtime-smoke.sh|scripts/ci/generate-security-openapi-contract.sh)
+    src/Coglatas.Application/*|src/Coglatas.Domain/*|src/Coglatas.Infrastructure/*|src/Coglatas.Web/*|scripts/security/*|scripts/ci/run-security-runtime-smoke.sh|scripts/ci/run-security-runtime-parallel.sh|scripts/ci/generate-security-openapi-contract.sh|Dockerfile.security.runtime|.dockerignore|.config/*)
       security=true
       security_dotnet=true
       security_compose=true
