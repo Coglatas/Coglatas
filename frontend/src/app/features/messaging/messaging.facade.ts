@@ -1408,8 +1408,8 @@ export class MessagingFacade {
     if (!this.isCurrentRequest(currentGeneration, conversationId)) {
       return;
     }
-    const routeKind = this.pageState().routeKind,
-      generation = this.beginRequestGeneration();
+    const generation = this.beginRequestGeneration(),
+      routeKind = this.pageState().routeKind;
     this.pageState.set(emptyMessagingPage(routeKind, 'loading'));
     return this.loadConversationData(
       conversationId,

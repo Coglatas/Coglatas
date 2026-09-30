@@ -123,12 +123,12 @@ function flushConversationOpen(
   });
 }
 
-async function configureConversationCatchUp(): Promise<{
+const configureConversationCatchUp = async (): Promise<{
   catchUp: () => Promise<void>;
   clear: (reason: 'authorization' | 'workspace') => void;
   facade: MessagingFacade;
   httpMock: HttpTestingController;
-}> {
+}> => {
   const events = new Subject<DurableRealtimeEvent>();
   let catchUp: (() => Promise<void> | void) | null = null,
     clear: ((reason: 'authorization' | 'workspace') => void) | null = null;
@@ -170,7 +170,7 @@ async function configureConversationCatchUp(): Promise<{
     facade: TestBed.inject(MessagingFacade),
     httpMock: TestBed.inject(HttpTestingController),
   };
-}
+};
 
 async function configureRealtimeActionFacade(events: Subject<DurableRealtimeEvent>): Promise<HttpTestingController> {
   await TestBed.configureTestingModule({
