@@ -35,45 +35,27 @@ jobs:
       - name: Enforce required PR check topology
         run: python3 scripts/ci/check-required-pr-checks.py
 
+      - name: Test required PR check governance
+        run: python3 scripts/ci/test-required-pr-checks.py
+
       - name: Enforce Coglatas rename completion
         run: python3 scripts/ci/check-coglatas-rename.py
 
-  build-test:
-    name: build-test
+  backend-build-contract:
+    name: Backend / build + OpenAPI contract
     runs-on: ubuntu-latest
-    timeout-minutes: 120
-
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_DB: coglatas_ci
-          POSTGRES_USER: coglatas_ci
-          POSTGRES_PASSWORD: coglatas_ci_password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U coglatas_ci -d coglatas_ci"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
+    timeout-minutes: 30
     env:
-      ASPNETCORE_ENVIRONMENT: Test
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "1"
       DOTNET_MULTILEVEL_LOOKUP: "0"
       DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE: "1"
-      ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
-      POSTGRES_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
-
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
-
       - name: Route pull request changes
         id: route
         shell: bash
@@ -81,31 +63,21 @@ jobs:
           BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: bash scripts/ci/route-main-ci-changes.sh
-
-      - name: Skip backend checks for unrelated PR
-        if: github.event_name == 'pull_request' && steps.route.outputs.backend != 'true'
-        run: echo "No backend-relevant changes detected; build-test passes without running the backend suite."
-
       - name: Set up .NET SDK
         if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
-
       - name: Restore
         if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
         run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
-
       - name: Build
         if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
         run: dotnet build Coglatas.slnx --configuration Release --no-restore --disable-build-servers -m:1
-
       - name: Verify deterministic OpenAPI 3.1 generation
         if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
         shell: bash
         env:
-          # Build-time contract generation must be read-only. Point database
-          # access at an unreachable port so any accidental startup query fails.
           ConnectionStrings__DefaultConnection: Host=127.0.0.1;Port=1;Database=sec01_openapi;Username=unused;Timeout=1;Command Timeout=1
           Tenancy__AppMode: SaaS
           Tenancy__SeedOnStartup: "false"
@@ -120,8 +92,7 @@ jobs:
         run: |
           set -euo pipefail
           spec="artifacts/openapi/coglatas-openapi.json"
-          first="${RUNNER_TEMP}/coglatas-openapi.first.json"
-
+          first="\${RUNNER_TEMP}/coglatas-openapi.first.json"
           generate_openapi() {
             dotnet build src/Coglatas.Web/Coglatas.Web.csproj \
               --configuration Release \
@@ -131,12 +102,10 @@ jobs:
               -m:1 \
               -p:GenerateSecurityOpenApiContract=true
           }
-
           rm -f "$spec"
           generate_openapi
           python3 scripts/ci/verify-openapi.py "$spec"
           cp "$spec" "$first"
-
           rm "$spec"
           generate_openapi
           python3 scripts/ci/verify-openapi.py "$spec"
@@ -145,7 +114,6 @@ jobs:
             diff -u "$first" "$spec" || true
             exit 1
           fi
-
       - name: Upload OpenAPI 3.1 contract
         if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -155,41 +123,254 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  backend-ef:
+    name: Backend / EF migration contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: coglatas_ci
+          POSTGRES_USER: coglatas_ci
+          POSTGRES_PASSWORD: coglatas_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U coglatas_ci -d coglatas_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      ASPNETCORE_ENVIRONMENT: Test
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      DOTNET_MULTILEVEL_LOOKUP: "0"
+      DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE: "1"
+      ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
+      POSTGRES_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Route pull request changes
+        id: route
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/ci/route-main-ci-changes.sh
+      - name: Set up .NET SDK
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+      - name: Restore
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
+        run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
+      - name: Build
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
+        run: dotnet build Coglatas.slnx --configuration Release --no-restore --disable-build-servers -m:1
       - name: Restore .NET tools
-        if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true' || steps.route.outputs.backend_tests == 'true'
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
         run: dotnet tool restore
-
       - name: Apply PostgreSQL migrations
         if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
         run: dotnet ef database update --project src/Coglatas.Infrastructure --startup-project src/Coglatas.Web --configuration Release --no-build
-
       - name: Reject pending EF Core model changes
         if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
         run: dotnet ef migrations has-pending-model-changes --project src/Coglatas.Infrastructure --startup-project src/Coglatas.Web --configuration Release --no-build
 
-      - name: Test
+  backend-test:
+    name: Backend tests / shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: "1"
+            filter: "FullyQualifiedName~Coglatas.Tests.PostgreSql"
+          - shard: "2"
+            filter: "FullyQualifiedName~Coglatas.Tests.Projects|FullyQualifiedName~Coglatas.Tests.Notifications|FullyQualifiedName~Coglatas.Tests.Audit|FullyQualifiedName~Coglatas.Tests.Announcements"
+          - shard: "3"
+            filter: "FullyQualifiedName~Coglatas.Tests.Files|FullyQualifiedName~Coglatas.Tests.Security|FullyQualifiedName~Coglatas.Tests.Web|FullyQualifiedName~Coglatas.Tests.Auth|FullyQualifiedName~Coglatas.Tests.Tenancy|FullyQualifiedName~Coglatas.Tests.Workspaces|FullyQualifiedName~Coglatas.Tests.Artifacts|FullyQualifiedName~Coglatas.Tests.Admin"
+          - shard: "4"
+            filter: "FullyQualifiedName!~Coglatas.Tests.PostgreSql&FullyQualifiedName!~Coglatas.Tests.Projects&FullyQualifiedName!~Coglatas.Tests.Notifications&FullyQualifiedName!~Coglatas.Tests.Audit&FullyQualifiedName!~Coglatas.Tests.Announcements&FullyQualifiedName!~Coglatas.Tests.Files&FullyQualifiedName!~Coglatas.Tests.Security&FullyQualifiedName!~Coglatas.Tests.Web&FullyQualifiedName!~Coglatas.Tests.Auth&FullyQualifiedName!~Coglatas.Tests.Tenancy&FullyQualifiedName!~Coglatas.Tests.Workspaces&FullyQualifiedName!~Coglatas.Tests.Artifacts&FullyQualifiedName!~Coglatas.Tests.Admin"
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: coglatas_ci
+          POSTGRES_USER: coglatas_ci
+          POSTGRES_PASSWORD: coglatas_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U coglatas_ci -d coglatas_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      ASPNETCORE_ENVIRONMENT: Test
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      DOTNET_MULTILEVEL_LOOKUP: "0"
+      DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE: "1"
+      ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
+      POSTGRES_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Route pull request changes
+        id: route
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/ci/route-main-ci-changes.sh
+      - name: Decide shard execution
+        id: execute
         if: github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true'
         shell: bash
         env:
+          SHARD: ${{ matrix.shard }}
+          BACKEND_TEST_SCOPE: ${{ steps.route.outputs.backend_test_scope }}
+        run: |
+          set -euo pipefail
+          scope="$BACKEND_TEST_SCOPE"
+          if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]]; then
+            scope="full"
+          fi
+          case "$scope" in
+            full)
+              echo "run=true" >> "$GITHUB_OUTPUT"
+              ;;
+            scoped)
+              if [[ "$SHARD" == "1" ]]; then
+                echo "run=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "run=false" >> "$GITHUB_OUTPUT"
+                echo "Scoped PR tests run once on shard 1; shard $SHARD is intentionally idle."
+              fi
+              ;;
+            *)
+              echo "::error::Unexpected backend test scope '$scope'."
+              exit 1
+              ;;
+          esac
+      - name: Set up .NET SDK
+        if: steps.execute.outputs.run == 'true'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+      - name: Restore
+        if: steps.execute.outputs.run == 'true'
+        run: dotnet restore tests/Coglatas.Tests/Coglatas.Tests.csproj --disable-parallel --verbosity normal
+      - name: Build test project
+        if: steps.execute.outputs.run == 'true'
+        run: dotnet build tests/Coglatas.Tests/Coglatas.Tests.csproj --configuration Release --no-restore --disable-build-servers -m:1
+      - name: Run test shard
+        if: steps.execute.outputs.run == 'true'
+        shell: bash
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARD_FILTER: ${{ matrix.filter }}
           BACKEND_TEST_SCOPE: ${{ steps.route.outputs.backend_test_scope }}
           BACKEND_TEST_FILTER: ${{ steps.route.outputs.backend_test_filter }}
         run: |
+          set -euo pipefail
+          results="artifacts/test-results/shard-\${SHARD}"
+          mkdir -p "$results"
+          filter="$SHARD_FILTER"
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" && "$BACKEND_TEST_SCOPE" == "scoped" ]]; then
+            filter="$BACKEND_TEST_FILTER"
+          fi
           args=(
             --configuration Release
             --no-build
             --disable-build-servers
             -m:1
             --verbosity normal
-            --logger "trx;LogFileName=backend-tests.trx"
-            --results-directory artifacts/test-results
+            --logger "trx;LogFileName=backend-tests-shard-\${SHARD}.trx"
+            --results-directory "$results"
             --collect "XPlat Code Coverage"
+            --filter "$filter"
           )
-          if [[ "$BACKEND_TEST_SCOPE" == "scoped" && -n "$BACKEND_TEST_FILTER" ]]; then
-            args+=(--filter "$BACKEND_TEST_FILTER")
-          fi
-          dotnet test Coglatas.slnx "${args[@]}"
+          dotnet test tests/Coglatas.Tests/Coglatas.Tests.csproj "\${args[@]}"
+      - name: Upload shard results
+        if: always() && steps.execute.outputs.run == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dotnet-test-shard-${{ matrix.shard }}
+          path: artifacts/test-results/shard-${{ matrix.shard }}
+          if-no-files-found: warn
+          retention-days: 7
 
-      - name: Generate .NET coverage report
+  build-test:
+    name: build-test
+    needs:
+      - backend-build-contract
+      - backend-ef
+      - backend-test
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require all backend workers
+        env:
+          REQUIRED_NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 scripts/ci/require-needs-success.py
+      - name: Route pull request changes
+        id: route
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/ci/route-main-ci-changes.sh
+      - name: Set up .NET SDK for coverage merge
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+      - name: Restore report generator
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true'
+        run: dotnet tool restore
+      - name: Download test shard 1
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dotnet-test-shard-1
+          path: artifacts/test-results/shard-1
+      - name: Download test shard 2
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_test_scope == 'full'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dotnet-test-shard-2
+          path: artifacts/test-results/shard-2
+      - name: Download test shard 3
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_test_scope == 'full'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dotnet-test-shard-3
+          path: artifacts/test-results/shard-3
+      - name: Download test shard 4
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend_test_scope == 'full'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dotnet-test-shard-4
+          path: artifacts/test-results/shard-4
+      - name: Generate merged .NET coverage report
         if: github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true'
         shell: bash
         run: |
@@ -199,7 +380,6 @@ jobs:
             "-targetdir:artifacts/coverage" \
             "-reporttypes:Html;Cobertura;MarkdownSummaryGithub"
           cat artifacts/coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
-
       - name: Upload .NET coverage report
         if: github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -209,28 +389,30 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload backend results on failure
-        if: failure() && (github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true')
-        continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: backend-test-results
-          path: artifacts/test-results
-          if-no-files-found: warn
-          retention-days: 7
-
-  frontend-test:
-    name: frontend-test
+  frontend-worker:
+    name: Frontend / ${{ matrix.kind }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
-
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kind: build
+            route: frontend_build
+          - kind: unit
+            route: frontend_unit
+          - kind: static
+            route: frontend
+          - kind: storybook
+            route: frontend_storybook
+          - kind: playwright
+            route: frontend_playwright
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
-
       - name: Route pull request changes
         id: route
         shell: bash
@@ -238,85 +420,74 @@ jobs:
           BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: bash scripts/ci/route-main-ci-changes.sh
-
-      - name: Skip frontend checks for unrelated PR
-        if: github.event_name == 'pull_request' && steps.route.outputs.frontend != 'true'
-        run: echo "No frontend-relevant changes detected; frontend-test passes without running the frontend suite."
-
       - name: Set up Node.js
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
+        if: github.event_name != 'pull_request' || steps.route.outputs[matrix.route] == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24"
-
       - name: Use repository npm version without lifecycle scripts
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
+        if: github.event_name != 'pull_request' || steps.route.outputs[matrix.route] == 'true'
         run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
-
-      - name: Validate MVP-A CI helper syntax
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
-        shell: bash
-        run: |
-          python3 -m py_compile \
-            scripts/ci/verify-mvp-a-required-a11y-tests.py \
-            scripts/ci/verify-mvp-a-final-checks.py
-          bash -n scripts/ci/mvp-a-authz-boundary-acceptance.sh
-          bash -n scripts/ci/run-mvp-a-authz-boundary-acceptance.sh
-          python3 - <<'PY'
-          from pathlib import Path
-
-          source = Path("scripts/ci/mvp-a-authz-boundary-acceptance.sh").read_text(encoding="utf-8")
-          start_marker = "node --input-type=module <<'NODE'\n"
-          start = source.index(start_marker) + len(start_marker)
-          end = source.rindex("\nNODE\n")
-          Path("/tmp/mvp-a-authz-boundary-acceptance.mjs").write_text(
-              source[start:end], encoding="utf-8"
-          )
-          PY
-          node --check /tmp/mvp-a-authz-boundary-acceptance.mjs
-
-      - name: Verify MVP-A accessibility coverage contract
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
-        run: python3 scripts/ci/verify-mvp-a-required-a11y-tests.py
-
       - name: Install UI runner dependencies with reviewed lifecycle policy
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
+        if: github.event_name != 'pull_request' || steps.route.outputs[matrix.route] == 'true'
         run: bash scripts/ci/npm-ci-retry.sh .
-
       - name: Install Angular dependencies with reviewed lifecycle policy
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
+        if: github.event_name != 'pull_request' || steps.route.outputs[matrix.route] == 'true'
         run: bash scripts/ci/npm-ci-retry.sh frontend
-
-      - name: Build Angular production bundle without repository secrets
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_build == 'true'
-        run: npm --prefix frontend run build
-
-      - name: Run Angular unit tests
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_unit == 'true'
-        run: npm --prefix frontend test
-
-      - name: Validate frontend architecture
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_architecture == 'true'
-        run: |
-          npm --prefix frontend run check:architecture
-          npm --prefix frontend run test:architecture
-
-      - name: Validate Syncfusion license guard
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_license_guard == 'true'
-        run: npm --prefix frontend run test:syncfusion-license
-
-      - name: Build Storybook
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_storybook == 'true'
+      - name: Run frontend lane
+        if: github.event_name != 'pull_request' || steps.route.outputs[matrix.route] == 'true'
+        shell: bash
         env:
-          NODE_OPTIONS: --max-old-space-size=4096
-        run: npm --prefix frontend run build-storybook
-
-      - name: Run Angular Playwright smoke in Docker
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend_playwright == 'true'
-        run: npm run test:ui:angular:docker
-
+          FRONTEND_KIND: ${{ matrix.kind }}
+          FRONTEND_ARCHITECTURE: ${{ steps.route.outputs.frontend_architecture }}
+          FRONTEND_LICENSE_GUARD: ${{ steps.route.outputs.frontend_license_guard }}
+        run: |
+          set -euo pipefail
+          case "$FRONTEND_KIND" in
+            build)
+              npm --prefix frontend run build
+              ;;
+            unit)
+              npm --prefix frontend test
+              ;;
+            static)
+              python3 -m py_compile \
+                scripts/ci/verify-mvp-a-required-a11y-tests.py \
+                scripts/ci/verify-mvp-a-final-checks.py
+              bash -n scripts/ci/mvp-a-authz-boundary-acceptance.sh
+              bash -n scripts/ci/run-mvp-a-authz-boundary-acceptance.sh
+              python3 - <<'PY'
+              from pathlib import Path
+              source = Path("scripts/ci/mvp-a-authz-boundary-acceptance.sh").read_text(encoding="utf-8")
+              start_marker = "node --input-type=module <<'NODE'\n"
+              start = source.index(start_marker) + len(start_marker)
+              end = source.rindex("\nNODE\n")
+              Path("/tmp/mvp-a-authz-boundary-acceptance.mjs").write_text(source[start:end], encoding="utf-8")
+              PY
+              node --check /tmp/mvp-a-authz-boundary-acceptance.mjs
+              python3 scripts/ci/verify-mvp-a-required-a11y-tests.py
+              if [[ "$GITHUB_EVENT_NAME" != "pull_request" || "$FRONTEND_ARCHITECTURE" == "true" ]]; then
+                npm --prefix frontend run check:architecture
+                npm --prefix frontend run test:architecture
+              fi
+              if [[ "$GITHUB_EVENT_NAME" != "pull_request" || "$FRONTEND_LICENSE_GUARD" == "true" ]]; then
+                npm --prefix frontend run test:syncfusion-license
+              fi
+              ;;
+            storybook)
+              export NODE_OPTIONS=--max-old-space-size=4096
+              npm --prefix frontend run build-storybook
+              ;;
+            playwright)
+              npm run test:ui:angular:docker
+              ;;
+            *)
+              echo "::error::Unknown frontend lane '$FRONTEND_KIND'."
+              exit 1
+              ;;
+          esac
       - name: Upload browser artifacts on failure
-        if: failure() && (github.event_name != 'pull_request' || steps.route.outputs.frontend_playwright == 'true')
+        if: matrix.kind == 'playwright' && failure()
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -327,25 +498,38 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  security-scan:
-    name: security-scan
+  frontend-test:
+    name: frontend-test
+    needs: frontend-worker
+    if: ${{ always() }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Require all frontend workers
+        env:
+          REQUIRED_NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 scripts/ci/require-needs-success.py
 
+  security-static:
+    name: Security / static + dependency scans
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       POSTGRES_DB: coglatas
       POSTGRES_USER: coglatas
       POSTGRES_PASSWORD: ci_dummy_password
       DB_PASSWORD: ci_dummy_password
       LOCAL_ADMIN_PASSWORD: ci_dummy_local_admin_password
-
     steps:
       - name: Checkout complete history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
-
       - name: Route pull request changes
         id: route
         shell: bash
@@ -353,30 +537,22 @@ jobs:
           BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: bash scripts/ci/route-main-ci-changes.sh
-
       - name: Create masked SEC-03 synthetic credential
-        if: github.event_name != 'pull_request' || steps.route.outputs.security == 'true'
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          password="$(python3 - <<'PY'
-          import secrets
-          print(secrets.token_urlsafe(36))
-          PY
-          )"
+          password="$(python3 -c 'import secrets; print(secrets.token_urlsafe(36))')"
           printf '::add-mask::%s\n' "$password"
           printf 'COGLATAS_SECURITY_CI_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
-
       - name: Set up .NET SDK
         if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true'
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
-
       - name: Restore
         if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true'
         run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
-
       - name: Reject vulnerable NuGet packages
         if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true'
         shell: bash
@@ -390,18 +566,10 @@ jobs:
             exit 1
           fi
           exit "$status"
-
-      - name: Verify AV-MIG production contracts and mutation suites
-        if: github.event_name != 'pull_request' || steps.route.outputs.avmig_contract == 'true'
-        shell: bash
-        run: bash scripts/ci/generate-security-openapi-contract.sh
-
       - name: Validate Compose files
         if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
         shell: bash
         env:
-          # Compose resolves environment-backed build secrets during config validation.
-          # This placeholder is used only for static Compose rendering; no licensed build runs here.
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
         run: |
           set -euo pipefail
@@ -417,7 +585,6 @@ jobs:
           docker compose -f docker-compose.onprem.yml -f docker-compose.onprem.ci.yml config --quiet
           docker compose -p deploy -f deploy/sakura/docker-compose.yml config --quiet
           bash scripts/ci/verify-onprem-proxy-topology.sh
-
       - name: Validate SEC-02 security Compose invariants
         if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
         shell: bash
@@ -431,92 +598,26 @@ jobs:
             -f docker-compose.security.yml \
             config --format json |
             python3 scripts/ci/verify-security-compose.py
-
       - name: Test SEC-03 scanner harness contract
         if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
         env:
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
         run: bash scripts/security/test-scanner-harness.sh
-
       - name: Test SEC-04 Schemathesis contract
         if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
         env:
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
         run: bash scripts/security/test-schemathesis-contract.sh
-
       - name: Test SEC-06 ZAP contract
         if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
         env:
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
         run: bash scripts/security/test-zap-contract.sh
-
       - name: Test AUD-02 lifecycle contract
         if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
         env:
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
         run: bash scripts/security/test-aud02-lifecycle.sh
-
-      - name: Generate SEC-01 contract for runtime security gates
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/generate-security-openapi-contract.sh
-
-      - name: Prepare security runtime
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/run-security-runtime-smoke.sh prepare
-
-      - name: Run SEC-03 scanner boundary and authentication
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/run-security-runtime-smoke.sh sec03
-
-      - name: Run SEC-05 authorization negative matrix
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/run-security-runtime-smoke.sh sec05
-
-      - name: Run SEC-04 Schemathesis contract fuzzing
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/run-security-runtime-smoke.sh sec04
-
-      - name: Run SEC-06 authenticated ZAP API DAST
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/run-security-runtime-smoke.sh sec06
-
-      - name: Verify AUD-02 restart lifecycle
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-        run: bash scripts/ci/run-security-runtime-smoke.sh aud02
-
-      - name: Cleanup security runtime
-        if: always() && (github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true')
-        shell: bash
-        env:
-          SYNCFUSION_LICENSE: compose-config-validation-placeholder
-          COGLATAS_SECURITY_RUNTIME_FAILED: ${{ job.status != 'success' }}
-        run: bash scripts/ci/run-security-runtime-smoke.sh cleanup
-
       - name: Scan repository filesystem with Trivy
         if: github.event_name != 'pull_request' || steps.route.outputs.security_image == 'true'
         shell: bash
@@ -533,7 +634,6 @@ jobs:
           set -e
           cat trivy-filesystem-report.txt
           exit "$status"
-
       - name: Scan PR diff or full main history with Gitleaks
         shell: bash
         env:
@@ -548,43 +648,184 @@ jobs:
               echo "::error::Unable to resolve the PR merge base for Gitleaks."
               exit 1
             }
-            extra_args+=(--log-opts="${merge_base}..${PR_HEAD_SHA}")
+            extra_args+=(--log-opts="\${merge_base}..\${PR_HEAD_SHA}")
           fi
           set +e
           docker run --rm \
             -v "$PWD:/repo" \
             zricethezav/gitleaks:v8.24.3 \
             detect --source /repo --redact --verbose \
-            "${extra_args[@]}" \
+            "\${extra_args[@]}" \
             --report-format json \
             --report-path /repo/gitleaks-report.json
           status=$?
           set -e
           [[ -f gitleaks-report.json ]] || printf '[]\n' > gitleaks-report.json
           exit "$status"
+      - name: Upload static security reports on failure
+        if: failure()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: security-static-reports
+          path: |
+            dotnet-vulnerable-packages.txt
+            trivy-filesystem-report.txt
+            gitleaks-report.json
+          if-no-files-found: warn
+          retention-days: 7
 
-      - name: Upload SEC-06 sanitized ZAP evidence
+  security-contract:
+    name: Security / verified OpenAPI contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Route pull request changes
+        id: route
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/ci/route-main-ci-changes.sh
+      - name: Set up .NET SDK
+        if: github.event_name != 'pull_request' || steps.route.outputs.avmig_contract == 'true' || steps.route.outputs.security_compose == 'true'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+      - name: Restore
+        if: github.event_name != 'pull_request' || steps.route.outputs.avmig_contract == 'true' || steps.route.outputs.security_compose == 'true'
+        run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
+      - name: Generate and verify security OpenAPI contract
+        if: github.event_name != 'pull_request' || steps.route.outputs.avmig_contract == 'true' || steps.route.outputs.security_compose == 'true'
+        run: bash scripts/ci/generate-security-openapi-contract.sh
+      - name: Upload runtime security OpenAPI contract
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: security-openapi-contract
+          path: artifacts/openapi/coglatas-openapi.json
+          if-no-files-found: error
+          retention-days: 1
+
+  security-runtime:
+    name: Security runtime / ${{ matrix.kind }}
+    needs: security-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        kind:
+          - core
+          - schemathesis
+          - zap
+    env:
+      POSTGRES_DB: coglatas
+      POSTGRES_USER: coglatas
+      POSTGRES_PASSWORD: ci_dummy_password
+      DB_PASSWORD: ci_dummy_password
+      LOCAL_ADMIN_PASSWORD: ci_dummy_local_admin_password
+    steps:
+      - name: Checkout complete history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Route pull request changes
+        id: route
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/ci/route-main-ci-changes.sh
+      - name: Create masked runtime credential
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          password="$(python3 -c 'import secrets; print(secrets.token_urlsafe(36))')"
+          printf '::add-mask::%s\n' "$password"
+          printf 'COGLATAS_SECURITY_CI_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
+      - name: Download verified OpenAPI contract
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: security-openapi-contract
+          path: artifacts/openapi
+      - name: Prepare isolated security runtime
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: bash scripts/ci/run-security-runtime-smoke.sh prepare
+      - name: Establish authenticated scanner state
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: bash scripts/ci/run-security-runtime-smoke.sh sec03
+      - name: Run SEC-05 authorization negative matrix
+        if: matrix.kind == 'core' && (github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true')
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: bash scripts/ci/run-security-runtime-smoke.sh sec05
+      - name: Verify AUD-02 restart lifecycle
+        if: matrix.kind == 'core' && (github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true')
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: bash scripts/ci/run-security-runtime-smoke.sh aud02
+      - name: Run SEC-04 Schemathesis contract fuzzing
+        if: matrix.kind == 'schemathesis' && (github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true')
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: bash scripts/ci/run-security-runtime-smoke.sh sec04
+      - name: Run SEC-06 authenticated ZAP API DAST
+        if: matrix.kind == 'zap' && (github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true')
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: bash scripts/ci/run-security-runtime-smoke.sh sec06
+      - name: Cleanup isolated security runtime
         if: always() && (github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true')
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+          COGLATAS_SECURITY_RUNTIME_FAILED: ${{ job.status != 'success' }}
+        run: bash scripts/ci/run-security-runtime-smoke.sh cleanup
+      - name: Upload SEC-06 sanitized ZAP evidence
+        if: always() && matrix.kind == 'zap' && (github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sec06-zap-evidence
           path: artifacts/security/zap/
           if-no-files-found: error
           retention-days: 7
-
-      - name: Upload security reports on failure
+      - name: Upload runtime security reports on failure
         if: failure()
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: security-scan-reports
-          path: |
-            dotnet-vulnerable-packages.txt
-            trivy-filesystem-report.txt
-            gitleaks-report.json
-            artifacts/security/schemathesis/
-            artifacts/security/zap/
+          name: security-runtime-${{ matrix.kind }}-reports
+          path: artifacts/security/
           if-no-files-found: warn
           retention-days: 7
 
-
+  security-scan:
+    name: security-scan
+    needs:
+      - security-static
+      - security-contract
+      - security-runtime
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Require all security workers
+        env:
+          REQUIRED_NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 scripts/ci/require-needs-success.py
