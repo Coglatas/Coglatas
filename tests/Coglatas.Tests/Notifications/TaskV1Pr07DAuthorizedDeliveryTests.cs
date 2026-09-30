@@ -304,6 +304,36 @@ public sealed class TaskV1Pr07DAuthorizedDeliveryTests
     }
 
     [Fact]
+    public async Task NotificationListHandlesPageOffsetsBeyondIntRange()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        const int page = 211_569_207;
+        const int pageSize = 20;
+
+        var unfilteredNotifications = new DbNotificationService(
+            fixture.Db,
+            FixedClock.Instance,
+            fixture.Tenant);
+
+        var unfilteredPage = await unfilteredNotifications.ListAsync(
+            fixture.UserId,
+            page,
+            pageSize);
+        var authorizationAwarePage = await fixture.Notifications.ListAsync(
+            fixture.UserId,
+            page,
+            pageSize);
+
+        foreach (var result in new[] { unfilteredPage, authorizationAwarePage })
+        {
+            Assert.Empty(result.Items);
+            Assert.Equal(page, result.Page);
+            Assert.Equal(pageSize, result.PageSize);
+            Assert.Equal(1, result.TotalCount);
+        }
+    }
+
+    [Fact]
     public async Task RevokedTaskNotificationIsHiddenAndCannotBeMutatedThroughTheLegacyEndpoints()
     {
         await using var fixture = await Fixture.CreateAsync();
