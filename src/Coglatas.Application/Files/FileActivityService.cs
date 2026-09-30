@@ -172,7 +172,7 @@ public sealed class FileActivityService(
         if (fileObjectId == Guid.Empty ||
             !currentTenant.IsAvailable ||
             !currentUser.IsAuthenticated ||
-            currentUser.UserId is not Guid actorUserId ||
+            currentUser.UserId is not { } actorUserId ||
             actorUserId == Guid.Empty)
         {
             return null;
