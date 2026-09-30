@@ -58,7 +58,10 @@
     "hono": "4.13.1",
     "postcss": "8.5.23",
     "webpack-dev-server": "5.2.6",
-    "less": "4.9.0"
+    "less": "4.9.0",
+    "@storybook/builder-webpack5": {
+      "webpack-dev-middleware": "7.4.6"
+    }
   },
   "allowScripts": {
     "esbuild@0.28.1": true,
