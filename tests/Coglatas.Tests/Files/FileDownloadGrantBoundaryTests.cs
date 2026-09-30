@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
@@ -64,8 +63,7 @@ public sealed class FileDownloadGrantBoundaryTests
     [Trait("Scope", "TaskV1PR03C")]
     public async Task TaskFileOpenReauthorizesAndDoesNotTreatDetailStateAsACapability()
     {
-        var fixture = new Fixture();
-        fixture.Authorization.CanDownload = false;
+        var fixture = new Fixture { Authorization = { CanDownload = false } };
 
         var result = await fixture.Service.GetAsync(fixture.Attachment.Id);
 
@@ -301,8 +299,8 @@ public sealed class FileDownloadGrantBoundaryTests
 
         public Guid TenantId { get; } = Guid.NewGuid();
         public Guid WorkspaceId { get; } = Guid.NewGuid();
-        public Guid ProjectId { get; } = Guid.NewGuid();
-        public Guid TaskId { get; } = Guid.NewGuid();
+        private Guid ProjectId { get; } = Guid.NewGuid();
+        private Guid TaskId { get; } = Guid.NewGuid();
         public Guid UserId { get; } = Guid.NewGuid();
         public FileObject FileObject { get; } = new()
         {
@@ -325,7 +323,7 @@ public sealed class FileDownloadGrantBoundaryTests
             ScanStatus = FileScanStatus.Clean
         };
 
-        public FakeFileRepository Files { get; } = new();
+        private FakeFileRepository Files { get; } = new();
         public FakeFileDownloadGrantRepository Grants { get; } = new();
         public FakeStorage Storage { get; } = new();
         public FakeAuthorization Authorization { get; } = new();
@@ -382,7 +380,7 @@ public sealed class FileDownloadGrantBoundaryTests
         public Task<Stream> OpenReadAsync(string storageKey, CancellationToken cancellationToken = default)
         {
             OpenReadCount++;
-            return Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("file content")));
+            return Task.FromResult<Stream>(new MemoryStream("file content"u8.ToArray()));
         }
         public Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<bool> ExistsAsync(string storageKey, CancellationToken cancellationToken = default) => Task.FromResult(true);
@@ -418,7 +416,7 @@ public sealed class FileDownloadGrantBoundaryTests
         public Guid? UserIdValue { get; set; } = userId;
         public Guid? UserId => UserIdValue;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "file-reader@example.test";
+        public string Email => "file-reader@example.test";
         public SystemRole? SystemRole => global::Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => UserIdValue.HasValue;
     }
@@ -428,7 +426,7 @@ public sealed class FileDownloadGrantBoundaryTests
         public Guid TenantIdValue { get; set; } = tenantId;
         public Guid TenantId => TenantIdValue;
         public bool IsAvailable => true;
-        public string? TenantSlug => "tenant-a";
+        public string TenantSlug => "tenant-a";
         public bool IsPlatformScope => false;
     }
 

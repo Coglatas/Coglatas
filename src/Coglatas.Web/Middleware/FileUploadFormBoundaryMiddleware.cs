@@ -3,28 +3,35 @@ using Coglatas.Web.Models;
 namespace Coglatas.Web.Middleware;
 
 /// <summary>
-/// Rejects malformed or ambiguous multipart shapes for the two canonical file-upload
+/// Rejects malformed or ambiguous multipart shapes for canonical file-upload
 /// endpoints before MVC model binding can interpret case-insensitive duplicate fields.
 /// </summary>
 public sealed class FileUploadFormBoundaryMiddleware(RequestDelegate next)
 {
     private const string FileFieldName = "File";
-    private static readonly HashSet<string> AllowedScalarFields =
+    private static readonly HashSet<string> AttachmentScalarFields =
         new(StringComparer.OrdinalIgnoreCase)
         {
             "OwnerType",
             "OwnerId"
         };
+    private static readonly HashSet<string> ArtifactVersionScalarFields =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "ChangeNote"
+        };
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (!IsFileUploadRequest(context.Request))
+        var allowedScalarFields = GetAllowedScalarFields(context.Request);
+        if (allowedScalarFields is null)
         {
             await next(context);
             return;
         }
 
-        if (!context.Request.HasFormContentType)
+        if (!context.Request.HasFormContentType ||
+            context.Request.ContentType?.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase) != true)
         {
             await next(context);
             return;
@@ -47,7 +54,7 @@ public sealed class FileUploadFormBoundaryMiddleware(RequestDelegate next)
             return;
         }
 
-        if (form.Keys.Any(field => !AllowedScalarFields.Contains(field)) ||
+        if (form.Any(field => !allowedScalarFields.Contains(field.Key) || field.Value.Count != 1) ||
             form.Files.Count != 1 ||
             form.Files.Any(file => !string.Equals(file.Name, FileFieldName, StringComparison.OrdinalIgnoreCase)))
         {
@@ -58,10 +65,28 @@ public sealed class FileUploadFormBoundaryMiddleware(RequestDelegate next)
         await next(context);
     }
 
-    private static bool IsFileUploadRequest(HttpRequest request) =>
-        HttpMethods.IsPost(request.Method) &&
-        (string.Equals(request.Path.Value, "/api/files", StringComparison.OrdinalIgnoreCase) ||
-         string.Equals(request.Path.Value, "/api/attachments", StringComparison.OrdinalIgnoreCase));
+    private static HashSet<string>? GetAllowedScalarFields(HttpRequest request)
+    {
+        if (!HttpMethods.IsPost(request.Method))
+        {
+            return null;
+        }
+
+        if (string.Equals(request.Path.Value, "/api/files", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(request.Path.Value, "/api/attachments", StringComparison.OrdinalIgnoreCase))
+        {
+            return AttachmentScalarFields;
+        }
+
+        var segments = request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return segments is { Length: 4 } &&
+               string.Equals(segments[0], "api", StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(segments[1], "artifacts", StringComparison.OrdinalIgnoreCase) &&
+               Guid.TryParse(segments[2], out _) &&
+               string.Equals(segments[3], "versions", StringComparison.OrdinalIgnoreCase)
+            ? ArtifactVersionScalarFields
+            : null;
+    }
 
     private static Task WriteInvalidRequestAsync(HttpContext context)
     {

@@ -48,8 +48,8 @@ public sealed class TaskV1Pr07DOutboxDispatcherTests
 
     private sealed class DispatcherFixture : IAsyncDisposable
     {
-        private readonly ServiceProvider services;
-        private readonly OutboxDispatcher dispatcher;
+        private readonly ServiceProvider _services;
+        private readonly OutboxDispatcher _dispatcher;
 
         private DispatcherFixture(
             ServiceProvider services,
@@ -57,8 +57,8 @@ public sealed class TaskV1Pr07DOutboxDispatcherTests
             RecordingOutboxRepository repository,
             DenyingDispatchAuthorizer authorizer)
         {
-            this.services = services;
-            this.dispatcher = dispatcher;
+            _services = services;
+            _dispatcher = dispatcher;
             Repository = repository;
             Authorizer = authorizer;
         }
@@ -152,12 +152,12 @@ public sealed class TaskV1Pr07DOutboxDispatcherTests
                 "DispatchBatchAsync",
                 BindingFlags.Instance | BindingFlags.NonPublic)
                 ?? throw new InvalidOperationException("Outbox dispatcher batch method is unavailable.");
-            var task = method.Invoke(dispatcher, [CancellationToken.None]) as Task
+            var task = method.Invoke(_dispatcher, [CancellationToken.None]) as Task
                 ?? throw new InvalidOperationException("Outbox dispatcher batch invocation did not return a task.");
             await task;
         }
 
-        public ValueTask DisposeAsync() => services.DisposeAsync();
+        public ValueTask DisposeAsync() => _services.DisposeAsync();
     }
 
     private sealed class DenyingDispatchAuthorizer : IRealtimeDispatchAuthorizer
@@ -271,7 +271,7 @@ public sealed class TaskV1Pr07DOutboxDispatcherTests
             Task.FromResult(new RealtimeOutboxDiagnostics(0, 0, 0, null, 0, 0, 0, 0));
 
         public Task<OutboxEvent?> GetByIdAsync(Guid eventId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<OutboxEvent?>(eventId == Event.Id ? Event : null);
+            Task.FromResult(eventId == Event.Id ? Event : null);
 
         public Task<bool> ReplayAsync(Guid eventId, DateTimeOffset now, CancellationToken cancellationToken = default)
         {

@@ -401,15 +401,15 @@ public sealed class AuthServiceTests
         }
 
         public Dictionary<Guid, User> Users { get; } = [];
-        public Dictionary<string, Invite> Invites { get; } = [];
-        public Dictionary<Guid, Tenant> Tenants { get; } = [];
-        public Dictionary<Guid, Workspace> Workspaces { get; } = [];
+        private Dictionary<string, Invite> Invites { get; } = [];
+        private Dictionary<Guid, Tenant> Tenants { get; } = [];
+        private Dictionary<Guid, Workspace> Workspaces { get; } = [];
         public List<TenantUser> TenantUsers { get; } = [];
         public List<WorkspaceMember> WorkspaceMembers { get; } = [];
         public List<Session> Sessions { get; } = [];
         public FakeClock Clock { get; } = new(new DateTimeOffset(2026, 6, 6, 0, 0, 0, TimeSpan.Zero));
         public Pbkdf2PasswordHasher PasswordHasher { get; } = new();
-        public Sha256TokenHasher TokenHasher { get; } = new();
+        private Sha256TokenHasher TokenHasher { get; } = new();
         public FakeAuditLogger AuditLogger { get; } = new();
         public FakeCurrentUser CurrentUser { get; }
         public AuthService Service { get; }
@@ -721,17 +721,17 @@ public sealed class AuthServiceTests
 
     private sealed class FakeCurrentUser : ICurrentUser
     {
-        private User? user;
+        private User? _user;
 
-        public Guid? UserId => user?.Id;
-        public Guid? SessionId => user is null ? null : Guid.NewGuid();
-        public string? Email => user?.Email;
-        public SystemRole? SystemRole => user?.SystemRole;
-        public bool IsAuthenticated => user is not null;
+        public Guid? UserId => _user?.Id;
+        public Guid? SessionId => _user is null ? null : Guid.NewGuid();
+        public string? Email => _user?.Email;
+        public SystemRole? SystemRole => _user?.SystemRole;
+        public bool IsAuthenticated => _user is not null;
 
         public void SetUser(User currentUser)
         {
-            user = currentUser;
+            _user = currentUser;
         }
     }
 

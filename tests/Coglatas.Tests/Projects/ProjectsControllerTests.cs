@@ -3,7 +3,6 @@ using System.Text.Json;
 using Coglatas.Application.Common;
 using Coglatas.Application.Projects;
 using Coglatas.Domain.Entities;
-using Coglatas.Domain.Enums;
 using Coglatas.Web.Controllers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -43,7 +42,7 @@ public sealed class ProjectsControllerTests
         var controller = Controller();
         var createMethod = typeof(ProjectsController)
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(candidate => candidate.Name == "ToActionResult" && candidate.IsGenericMethod)
+            .Single(candidate => candidate is { Name: "ToActionResult", IsGenericMethod: true })
             .MakeGenericMethod(typeof(string));
         var createAction = Assert.IsType<ObjectResult>(createMethod.Invoke(controller, [Result<string>.Failure(detail)]));
 
@@ -67,7 +66,7 @@ public sealed class ProjectsControllerTests
         var controller = Controller();
         var genericMethod = typeof(ProjectsController)
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(candidate => candidate.Name == "ToActionResult" && candidate.IsGenericMethod)
+            .Single(candidate => candidate is { Name: "ToActionResult", IsGenericMethod: true })
             .MakeGenericMethod(typeof(string));
         var genericAction = Assert.IsType<ObjectResult>(
             genericMethod.Invoke(controller, [Result<string>.Failure(detail)]));
@@ -97,7 +96,7 @@ public sealed class ProjectsControllerTests
         var controller = Controller();
         var genericMethod = typeof(ProjectsController)
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(candidate => candidate.Name == "ToActionResult" && candidate.IsGenericMethod)
+            .Single(candidate => candidate is { Name: "ToActionResult", IsGenericMethod: true })
             .MakeGenericMethod(typeof(string));
 
         var action = Assert.IsType<ObjectResult>(
@@ -143,7 +142,7 @@ public sealed class ProjectsControllerTests
         var controller = Controller();
         var genericMethod = typeof(ProjectsController)
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(candidate => candidate.Name == "ToActionResult" && candidate.IsGenericMethod)
+            .Single(candidate => candidate is { Name: "ToActionResult", IsGenericMethod: true })
             .MakeGenericMethod(typeof(string));
         var action = Assert.IsType<ObjectResult>(genericMethod.Invoke(
             controller,
@@ -166,7 +165,7 @@ public sealed class ProjectsControllerTests
         var controller = Controller();
         var genericMethod = typeof(ProjectsController)
             .GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(candidate => candidate.Name == "ToActionResult" && candidate.IsGenericMethod)
+            .Single(candidate => candidate is { Name: "ToActionResult", IsGenericMethod: true })
             .MakeGenericMethod(typeof(string));
 
         var action = Assert.IsType<ObjectResult>(
@@ -198,7 +197,7 @@ public sealed class ProjectsControllerTests
     {
         var controller = Controller();
         var method = typeof(ProjectsController).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(candidate => candidate.Name == "ToTaskActionResult" && !candidate.IsGenericMethod && candidate.GetParameters()[0].ParameterType == typeof(Result));
+            .Single(candidate => candidate is { Name: "ToTaskActionResult", IsGenericMethod: false } && candidate.GetParameters()[0].ParameterType == typeof(Result));
         return Assert.IsAssignableFrom<IActionResult>(method.Invoke(controller, [result]));
     }
 
@@ -206,7 +205,7 @@ public sealed class ProjectsControllerTests
     {
         var controller = Controller();
         var method = typeof(ProjectsController).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic)
-            .Single(candidate => candidate.Name == "ToTaskActionResult" && candidate.IsGenericMethod)
+            .Single(candidate => candidate is { Name: "ToTaskActionResult", IsGenericMethod: true })
             .MakeGenericMethod(typeof(string));
         return Assert.IsAssignableFrom<IActionResult>(method.Invoke(controller, [result]));
     }

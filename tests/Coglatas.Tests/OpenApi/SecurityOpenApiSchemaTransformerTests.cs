@@ -3,6 +3,7 @@ using System.Text.Json.Serialization.Metadata;
 using Coglatas.Application.Announcements;
 using Coglatas.Application.Integrations;
 using Coglatas.Application.Messaging;
+using Coglatas.Web.Controllers;
 using Coglatas.Web.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
@@ -11,6 +12,16 @@ namespace Coglatas.Tests.OpenApi;
 
 public sealed class SecurityOpenApiSchemaTransformerTests
 {
+    [Theory]
+    [InlineData(typeof(UploadAttachmentForm))]
+    [InlineData(typeof(UploadArtifactVersionForm))]
+    public async Task Upload_form_schema_rejects_extra_properties(Type formType)
+    {
+        var schema = await Transform(formType);
+
+        Assert.False(schema.AdditionalPropertiesAllowed);
+    }
+
     [Theory]
     [InlineData(typeof(CreateAnnouncementRequest))]
     [InlineData(typeof(UpdateAnnouncementRequest))]
@@ -129,7 +140,7 @@ public sealed class SecurityOpenApiSchemaTransformerTests
             }
 
             if (propertySchema.Enum is { Count: > 0 } &&
-                !propertySchema.Enum.Any(candidate => candidate?.ToString() == value?.ToString()))
+                propertySchema.Enum.All(candidate => candidate?.ToString() != value?.ToString()))
             {
                 return false;
             }
@@ -172,7 +183,7 @@ public sealed class SecurityOpenApiSchemaTransformerTests
             ApplicationServices = EmptyServiceProvider.Instance
         };
 
-        await new SecurityOpenApiSchemaTransformer().TransformAsync(schema, context, default);
+        await new SecurityOpenApiSchemaTransformer().TransformAsync(schema, context, CancellationToken.None);
         return schema;
     }
 

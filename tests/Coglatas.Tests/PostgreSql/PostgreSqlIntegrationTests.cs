@@ -1,11 +1,6 @@
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
-using Coglatas.Application.Groups;
-using Coglatas.Application.Messaging;
-using Coglatas.Application.Projects;
 using Coglatas.Application.Search;
-using Coglatas.Application.Tenancy;
-using Coglatas.Application.Workspaces;
 using Coglatas.Domain.Entities;
 using Coglatas.Domain.Enums;
 using Coglatas.Infrastructure.Persistence;
@@ -284,7 +279,6 @@ public sealed class PostgreSqlIntegrationTests
         Group Group,
         Channel Channel,
         Post Post,
-        Conversation Conversation,
         Message Message,
         Project Project,
         TaskItem Task,
@@ -354,7 +348,7 @@ public sealed class PostgreSqlIntegrationTests
         dbContext.FileObjects.Add(fileObject);
         dbContext.Attachments.Add(attachment);
         await dbContext.SaveChangesAsync();
-        return new SearchGraph(workspace, group, channel, post, conversation, message, project, task, artifact, fileObject, attachment);
+        return new SearchGraph(workspace, group, channel, post, message, project, task, artifact, fileObject, attachment);
     }
 
     private static User NewUser(string email, string displayName) => new()
@@ -377,7 +371,7 @@ public sealed class PostgreSqlIntegrationTests
     {
         public Guid? UserId => user.Id;
         public Guid? SessionId => null;
-        public string? Email => user.Email;
+        public string Email => user.Email;
         public SystemRole? SystemRole => user.SystemRole;
         public bool IsAuthenticated => true;
     }

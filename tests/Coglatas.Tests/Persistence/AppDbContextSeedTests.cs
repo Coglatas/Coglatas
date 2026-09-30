@@ -100,7 +100,7 @@ public sealed class AppDbContextSeedTests
         var tenant = await AppDbContextSeed.SeedDefaultTenantAsync(dbContext, new TenancyOptions { DefaultTenantSlug = "default" });
         var passwordHasher = new Pbkdf2PasswordHasher();
 
-        var existingUser = new Domain.Entities.User
+        var existingUser = new User
         {
             DisplayName = "Existing User",
             Email = "admin@example.com",
@@ -115,7 +115,7 @@ public sealed class AppDbContextSeedTests
         existingUser.MarkDeleted(DateTimeOffset.UtcNow);
 
         await dbContext.Users.AddAsync(existingUser);
-        await dbContext.TenantUsers.AddAsync(new Domain.Entities.TenantUser
+        await dbContext.TenantUsers.AddAsync(new TenantUser
         {
             TenantId = tenant.Id,
             UserId = existingUser.Id,
@@ -164,7 +164,7 @@ public sealed class AppDbContextSeedTests
         var passwordHasher = new Pbkdf2PasswordHasher();
         var existingHash = passwordHasher.HashPassword("existing-password");
 
-        await dbContext.Users.AddAsync(new Domain.Entities.User
+        await dbContext.Users.AddAsync(new User
         {
             DisplayName = "Existing User",
             Email = "admin@example.com",
@@ -515,7 +515,7 @@ public sealed class AppDbContextSeedTests
         public Task<Stream> OpenReadAsync(
             string storageKey,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<Stream>(Stream.Null);
+            Task.FromResult(Stream.Null);
 
         public Task DeleteAsync(
             string storageKey,

@@ -1,5 +1,3 @@
-using Coglatas.Application.Common.Tenancy;
-using Coglatas.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -12,7 +10,7 @@ namespace Coglatas.Tests.PostgreSql;
 [Trait("Scope", "TaskV1Prompt2C")]
 public sealed class TaskV1MigrationPostgreSqlTests
 {
-    private const string Pr03cBaseMigration = "20260722230000_MigrateLegacyTaskComments";
+    private const string Pr03CBaseMigration = "20260722230000_MigrateLegacyTaskComments";
     private const string BeforeTenantTableRepairMigration = "20260726150000_EnforceManualWatchOptOutExclusivity";
     private const string TenantTableRepairMigration = "20260728010000_CreateMissingTenantSettingsTable";
 
@@ -44,9 +42,9 @@ public sealed class TaskV1MigrationPostgreSqlTests
             Assert.True(await ScalarAsync<bool>(testConnectionString, "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE tablename = 'attachments' AND indexname = 'IX_attachments_OwnerType_OwnerId_FileObjectId_active_task');"));
             Assert.True(await ScalarAsync<bool>(testConnectionString, "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE tablename = 'project_task_labels' AND indexname = 'IX_project_task_labels_TenantId_ProjectId_NormalizedName');"));
             Assert.True(await ScalarAsync<bool>(testConnectionString, "SELECT EXISTS (SELECT 1 FROM pg_attribute attribute JOIN pg_class table_class ON table_class.oid = attribute.attrelid WHERE table_class.relname = 'project_task_labels' AND attribute.attname = 'NormalizedName' AND attribute.attgenerated = 's');"));
-            Assert.True(context.Model.FindEntityType(typeof(Coglatas.Domain.Entities.WorkItemWatchState))!.FindProperty(nameof(Coglatas.Domain.Entities.WorkItemWatchState.VersionNo))!.IsConcurrencyToken);
-            Assert.NotNull(context.Model.FindEntityType(typeof(Coglatas.Domain.Entities.WorkItemWatchState))!.FindProperty(nameof(Coglatas.Domain.Entities.WorkItemWatchState.IsManualWatch)));
-            Assert.True(context.Model.FindEntityType(typeof(Coglatas.Domain.Entities.ProjectTaskLabel))!.FindProperty(nameof(Coglatas.Domain.Entities.ProjectTaskLabel.VersionNo))!.IsConcurrencyToken);
+            Assert.True(context.Model.FindEntityType(typeof(Domain.Entities.WorkItemWatchState))!.FindProperty(nameof(Domain.Entities.WorkItemWatchState.VersionNo))!.IsConcurrencyToken);
+            Assert.NotNull(context.Model.FindEntityType(typeof(Domain.Entities.WorkItemWatchState))!.FindProperty(nameof(Domain.Entities.WorkItemWatchState.IsManualWatch)));
+            Assert.True(context.Model.FindEntityType(typeof(Domain.Entities.ProjectTaskLabel))!.FindProperty(nameof(Domain.Entities.ProjectTaskLabel.VersionNo))!.IsConcurrencyToken);
         });
     }
 
@@ -58,7 +56,7 @@ public sealed class TaskV1MigrationPostgreSqlTests
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
         await WithTemporaryDatabaseAsync(connectionString, async testConnectionString =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(testConnectionString, Pr03cBaseMigration);
+            await PostgreSqlMigrationTestDatabase.MigrateAsync(testConnectionString, Pr03CBaseMigration);
             await AssertHistoricalTablesAsync(testConnectionString, expected: false);
 
             await PostgreSqlMigrationTestDatabase.MigrateAsync(testConnectionString);

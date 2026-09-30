@@ -87,11 +87,10 @@ public sealed class AuditFindingReviewerMentionsServiceTests
 
     private sealed class Fixture : IAsyncDisposable
     {
-        private readonly Tenant tenant;
+        private readonly Tenant _tenant;
 
         private Fixture(
             Guid tenantId,
-            Guid actorUserId,
             Guid artifactVersionId,
             Tenant tenant,
             AppDbContext context,
@@ -103,9 +102,8 @@ public sealed class AuditFindingReviewerMentionsServiceTests
             DbAuditFindingReviewerMentionsService service)
         {
             TenantId = tenantId;
-            ActorUserId = actorUserId;
             ArtifactVersionId = artifactVersionId;
-            this.tenant = tenant;
+            _tenant = tenant;
             Context = context;
             Claims = claims;
             Authorization = authorization;
@@ -115,13 +113,12 @@ public sealed class AuditFindingReviewerMentionsServiceTests
             Service = service;
         }
 
-        public Guid TenantId { get; }
-        public Guid ActorUserId { get; }
-        public Guid ArtifactVersionId { get; }
+        private Guid TenantId { get; }
+        private Guid ArtifactVersionId { get; }
         public AppDbContext Context { get; }
-        public StubClaimsEvidenceService Claims { get; }
+        private StubClaimsEvidenceService Claims { get; }
         public StubAuditAuthorization Authorization { get; }
-        public StubCapabilityGrantEvaluator Capabilities { get; }
+        private StubCapabilityGrantEvaluator Capabilities { get; }
         public StubNotificationService Notifications { get; }
         public StubAuditLogger Audit { get; }
         public DbAuditFindingReviewerMentionsService Service { get; }
@@ -190,7 +187,6 @@ public sealed class AuditFindingReviewerMentionsServiceTests
 
             return new Fixture(
                 tenantId,
-                actorUserId,
                 artifactVersionId,
                 tenant,
                 context,
@@ -222,7 +218,7 @@ public sealed class AuditFindingReviewerMentionsServiceTests
                 Role = TenantUserRole.Member,
                 Status = TenantUserStatus.Active,
                 JoinedAt = DateTimeOffset.UtcNow,
-                Tenant = tenant,
+                Tenant = _tenant,
                 User = user,
             });
             await Context.SaveChangesAsync();
@@ -269,11 +265,11 @@ public sealed class AuditFindingReviewerMentionsServiceTests
     private sealed class StubClaimsEvidenceService(Guid artifactVersionId) : IAuditClaimsEvidenceService
     {
         public static readonly Guid ArtifactId = Guid.Parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
-        private readonly Dictionary<Guid, AuditClaimEvidenceResponse> claims = new();
+        private readonly Dictionary<Guid, AuditClaimEvidenceResponse> _claims = new();
 
         public void AddClaim(ArtifactClaim claim)
         {
-            claims[claim.Id] = new AuditClaimEvidenceResponse(
+            _claims[claim.Id] = new AuditClaimEvidenceResponse(
                 claim.Id,
                 claim.Ordinal,
                 claim.Text,
@@ -298,7 +294,7 @@ public sealed class AuditFindingReviewerMentionsServiceTests
                 artifactVersionId,
                 1,
                 "Audit report",
-                claims.Values.OrderBy(claim => claim.Ordinal).ToArray())));
+                _claims.Values.OrderBy(claim => claim.Ordinal).ToArray())));
         }
     }
 
@@ -324,9 +320,9 @@ public sealed class AuditFindingReviewerMentionsServiceTests
 
     private sealed class StubCapabilityGrantEvaluator : ICapabilityGrantEvaluator
     {
-        private readonly HashSet<Guid> grantedUsers = new();
+        private readonly HashSet<Guid> _grantedUsers = new();
 
-        public void Grant(Guid userId) => grantedUsers.Add(userId);
+        public void Grant(Guid userId) => _grantedUsers.Add(userId);
 
         public Task<bool> HasActiveGrantAsync(
             Guid subjectUserId,
@@ -336,7 +332,7 @@ public sealed class AuditFindingReviewerMentionsServiceTests
             Guid? scopeId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(
-                grantedUsers.Contains(subjectUserId) &&
+                _grantedUsers.Contains(subjectUserId) &&
                 (capabilityKey == CapabilityKeys.AuditView || capabilityKey == CapabilityKeys.AuditReview) &&
                 scopeType == CapabilityScopeType.Tenant &&
                 scopeId == tenantId);
@@ -346,7 +342,7 @@ public sealed class AuditFindingReviewerMentionsServiceTests
     {
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "actor@example.invalid";
+        public string Email => "actor@example.invalid";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }
@@ -355,7 +351,7 @@ public sealed class AuditFindingReviewerMentionsServiceTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "audit-tenant";
+        public string TenantSlug => "audit-tenant";
         public bool IsPlatformScope => false;
     }
 

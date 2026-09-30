@@ -8,8 +8,6 @@ using Coglatas.Domain.Enums;
 using Coglatas.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Coglatas.Tests.PostgreSql;
 
@@ -526,7 +524,7 @@ public sealed class TaskV1Pr07NotificationFoundationPostgreSqlTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => null;
-        public string? Email => "pr07@example.test";
+        public string Email => "pr07@example.test";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }
@@ -547,11 +545,11 @@ public sealed class TaskV1Pr07NotificationFoundationPostgreSqlTests
 
     private sealed class InitialLogicalLookupBarrier(int expectedArrivals) : DbCommandInterceptor
     {
-        private readonly TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private int arrivals;
-        private int released;
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _arrivals;
+        private int _released;
 
-        public int Arrivals => Volatile.Read(ref arrivals);
+        public int Arrivals => Volatile.Read(ref _arrivals);
 
         public override async ValueTask<DbDataReader> ReaderExecutedAsync(
             DbCommand command,
@@ -559,18 +557,18 @@ public sealed class TaskV1Pr07NotificationFoundationPostgreSqlTests
             DbDataReader result,
             CancellationToken cancellationToken = default)
         {
-            if (!IsLogicalLookup(command.CommandText) || Volatile.Read(ref released) != 0)
+            if (!IsLogicalLookup(command.CommandText) || Volatile.Read(ref _released) != 0)
             {
                 return result;
             }
 
-            if (Interlocked.Increment(ref arrivals) == expectedArrivals)
+            if (Interlocked.Increment(ref _arrivals) == expectedArrivals)
             {
-                Interlocked.Exchange(ref released, 1);
-                release.TrySetResult();
+                Interlocked.Exchange(ref _released, 1);
+                _release.TrySetResult();
             }
 
-            await release.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+            await _release.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
             return result;
         }
 

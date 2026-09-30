@@ -119,12 +119,12 @@ public sealed class IntegrationServiceTests
         public Guid TenantId { get; } = Guid.NewGuid();
         public Guid UserId { get; }
         public FakeIntegrationRepository Integrations { get; } = new();
-        public FakeTenantRepository Tenants { get; } = new();
+        private FakeTenantRepository Tenants { get; } = new();
         public FakeFeatureFlags Features { get; } = new();
         public FakeClock Clock { get; } = new();
         public Sha256TokenHasher TokenHasher { get; } = new();
-        public FakeAuditLogger Audit { get; } = new();
-        public FakeUnitOfWork UnitOfWork { get; } = new();
+        private FakeAuditLogger Audit { get; } = new();
+        private FakeUnitOfWork UnitOfWork { get; } = new();
         public IntegrationService Service { get; }
         public IApiTokenValidator Validator { get; }
         private FakeCurrentTenant CurrentTenant => new(TenantId);
@@ -135,10 +135,9 @@ public sealed class IntegrationServiceTests
 
     private sealed class FakeIntegrationRepository : IIntegrationRepository
     {
-        public List<IntegrationAccount> Accounts { get; } = [];
-        public List<WebhookEndpoint> Webhooks { get; } = [];
+        private List<IntegrationAccount> Accounts { get; } = [];
+        private List<WebhookEndpoint> Webhooks { get; } = [];
         public List<ApiToken> Tokens { get; } = [];
-        public Guid TenantId { get; set; }
 
         public Task<IReadOnlyList<IntegrationAccount>> ListIntegrationAccountsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<IntegrationAccount>>(Accounts);
         public Task<IntegrationAccount?> GetIntegrationAccountAsync(Guid integrationId, CancellationToken cancellationToken = default) => Task.FromResult(Accounts.FirstOrDefault(account => account.Id == integrationId));
@@ -179,7 +178,7 @@ public sealed class IntegrationServiceTests
     private sealed record FakeCurrentTenant(Guid TenantId) : ICurrentTenant
     {
         public bool IsAvailable => true;
-        public string? TenantSlug => "tenant";
+        public string TenantSlug => "tenant";
         public bool IsPlatformScope => false;
     }
 
@@ -187,7 +186,7 @@ public sealed class IntegrationServiceTests
     {
         public Guid? UserId => UserIdValue;
         public Guid? SessionId => null;
-        public string? Email => "admin@example.com";
+        public string Email => "admin@example.com";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.NormalUser;
         public bool IsAuthenticated => true;
     }

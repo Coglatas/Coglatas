@@ -346,7 +346,7 @@ public sealed class Wpc02BCapabilityGrantWorkspaceGeneralPostgreSqlTests
         dbContext.WorkspaceMembers.Add(workspaceMember);
         await dbContext.SaveChangesAsync();
 
-        return new SeedGraph(tenant, user, tenantUser, workspace, workspaceMember);
+        return new SeedGraph(tenant, user, tenantUser, workspace);
     }
 
     private static User NewUser(string suffix) => new()
@@ -410,8 +410,7 @@ public sealed class Wpc02BCapabilityGrantWorkspaceGeneralPostgreSqlTests
         Tenant Tenant,
         User User,
         TenantUser TenantUser,
-        Workspace Workspace,
-        WorkspaceMember WorkspaceMember);
+        Workspace Workspace);
 
     private sealed class FixedClock(DateTimeOffset utcNow) : IClock
     {

@@ -686,8 +686,8 @@ public sealed class TaskV1Pr06GanttPostgreSqlTests(ITestOutputHelper output)
     private sealed class AfterMilestoneCountInterceptor(
         Func<CancellationToken, Task> insert) : DbCommandInterceptor
     {
-        private int inserted;
-        public bool Inserted => Volatile.Read(ref inserted) != 0;
+        private int _inserted;
+        public bool Inserted => Volatile.Read(ref _inserted) != 0;
 
         public override async ValueTask<DbDataReader> ReaderExecutedAsync(
             DbCommand command,
@@ -697,7 +697,7 @@ public sealed class TaskV1Pr06GanttPostgreSqlTests(ITestOutputHelper output)
         {
             if (command.CommandText.Contains("COUNT", StringComparison.OrdinalIgnoreCase) &&
                 command.CommandText.Contains("FROM milestones", StringComparison.OrdinalIgnoreCase) &&
-                Interlocked.Exchange(ref inserted, 1) == 0)
+                Interlocked.Exchange(ref _inserted, 1) == 0)
             {
                 await insert(cancellationToken);
             }

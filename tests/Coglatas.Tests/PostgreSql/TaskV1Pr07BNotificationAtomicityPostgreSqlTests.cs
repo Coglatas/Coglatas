@@ -586,17 +586,17 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
     private sealed class ServiceHarness : IAsyncDisposable
     {
-        private readonly ServiceProvider provider;
-        private readonly string connectionString;
-        private readonly ICommunicationSafetyGuard safetyGuard;
+        private readonly ServiceProvider _provider;
+        private readonly string _connectionString;
+        private readonly ICommunicationSafetyGuard _safetyGuard;
 
         private ServiceHarness(ServiceProvider provider, string connectionString, Graph graph, SaveRaceCoordinator saveRace, ICommunicationSafetyGuard safetyGuard)
         {
-            this.provider = provider;
-            this.connectionString = connectionString;
+            _provider = provider;
+            _connectionString = connectionString;
             Graph = graph;
             SaveRace = saveRace;
-            this.safetyGuard = safetyGuard;
+            _safetyGuard = safetyGuard;
         }
 
         public Graph Graph { get; }
@@ -657,7 +657,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
         public RequestScope CreateScope(Guid? actorUserId = null)
         {
-            var scope = provider.CreateAsyncScope();
+            var scope = _provider.CreateAsyncScope();
             scope.ServiceProvider.GetRequiredService<CurrentTenantService>()
                 .SetTenant(Graph.Tenant.Id, Graph.Tenant.Slug);
             scope.ServiceProvider.GetRequiredService<TestCurrentUser>()
@@ -672,7 +672,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
                 null!,
                 null!,
                 serviceProvider.GetRequiredService<ITaskCommandService>(),
-                safetyGuard,
+                _safetyGuard,
                 serviceProvider.GetRequiredService<ICurrentUser>(),
                 serviceProvider.GetRequiredService<IClock>(),
                 serviceProvider.GetRequiredService<IAuditLogger>(),
@@ -689,7 +689,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
         public async Task<PersistenceSnapshot> SnapshotAsync()
         {
-            await using var db = CreateTenantContext(connectionString, Graph.Tenant);
+            await using var db = CreateTenantContext(_connectionString, Graph.Tenant);
             var task = await db.TaskItems.AsNoTracking().SingleAsync(item => item.Id == Graph.Task.Id);
             return new PersistenceSnapshot(
                 task.VersionNo,
@@ -704,7 +704,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
         public async Task<IReadOnlyList<Notification>> LoadNotificationsAsync()
         {
-            await using var db = CreateTenantContext(connectionString, Graph.Tenant);
+            await using var db = CreateTenantContext(_connectionString, Graph.Tenant);
             return await db.Notifications.AsNoTracking()
                 .Where(item => item.RelatedEntityType == "TaskItem" && item.RelatedEntityId == Graph.Task.Id)
                 .OrderBy(item => item.CreatedAt)
@@ -713,7 +713,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
         public async Task<CommentSnapshot> LoadCommentSnapshotAsync(Guid commentId)
         {
-            await using var db = CreateTenantContext(connectionString, Graph.Tenant);
+            await using var db = CreateTenantContext(_connectionString, Graph.Tenant);
             return await db.TaskComments.AsNoTracking()
                 .Where(comment => comment.Id == commentId)
                 .Select(comment => new CommentSnapshot(comment.BodyPlainText, comment.VersionNo, comment.UpdatedAt, comment.IsImportant))
@@ -722,7 +722,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
         public async Task<TaskComment> AddTaskCommentAsync(Guid authorUserId, string body)
         {
-            await using var db = CreateTenantContext(connectionString, Graph.Tenant);
+            await using var db = CreateTenantContext(_connectionString, Graph.Tenant);
             var comment = new TaskComment
             {
                 TenantId = Graph.Tenant.Id,
@@ -741,7 +741,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
         public async Task SetWorkspaceMembershipStatusAsync(Guid userId, MembershipStatus status)
         {
-            await using var db = CreateTenantContext(connectionString, Graph.Tenant);
+            await using var db = CreateTenantContext(_connectionString, Graph.Tenant);
             var member = await db.WorkspaceMembers.SingleAsync(item =>
                 item.WorkspaceId == Graph.Workspace.Id && item.UserId == userId);
             member.Status = status;
@@ -750,7 +750,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
         public async Task<long> LoadNotificationUserStateVersionAsync(Guid userId)
         {
-            await using var db = CreateTenantContext(connectionString, Graph.Tenant);
+            await using var db = CreateTenantContext(_connectionString, Graph.Tenant);
             return await db.NotificationUserStates.AsNoTracking()
                 .Where(state => state.UserId == userId)
                 .Select(state => state.Version)
@@ -759,7 +759,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
         public async Task<DateTimeOffset?> LoadDeadlineAsync()
         {
-            await using var db = CreateTenantContext(connectionString, Graph.Tenant);
+            await using var db = CreateTenantContext(_connectionString, Graph.Tenant);
             return await db.TaskItems
                 .AsNoTracking()
                 .Where(item => item.Id == Graph.Task.Id)
@@ -769,7 +769,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
         public async Task<IReadOnlyList<AuditLog>> LoadAuditLogsAsync()
         {
-            await using var db = CreateTenantContext(connectionString, Graph.Tenant);
+            await using var db = CreateTenantContext(_connectionString, Graph.Tenant);
             return await db.AuditLogs.AsNoTracking()
                 .Where(item => item.EntityType == "TaskItem" && item.EntityId == Graph.Task.Id)
                 .OrderBy(item => item.CreatedAt)
@@ -778,7 +778,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
         public async Task<IReadOnlyList<OutboxEvent>> LoadOutboxAsync()
         {
-            await using var db = CreateTenantContext(connectionString, Graph.Tenant);
+            await using var db = CreateTenantContext(_connectionString, Graph.Tenant);
             return await db.OutboxEvents.AsNoTracking()
                 .OrderBy(item => item.CreatedAt)
                 .ThenBy(item => item.Id)
@@ -788,7 +788,7 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
         public async ValueTask DisposeAsync()
         {
             SaveRace.Dispose();
-            await provider.DisposeAsync();
+            await _provider.DisposeAsync();
         }
 
         private static async Task<Graph> SeedAsync(string connectionString)
@@ -969,12 +969,12 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
     private sealed class TestCurrentUser : ICurrentUser
     {
-        private Guid userId;
+        private Guid _userId;
 
-        public void SetUser(Guid value) => userId = value;
-        public Guid? UserId => userId;
+        public void SetUser(Guid value) => _userId = value;
+        public Guid? UserId => _userId;
         public Guid? SessionId => null;
-        public string? Email => "pr07b-atomicity@example.test";
+        public string Email => "pr07b-atomicity@example.test";
         public SystemRole? SystemRole => null;
         public bool IsAuthenticated => true;
     }
@@ -1065,38 +1065,38 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
     private sealed class SaveRaceCoordinator : IDisposable
     {
-        private readonly object gate = new();
-        private TaskCompletionSource? release;
-        private bool armed;
-        private int remaining;
+        private readonly Lock _gate = new();
+        private TaskCompletionSource? _release;
+        private bool _armed;
+        private int _remaining;
 
         public void Arm()
         {
-            lock (gate)
+            lock (_gate)
             {
-                if (armed)
-                    throw new InvalidOperationException("A save race is already armed.");
+                if (_armed)
+                    throw new InvalidOperationException("A save race is already _armed.");
 
-                armed = true;
-                remaining = 2;
-                release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                _armed = true;
+                _remaining = 2;
+                _release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             }
         }
 
         public async Task WaitBeforeSaveAsync(CancellationToken cancellationToken)
         {
-            Task? wait = null;
-            lock (gate)
+            Task wait;
+            lock (_gate)
             {
-                if (!armed)
+                if (!_armed)
                     return;
 
-                remaining--;
-                wait = release!.Task;
-                if (remaining == 0)
+                _remaining--;
+                wait = _release!.Task;
+                if (_remaining == 0)
                 {
-                    armed = false;
-                    release.TrySetResult();
+                    _armed = false;
+                    _release.TrySetResult();
                 }
             }
 
@@ -1105,12 +1105,12 @@ public sealed class TaskV1Pr07BNotificationAtomicityPostgreSqlTests
 
         public void Dispose()
         {
-            lock (gate)
+            lock (_gate)
             {
-                release?.TrySetCanceled();
-                release = null;
-                armed = false;
-                remaining = 0;
+                _release?.TrySetCanceled();
+                _release = null;
+                _armed = false;
+                _remaining = 0;
             }
         }
     }

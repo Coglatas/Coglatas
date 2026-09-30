@@ -82,13 +82,8 @@ public sealed class TaskExecutionResultServiceTests
         private Fixture(
             AppDbContext db,
             CurrentTenantService currentTenant,
-            Tenant tenant,
-            User actor,
-            Workspace workspace,
-            Project project,
             TaskItem task,
             TaskExecutionRun run,
-            FileObject fileObject,
             Attachment attachment,
             TaskExecutionPersistedResult result,
             ControllableProjectAuthorization projectAuthorization,
@@ -96,13 +91,8 @@ public sealed class TaskExecutionResultServiceTests
         {
             Db = db;
             CurrentTenant = currentTenant;
-            Tenant = tenant;
-            Actor = actor;
-            Workspace = workspace;
-            Project = project;
             Task = task;
             Run = run;
-            FileObject = fileObject;
             Attachment = attachment;
             Result = result;
             ProjectAuthorization = projectAuthorization;
@@ -110,14 +100,9 @@ public sealed class TaskExecutionResultServiceTests
         }
 
         public AppDbContext Db { get; }
-        public CurrentTenantService CurrentTenant { get; }
-        public Tenant Tenant { get; }
-        public User Actor { get; }
-        public Workspace Workspace { get; }
-        public Project Project { get; }
+        private CurrentTenantService CurrentTenant { get; }
         public TaskItem Task { get; }
         public TaskExecutionRun Run { get; }
-        public FileObject FileObject { get; }
         public Attachment Attachment { get; }
         public TaskExecutionPersistedResult Result { get; }
         public ControllableProjectAuthorization ProjectAuthorization { get; }
@@ -261,7 +246,7 @@ public sealed class TaskExecutionResultServiceTests
                 task.Id,
                 run.Id,
                 FirstPartyProjectFilesReportV1.SchemaVersion,
-                TaskExecutionRunStatus.Succeeded.ToString(),
+                nameof(TaskExecutionRunStatus.Succeeded),
                 FirstPartyProjectFilesReportV1.Title,
                 reportBody,
                 reportHash,
@@ -288,13 +273,8 @@ public sealed class TaskExecutionResultServiceTests
             return new Fixture(
                 db,
                 currentTenant,
-                tenant,
-                actor,
-                workspace,
-                project,
                 task,
                 run,
-                fileObject,
                 attachment,
                 result,
                 projectAuthorization,
@@ -326,7 +306,7 @@ public sealed class TaskExecutionResultServiceTests
         public Task<TaskExecutionPersistedResult?> GetByRunAsync(
             Guid runId,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<TaskExecutionPersistedResult?>(runId == result.TaskExecutionRunId ? result : null);
+            Task.FromResult(runId == result.TaskExecutionRunId ? result : null);
 
         public Task<IReadOnlyList<TaskExecutionResultSourceReference>> ListSourceReferencesAsync(
             Guid resultId,

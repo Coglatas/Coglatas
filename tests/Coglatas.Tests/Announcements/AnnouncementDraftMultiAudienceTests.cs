@@ -1,4 +1,3 @@
-using Coglatas.Application;
 using Coglatas.Application.Announcements;
 using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
@@ -88,7 +87,6 @@ public sealed class AnnouncementDraftMultiAudienceTests
     {
         private Fixture(
             AppDbContext db,
-            CurrentTenantService tenant,
             MutableClock clock,
             TestAudienceService audiences,
             TestDistributionStore distribution,
@@ -100,7 +98,6 @@ public sealed class AnnouncementDraftMultiAudienceTests
             Guid overlapUserId)
         {
             Db = db;
-            Tenant = tenant;
             Clock = clock;
             Audiences = audiences;
             Distribution = distribution;
@@ -113,15 +110,14 @@ public sealed class AnnouncementDraftMultiAudienceTests
         }
 
         public AppDbContext Db { get; }
-        public CurrentTenantService Tenant { get; }
         public MutableClock Clock { get; }
         public TestAudienceService Audiences { get; }
         public TestDistributionStore Distribution { get; }
         public RecordingNotificationService Notifications { get; }
         public AnnouncementDraftService Service { get; }
-        public Guid WorkspaceId { get; }
-        public Guid GroupId { get; }
-        public Guid ChannelId { get; }
+        private Guid WorkspaceId { get; }
+        private Guid GroupId { get; }
+        private Guid ChannelId { get; }
         public Guid OverlapUserId { get; }
 
         public static async Task<Fixture> CreateAsync()
@@ -180,7 +176,6 @@ public sealed class AnnouncementDraftMultiAudienceTests
 
             return new Fixture(
                 db,
-                tenant,
                 clock,
                 audiences,
                 distribution,
@@ -213,7 +208,7 @@ public sealed class AnnouncementDraftMultiAudienceTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => null;
-        public string? Email => "author@example.test";
+        public string Email => "author@example.test";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.Teacher;
         public bool IsAuthenticated => true;
     }

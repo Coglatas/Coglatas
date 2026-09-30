@@ -51,7 +51,7 @@ public sealed class TenantExportServiceAuthorizationTests
         public bool BuildCalled { get; private set; }
 
         public Task<Tenant?> GetTenantAsync(Guid requestedTenantId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<Tenant?>(requestedTenantId == tenantId ? new Tenant(tenantId) : null);
+            Task.FromResult(requestedTenantId == tenantId ? new Tenant(tenantId) : null);
 
         public Task<ExportJob?> GetExportJobAsync(Guid exportJobId, CancellationToken cancellationToken = default) =>
             Task.FromResult<ExportJob?>(null);
@@ -80,14 +80,9 @@ public sealed class TenantExportServiceAuthorizationTests
         }
     }
 
-    private sealed class SequenceTenantAuthorizationService : ITenantAuthorizationService
+    private sealed class SequenceTenantAuthorizationService(params bool[] canManageResponses) : ITenantAuthorizationService
     {
-        private readonly Queue<bool> _responses;
-
-        public SequenceTenantAuthorizationService(params bool[] canManageResponses)
-        {
-            _responses = new Queue<bool>(canManageResponses);
-        }
+        private readonly Queue<bool> _responses = new(canManageResponses);
 
         public int CanManageCalls { get; private set; }
 
@@ -123,7 +118,7 @@ public sealed class TenantExportServiceAuthorizationTests
     {
         public Guid TenantId => tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "tenant";
+        public string TenantSlug => "tenant";
         public bool IsPlatformScope => false;
     }
 
@@ -131,7 +126,7 @@ public sealed class TenantExportServiceAuthorizationTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.Empty;
-        public string? Email => "export-test@example.invalid";
+        public string Email => "export-test@example.invalid";
         public SystemRole? SystemRole => null;
         public bool IsAuthenticated => true;
     }

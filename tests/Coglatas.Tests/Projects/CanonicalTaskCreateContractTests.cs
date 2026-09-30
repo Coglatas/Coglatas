@@ -183,8 +183,8 @@ public sealed class CanonicalTaskCreateContractTests
 
     private sealed class StubService : ICanonicalTaskCreateService
     {
-        public Result<TaskCreateOptionsResponse> OptionsResult { get; set; } = Failure<TaskCreateOptionsResponse>("NotFound", "The requested resource was not found.");
-        public Result<CanonicalTaskCreateResponse> CreateResult { get; set; } = Failure<CanonicalTaskCreateResponse>("NotFound", "The requested resource was not found.");
+        private Result<TaskCreateOptionsResponse> OptionsResult { get; } = Failure<TaskCreateOptionsResponse>("NotFound", "The requested resource was not found.");
+        public Result<CanonicalTaskCreateResponse> CreateResult { get; init; } = Failure<CanonicalTaskCreateResponse>("NotFound", "The requested resource was not found.");
         public string? IdempotencyKey { get; private set; }
 
         public Task<Result<TaskCreateOptionsResponse>> GetCreateOptionsAsync(Guid projectId, CancellationToken cancellationToken = default) =>

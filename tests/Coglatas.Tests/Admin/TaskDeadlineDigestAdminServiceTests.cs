@@ -144,10 +144,10 @@ public sealed class TaskDeadlineDigestAdminServiceTests
         }
 
         public User Actor { get; }
-        public FakeAdminRepository AdminRepository { get; } = new();
+        private FakeAdminRepository AdminRepository { get; } = new();
         public FakeDigestRepository Digests { get; } = new();
         public TaskDeadlineDigestDiagnostics Diagnostics { get; } = new();
-        public CurrentTenantService Tenant { get; } = new();
+        private CurrentTenantService Tenant { get; } = new();
         public FakeClock Clock { get; } = new();
         public FakeUnitOfWork UnitOfWork { get; } = new();
         public AdminService Service { get; }
@@ -254,7 +254,7 @@ public sealed class TaskDeadlineDigestAdminServiceTests
     {
         public Guid? UserId => actor.Id;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => actor.Email;
+        public string Email => actor.Email;
         public SystemRole? SystemRole => actor.SystemRole;
         public bool IsAuthenticated => true;
     }

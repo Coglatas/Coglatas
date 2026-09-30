@@ -1,6 +1,5 @@
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
-using Coglatas.Application.Notifications;
 using Coglatas.Application.Realtime;
 using Coglatas.Domain.Entities;
 using Coglatas.Domain.Enums;

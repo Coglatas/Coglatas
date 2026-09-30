@@ -242,22 +242,21 @@ public sealed class CommunicationPollingServiceTests
         }
 
         public Guid TenantId { get; } = Guid.NewGuid();
-        public Guid WorkspaceId { get; } = Guid.NewGuid();
+        private Guid WorkspaceId { get; } = Guid.NewGuid();
         public Guid UserId { get; } = Guid.NewGuid();
         public Guid OtherUserId { get; } = Guid.NewGuid();
-        public FakeMessagingRepository Messaging { get; } = new();
+        private FakeMessagingRepository Messaging { get; } = new();
         public FakeNotificationService Notifications { get; } = new();
-        public FakeConversationAuthorization Authorization { get; } = new();
-        public FakeProjectAuthorization Projects { get; } = new();
-        public FakeCurrentUser Current { get; } = new();
-        public FakeCurrentTenant CurrentTenant { get; } = new();
+        private FakeConversationAuthorization Authorization { get; } = new();
+        private FakeProjectAuthorization Projects { get; } = new();
+        private FakeCurrentUser Current { get; } = new();
+        private FakeCurrentTenant CurrentTenant { get; } = new();
         public FakeClock Clock { get; } = new();
         public CapturingAuditLogger Audit { get; } = new();
-        public FakeUnitOfWork UnitOfWork { get; } = new();
+        private FakeUnitOfWork UnitOfWork { get; } = new();
         public CommunicationPollingService Service { get; }
         public bool IncludeRemovedConversationsInList
         {
-            get => Messaging.IncludeRemovedConversationsInList;
             set => Messaging.IncludeRemovedConversationsInList = value;
         }
 
@@ -489,7 +488,7 @@ public sealed class CommunicationPollingServiceTests
 
     private sealed class FakeNotificationService : INotificationService
     {
-        public List<NotificationListItemResponse> Notifications { get; } = [];
+        private List<NotificationListItemResponse> Notifications { get; } = [];
 
         public void Add(NotificationListItemResponse notification) => Notifications.Add(notification);
 
@@ -552,7 +551,7 @@ public sealed class CommunicationPollingServiceTests
         public Guid TenantIdValue { get; set; }
         public Guid TenantId => TenantIdValue;
         public bool IsAvailable => TenantIdValue != Guid.Empty;
-        public string? TenantSlug => "tenant-test";
+        public string TenantSlug => "tenant-test";
         public bool IsPlatformScope => false;
     }
 

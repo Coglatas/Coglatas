@@ -1,4 +1,3 @@
-using System.Text;
 using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Files;
@@ -70,8 +69,7 @@ public sealed class FileActivityServiceTests
     [Fact]
     public async Task ActivityFailsClosedBeforeReadingHistoryWhenViewAuthorizationIsRevoked()
     {
-        var fixture = new Fixture();
-        fixture.Authorization.CanView = false;
+        var fixture = new Fixture { Authorization = { CanView = false } };
 
         var result = await fixture.Service.GetAsync(fixture.File.Id);
 
@@ -184,13 +182,13 @@ public sealed class FileActivityServiceTests
                 new CurrentTenant(TenantId));
         }
 
-        public Guid TenantId { get; } = Guid.NewGuid();
-        public Guid WorkspaceId { get; } = Guid.NewGuid();
+        private Guid TenantId { get; } = Guid.NewGuid();
+        private Guid WorkspaceId { get; } = Guid.NewGuid();
         public Guid ActorUserId { get; } = Guid.NewGuid();
         public FileObject File { get; }
-        public Attachment Attachment { get; }
+        private Attachment Attachment { get; }
         public FakeFileRepository Files { get; } = new();
-        public FakeGrantRepository Grants { get; } = new();
+        private FakeGrantRepository Grants { get; } = new();
         public FakeFileAuthorization Authorization { get; } = new();
         public FakeStorage Storage { get; } = new();
         public FileActivityService Service { get; }
@@ -216,7 +214,7 @@ public sealed class FileActivityServiceTests
         public Task<FileVersionRecord?> GetFileVersionAsync(Guid tenantId, Guid fileObjectId, Guid versionId, CancellationToken cancellationToken = default)
         {
             VersionReadCalls++;
-            return Task.FromResult<FileVersionRecord?>(Versions.FirstOrDefault(version =>
+            return Task.FromResult(Versions.FirstOrDefault(version =>
                 version.FileObjectId == fileObjectId && version.Id == versionId));
         }
 
@@ -285,7 +283,7 @@ public sealed class FileActivityServiceTests
         public Task<Stream> OpenReadAsync(string storageKey, CancellationToken cancellationToken = default)
         {
             LastOpenedStorageKey = storageKey;
-            return Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("version")));
+            return Task.FromResult<Stream>(new MemoryStream("version"u8.ToArray()));
         }
         public Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<bool> ExistsAsync(string storageKey, CancellationToken cancellationToken = default) => Task.FromResult(true);
@@ -305,7 +303,7 @@ public sealed class FileActivityServiceTests
     {
         public Guid TenantId => Id;
         public bool IsAvailable => true;
-        public string? TenantSlug => "test";
+        public string TenantSlug => "test";
         public bool IsPlatformScope => false;
     }
 }

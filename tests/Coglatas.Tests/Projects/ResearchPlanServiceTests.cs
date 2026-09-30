@@ -1,4 +1,3 @@
-using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
 using Coglatas.Application.Projects;
@@ -143,9 +142,7 @@ public sealed class ResearchPlanServiceTests
             AppDbContext db,
             CurrentTenantService currentTenant,
             Tenant tenant,
-            Workspace workspace,
             User actor,
-            Project project,
             TaskItem taskItem,
             ControllableProjectAuthorization authorization,
             RecordingAuditLogger audit)
@@ -153,9 +150,7 @@ public sealed class ResearchPlanServiceTests
             Db = db;
             CurrentTenant = currentTenant;
             Tenant = tenant;
-            Workspace = workspace;
             Actor = actor;
-            Project = project;
             TaskItem = taskItem;
             Authorization = authorization;
             Audit = audit;
@@ -163,13 +158,11 @@ public sealed class ResearchPlanServiceTests
         }
 
         public AppDbContext Db { get; }
-        public CurrentTenantService CurrentTenant { get; }
-        public Tenant Tenant { get; }
-        public Workspace Workspace { get; }
-        public User Actor { get; }
-        public Project Project { get; }
+        private CurrentTenantService CurrentTenant { get; }
+        private Tenant Tenant { get; }
+        private User Actor { get; }
         public TaskItem TaskItem { get; }
-        public ControllableProjectAuthorization Authorization { get; }
+        private ControllableProjectAuthorization Authorization { get; }
         public RecordingAuditLogger Audit { get; }
         public ResearchPlanService Service { get; }
 
@@ -250,9 +243,7 @@ public sealed class ResearchPlanServiceTests
                 db,
                 currentTenant,
                 tenant,
-                workspace,
                 actor,
-                project,
                 taskItem,
                 new ControllableProjectAuthorization { CanManage = canManage },
                 new RecordingAuditLogger());
@@ -278,8 +269,8 @@ public sealed class ResearchPlanServiceTests
 
     private sealed class ControllableProjectAuthorization : IProjectAuthorizationService
     {
-        public bool CanView { get; set; } = true;
-        public bool CanManage { get; set; } = true;
+        private bool CanView { get; } = true;
+        public bool CanManage { get; init; } = true;
 
         public Task<bool> CanViewProject(Guid userId, Guid projectId, CancellationToken cancellationToken = default) =>
             Task.FromResult(CanView);

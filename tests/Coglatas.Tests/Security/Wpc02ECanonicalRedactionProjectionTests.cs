@@ -204,11 +204,14 @@ public sealed class Wpc02ECanonicalRedactionProjectionTests
         var httpContext = new DefaultHttpContext
         {
             TraceIdentifier = "wpc02e-415",
-            Response = { Body = new MemoryStream() }
+            Response = { Body = new MemoryStream() },
+            Request =
+            {
+                Method = HttpMethods.Post,
+                Path = path,
+                ContentType = "text/plain"
+            }
         };
-        httpContext.Request.Method = HttpMethods.Post;
-        httpContext.Request.Path = path;
-        httpContext.Request.ContentType = "text/plain";
 
         await middleware.InvokeAsync(httpContext);
 
@@ -232,10 +235,10 @@ public sealed class Wpc02ECanonicalRedactionProjectionTests
             nextCalled = true;
             return Task.CompletedTask;
         });
-        var httpContext = new DefaultHttpContext();
-        httpContext.Request.Method = HttpMethods.Post;
-        httpContext.Request.Path = "/api/workspaces/capabilities";
-        httpContext.Request.ContentType = "text/plain";
+        var httpContext = new DefaultHttpContext
+        {
+            Request = { Method = HttpMethods.Post, Path = "/api/workspaces/capabilities", ContentType = "text/plain" }
+        };
 
         await middleware.InvokeAsync(httpContext);
 
@@ -246,7 +249,7 @@ public sealed class Wpc02ECanonicalRedactionProjectionTests
     private static DefaultHttpContext CreateHttpContext(IRedactionService redactor)
     {
         var services = new ServiceCollection()
-            .AddSingleton<IRedactionService>(redactor)
+            .AddSingleton(redactor)
             .AddSingleton<ICurrentUser>(new TestCurrentUser(Guid.NewGuid()))
             .AddSingleton<ICurrentTenant>(new TestCurrentTenant(Guid.NewGuid()))
             .BuildServiceProvider();
@@ -264,7 +267,7 @@ public sealed class Wpc02ECanonicalRedactionProjectionTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "redaction-test@example.invalid";
+        public string Email => "redaction-test@example.invalid";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.NormalUser;
         public bool IsAuthenticated => true;
     }
@@ -273,7 +276,7 @@ public sealed class Wpc02ECanonicalRedactionProjectionTests
     {
         public Guid TenantId => tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "redaction-test";
+        public string TenantSlug => "redaction-test";
         public bool IsPlatformScope => false;
     }
 

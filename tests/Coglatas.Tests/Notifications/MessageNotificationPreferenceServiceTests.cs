@@ -55,14 +55,9 @@ public sealed class MessageNotificationPreferenceServiceTests
         Assert.Empty(store.Calls);
     }
 
-    private sealed class RecordingStore : IMessageNotificationPreferenceStore
+    private sealed class RecordingStore(bool enabled) : IMessageNotificationPreferenceStore
     {
-        private bool enabled;
-
-        public RecordingStore(bool enabled)
-        {
-            this.enabled = enabled;
-        }
+        private bool _enabled = enabled;
 
         public List<Call> Calls { get; } = [];
 
@@ -72,7 +67,7 @@ public sealed class MessageNotificationPreferenceServiceTests
             CancellationToken cancellationToken = default)
         {
             Calls.Add(new Call("get", tenantId, userId, null));
-            return Task.FromResult<bool?>(enabled);
+            return Task.FromResult<bool?>(_enabled);
         }
 
         public Task<bool> SetEnabledAsync(
@@ -83,7 +78,7 @@ public sealed class MessageNotificationPreferenceServiceTests
             CancellationToken cancellationToken = default)
         {
             Calls.Add(new Call("set", tenantId, userId, updatedAt));
-            enabled = value;
+            _enabled = value;
             return Task.FromResult(true);
         }
     }
@@ -103,7 +98,7 @@ public sealed class MessageNotificationPreferenceServiceTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "test";
+        public string TenantSlug => "test";
         public bool IsPlatformScope { get; } = platformScope;
     }
 

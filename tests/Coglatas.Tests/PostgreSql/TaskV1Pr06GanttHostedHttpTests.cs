@@ -741,13 +741,13 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
         private const string TenantHeader = "X-Tenant-Slug";
         private const string OutboxFailureConstraint = "CK_TaskV1Pr06_ForceOutboxFailure";
 
-        private readonly WebApplication app;
-        private readonly Uri baseAddress;
-        private readonly string connectionString;
-        private readonly string fileStoragePath;
-        private readonly string dataProtectionPath;
-        private readonly HostedCommandCounter queryCounter;
-        private readonly List<IDisposable> clients = [];
+        private readonly WebApplication _app;
+        private readonly Uri _baseAddress;
+        private readonly string _connectionString;
+        private readonly string _fileStoragePath;
+        private readonly string _dataProtectionPath;
+        private readonly HostedCommandCounter _queryCounter;
+        private readonly List<IDisposable> _clients = [];
 
         private GanttHostedTestApp(
             WebApplication app,
@@ -758,12 +758,12 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
             HostedGraph graph,
             HostedCommandCounter queryCounter)
         {
-            this.app = app;
-            this.baseAddress = baseAddress;
-            this.connectionString = connectionString;
-            this.fileStoragePath = fileStoragePath;
-            this.dataProtectionPath = dataProtectionPath;
-            this.queryCounter = queryCounter;
+            _app = app;
+            _baseAddress = baseAddress;
+            _connectionString = connectionString;
+            _fileStoragePath = fileStoragePath;
+            _dataProtectionPath = dataProtectionPath;
+            _queryCounter = queryCounter;
             Graph = graph;
         }
 
@@ -857,15 +857,15 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
                 queryCounter);
         }
 
-        public void BeginQueryCapture() => queryCounter.Begin();
+        public void BeginQueryCapture() => _queryCounter.Begin();
 
-        public IReadOnlyList<string> EndQueryCapture() => queryCounter.End();
+        public IReadOnlyList<string> EndQueryCapture() => _queryCounter.End();
 
         public async Task<ActorHttpClient> LoginAsync(User actor, Tenant tenant)
         {
             var client = NewClient();
             var actorClient = new ActorHttpClient(client, tenant.Slug);
-            clients.Add(actorClient);
+            _clients.Add(actorClient);
             await actorClient.LoginAsync(actor.Email, Password);
             return actorClient;
         }
@@ -873,7 +873,7 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
         public async Task<HttpResponseMessage> SendAnonymousGetAsync(Tenant tenant, string path)
         {
             var client = NewClient();
-            clients.Add(client);
+            _clients.Add(client);
             using var request = new HttpRequestMessage(HttpMethod.Get, path);
             request.Headers.TryAddWithoutValidation(TenantHeader, tenant.Slug);
             return await client.SendAsync(request);
@@ -886,18 +886,16 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
             T body)
         {
             var client = NewClient();
-            clients.Add(client);
-            using var request = new HttpRequestMessage(method, path)
-            {
-                Content = JsonContent.Create(body)
-            };
+            _clients.Add(client);
+            using var request = new HttpRequestMessage(method, path);
+            request.Content = JsonContent.Create(body);
             request.Headers.TryAddWithoutValidation(TenantHeader, tenant.Slug);
             return await client.SendAsync(request);
         }
 
         public async Task SetProjectStatusAsync(ProjectStatus status)
         {
-            await using var scope = app.Services.CreateAsyncScope();
+            await using var scope = _app.Services.CreateAsyncScope();
             SetTenant(scope.ServiceProvider, Graph.TenantA);
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var project = await db.Projects.SingleAsync(item => item.Id == Graph.Project.Id);
@@ -911,7 +909,7 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
         public async Task SetWorkspaceMembershipStatusAsync(User user, MembershipStatus status)
         {
-            await using var scope = app.Services.CreateAsyncScope();
+            await using var scope = _app.Services.CreateAsyncScope();
             SetTenant(scope.ServiceProvider, Graph.TenantA);
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var membership = await db.WorkspaceMembers.SingleAsync(item =>
@@ -928,7 +926,7 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
             if (activeItemCount < 1)
                 throw new ArgumentOutOfRangeException(nameof(activeItemCount));
 
-            await using var scope = app.Services.CreateAsyncScope();
+            await using var scope = _app.Services.CreateAsyncScope();
             SetTenant(scope.ServiceProvider, Graph.TenantA);
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var suffix = Guid.NewGuid().ToString("N");
@@ -1029,7 +1027,7 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
         public async Task<TaskState> ReadTaskStateAsync(Guid taskId)
         {
-            await using var scope = app.Services.CreateAsyncScope();
+            await using var scope = _app.Services.CreateAsyncScope();
             SetTenant(scope.ServiceProvider, Graph.TenantA);
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var task = await db.TaskItems.AsNoTracking().SingleAsync(item => item.Id == taskId);
@@ -1050,7 +1048,7 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
         public async Task<DependencyState> ReadDependencyStateAsync()
         {
-            await using var scope = app.Services.CreateAsyncScope();
+            await using var scope = _app.Services.CreateAsyncScope();
             SetTenant(scope.ServiceProvider, Graph.TenantA);
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var predecessor = await db.TaskItems.AsNoTracking()
@@ -1075,7 +1073,7 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
         public async Task<OutboxEvent> ReadLatestProjectChangedEventAsync()
         {
-            await using var scope = app.Services.CreateAsyncScope();
+            await using var scope = _app.Services.CreateAsyncScope();
             SetTenant(scope.ServiceProvider, Graph.TenantA);
             return await scope.ServiceProvider.GetRequiredService<AppDbContext>().OutboxEvents
                 .AsNoTracking()
@@ -1089,7 +1087,7 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
         public Task InstallOutboxFailureConstraintAsync() =>
             PostgreSqlMigrationTestDatabase.ExecuteAsync(
-                connectionString,
+                _connectionString,
                 $"""
                  ALTER TABLE outbox_events
                  ADD CONSTRAINT "{OutboxFailureConstraint}"
@@ -1098,7 +1096,7 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
         public Task RemoveOutboxFailureConstraintAsync() =>
             PostgreSqlMigrationTestDatabase.ExecuteAsync(
-                connectionString,
+                _connectionString,
                 $"""
                  ALTER TABLE outbox_events
                  DROP CONSTRAINT IF EXISTS "{OutboxFailureConstraint}";
@@ -1106,11 +1104,11 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
         public async ValueTask DisposeAsync()
         {
-            foreach (var client in clients)
+            foreach (var client in _clients)
                 client.Dispose();
-            await app.DisposeAsync();
-            TryDeleteDirectory(Path.GetDirectoryName(fileStoragePath)!);
-            TryDeleteDirectory(Path.GetDirectoryName(dataProtectionPath)!);
+            await _app.DisposeAsync();
+            TryDeleteDirectory(Path.GetDirectoryName(_fileStoragePath)!);
+            TryDeleteDirectory(Path.GetDirectoryName(_dataProtectionPath)!);
         }
 
         private HttpClient NewClient() =>
@@ -1121,7 +1119,7 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
                     CookieContainer = new CookieContainer()
                 })
             {
-                BaseAddress = baseAddress
+                BaseAddress = _baseAddress
             };
 
         private static async Task<HostedGraph> SeedAsync(IServiceProvider services, DateTimeOffset now)
@@ -1269,7 +1267,6 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
             return new HostedGraph(
                 tenantA,
-                tenantB,
                 manager,
                 contributor,
                 viewer,
@@ -1428,10 +1425,8 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
         public async Task LoginAsync(string email, string password)
         {
             var token = await GetCsrfTokenAsync();
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
-            {
-                Content = JsonContent.Create(new LoginRequest(email, password))
-            };
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login");
+            request.Content = JsonContent.Create(new LoginRequest(email, password));
             request.Headers.TryAddWithoutValidation("X-Tenant-Slug", tenantSlug);
             request.Headers.TryAddWithoutValidation(SecurityOptions.CsrfHeaderName, token);
             using var response = await client.SendAsync(request);
@@ -1469,7 +1464,8 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
             HttpContent? content,
             bool includeCsrf)
         {
-            using var request = new HttpRequestMessage(method, path) { Content = content };
+            using var request = new HttpRequestMessage(method, path);
+            request.Content = content;
             request.Headers.TryAddWithoutValidation("X-Tenant-Slug", tenantSlug);
             if (includeCsrf)
             {
@@ -1498,7 +1494,6 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
     private sealed record HostedGraph(
         Tenant TenantA,
-        Tenant TenantB,
         User Manager,
         User Contributor,
         User Viewer,
@@ -1546,25 +1541,25 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
     private sealed class HostedCommandCounter : DbCommandInterceptor
     {
-        private readonly object sync = new();
-        private readonly List<string> commands = [];
-        private bool active;
+        private readonly Lock _sync = new();
+        private readonly List<string> _commands = [];
+        private bool _active;
 
         public void Begin()
         {
-            lock (sync)
+            lock (_sync)
             {
-                commands.Clear();
-                active = true;
+                _commands.Clear();
+                _active = true;
             }
         }
 
         public IReadOnlyList<string> End()
         {
-            lock (sync)
+            lock (_sync)
             {
-                active = false;
-                return commands.ToArray();
+                _active = false;
+                return _commands.ToArray();
             }
         }
 
@@ -1627,10 +1622,10 @@ public sealed class TaskV1Pr06GanttHostedHttpTests(ITestOutputHelper output)
 
         private void Record(DbCommand command)
         {
-            lock (sync)
+            lock (_sync)
             {
-                if (active)
-                    commands.Add(command.CommandText);
+                if (_active)
+                    _commands.Add(command.CommandText);
             }
         }
     }

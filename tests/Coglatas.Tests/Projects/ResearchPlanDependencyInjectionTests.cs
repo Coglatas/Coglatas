@@ -55,7 +55,7 @@ public sealed class ResearchPlanDependencyInjectionTests
         public Guid? UserId => null;
         public Guid? SessionId => null;
         public string? Email => null;
-        public Coglatas.Domain.Enums.SystemRole? SystemRole => null;
+        public Domain.Enums.SystemRole? SystemRole => null;
         public bool IsAuthenticated => false;
     }
 }

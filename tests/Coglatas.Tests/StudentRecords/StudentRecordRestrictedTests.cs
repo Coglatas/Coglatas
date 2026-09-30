@@ -45,7 +45,7 @@ public sealed class StudentRecordRestrictedTests
 
         var entry = Assert.Single(fixture.Audit.Entries);
         var serialized = JsonSerializer.Serialize(entry);
-        Assert.Contains(DataClassification.StudentRecordRestricted.ToString(), serialized);
+        Assert.Contains(nameof(DataClassification.StudentRecordRestricted), serialized);
         Assert.Contains(StudentRecordDataPolicy.HealthNotes, serialized);
         Assert.DoesNotContain(fixture.Record.HealthNotes!, serialized);
         Assert.DoesNotContain(fixture.Record.GuardianContact!, serialized);
@@ -679,9 +679,9 @@ public sealed class StudentRecordRestrictedTests
                 Audit);
         }
 
-        public Guid TenantId { get; } = Guid.NewGuid();
-        public Guid WorkspaceId { get; } = Guid.NewGuid();
-        public Guid UserId { get; } = Guid.NewGuid();
+        private Guid TenantId { get; } = Guid.NewGuid();
+        private Guid WorkspaceId { get; } = Guid.NewGuid();
+        private Guid UserId { get; } = Guid.NewGuid();
 
         public StudentRecord Record { get; } = new()
         {
@@ -697,13 +697,13 @@ public sealed class StudentRecordRestrictedTests
         };
 
         public FakeCurrentUser CurrentUser { get; }
-        public FakeCurrentTenant CurrentTenant { get; }
-        public FakeStudentRecordRepository StudentRecords { get; }
-        public FakeWorkspaceRepository Workspaces { get; }
+        private FakeCurrentTenant CurrentTenant { get; }
+        private FakeStudentRecordRepository StudentRecords { get; }
+        private FakeWorkspaceRepository Workspaces { get; }
         public FakeStudentRecordSchoolAccessContextProvider SchoolAccess { get; }
         public FakeStudentRecordExportGrantRepository ExportGrants { get; }
         public FakeClock Clock { get; }
-        public FakeUnitOfWork UnitOfWork { get; }
+        private FakeUnitOfWork UnitOfWork { get; }
         public FakeAuditLogger Audit { get; }
         public StudentRecordService Service { get; }
     }
@@ -736,12 +736,12 @@ public sealed class StudentRecordRestrictedTests
 
     private sealed class FakeWorkspaceRepository(Guid workspaceId, Guid userId, WorkspaceRole role) : IWorkspaceRepository
     {
-        public Task<IReadOnlyList<Workspace>> ListForUserAsync(Guid userId, bool includeAll, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<Workspace>> ListForUserAsync(Guid requestedUserId, bool includeAll, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IReadOnlyList<Workspace>>([]);
         }
 
-        public Task<Workspace?> GetByIdAsync(Guid workspaceId, CancellationToken cancellationToken = default)
+        public Task<Workspace?> GetByIdAsync(Guid requestedWorkspaceId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<Workspace?>(null);
         }
@@ -762,7 +762,7 @@ public sealed class StudentRecordRestrictedTests
             });
         }
 
-        public Task<IReadOnlyList<WorkspaceMember>> ListMembersAsync(Guid workspaceId, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<WorkspaceMember>> ListMembersAsync(Guid requestedWorkspaceId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<IReadOnlyList<WorkspaceMember>>([]);
         }
@@ -783,7 +783,7 @@ public sealed class StudentRecordRestrictedTests
         public Guid? UserIdValue { get; set; } = userId;
         public Guid? UserId => UserIdValue;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "student-record-reader@example.test";
+        public string Email => "student-record-reader@example.test";
         public SystemRole? SystemRole => global::Coglatas.Domain.Enums.SystemRole.Admin;
         public bool IsAuthenticated => true;
     }
@@ -792,7 +792,7 @@ public sealed class StudentRecordRestrictedTests
     {
         public Guid TenantId => tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "tenant-a";
+        public string TenantSlug => "tenant-a";
         public bool IsPlatformScope => false;
     }
 

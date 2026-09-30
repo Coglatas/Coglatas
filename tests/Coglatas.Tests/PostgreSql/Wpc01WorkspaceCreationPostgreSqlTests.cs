@@ -14,7 +14,6 @@ using Coglatas.Domain.Enums;
 using Coglatas.Infrastructure.Audit;
 using Coglatas.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Coglatas.Tests.PostgreSql;
 
@@ -966,7 +965,7 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
                 await LegacyCandidateConversationIds().Take(100).ToListAsync());
             var tiedMessageIds = tiedMessages.Select(message => message.Id).ToArray();
             var expectedTiedOrder = await db.Messages
-                .Where(message => tiedMessageIds.Contains(message.Id))
+                .Where(message => Enumerable.Contains(tiedMessageIds, message.Id))
                 .OrderBy(message => message.Id)
                 .Select(message => message.Id)
                 .ToListAsync();
@@ -1887,11 +1886,11 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
 
     private sealed class TestCurrentUser(
         Guid userId,
-        SystemRole systemRole = Coglatas.Domain.Enums.SystemRole.NormalUser) : ICurrentUser
+        SystemRole systemRole = SystemRole.NormalUser) : ICurrentUser
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "wpc-owner@example.test";
+        public string Email => "wpc-owner@example.test";
         public SystemRole? SystemRole => systemRole;
         public bool IsAuthenticated => true;
     }

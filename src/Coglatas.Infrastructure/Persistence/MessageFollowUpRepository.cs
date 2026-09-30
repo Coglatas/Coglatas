@@ -48,7 +48,7 @@ public sealed class MessageFollowUpRepository(
             : query.Where(item => fallbackReadableConversationIds!.Contains(item.Message!.ConversationId));
 
         var total = await query.CountAsync(cancellationToken);
-        var skip = (int)Math.Min(((long)page - 1L) * pageSize, int.MaxValue);
+        var skip = (int)Math.Min((page - 1L) * pageSize, int.MaxValue);
         var items = await query
             .OrderByDescending(item => item.CreatedAt)
             .ThenByDescending(item => item.Id)

@@ -523,16 +523,16 @@ public sealed class TaskDeadlineDigestWorkerTests
 
     private sealed class GenerationStartGate(int expectedArrivals)
     {
-        private readonly TaskCompletionSource allArrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private int arrivalCount;
+        private readonly TaskCompletionSource _allArrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _arrivalCount;
 
-        public int ArrivalCount => Volatile.Read(ref arrivalCount);
+        public int ArrivalCount => Volatile.Read(ref _arrivalCount);
 
         public async Task ArriveAsync(CancellationToken cancellationToken)
         {
-            if (Interlocked.Increment(ref arrivalCount) == expectedArrivals)
-                allArrived.TrySetResult();
-            await allArrived.Task.WaitAsync(cancellationToken);
+            if (Interlocked.Increment(ref _arrivalCount) == expectedArrivals)
+                _allArrived.TrySetResult();
+            await _allArrived.Task.WaitAsync(cancellationToken);
         }
     }
 
@@ -540,7 +540,7 @@ public sealed class TaskDeadlineDigestWorkerTests
     {
         public ConcurrentQueue<LogEntry> Entries { get; } = [];
 
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => NoopScope.Instance;
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull => NoopScope.Instance;
 
         public bool IsEnabled(LogLevel logLevel) => true;
 

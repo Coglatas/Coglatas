@@ -47,8 +47,7 @@ public sealed class FileWorkspaceWorkflowTests
     [Fact]
     public async Task StorageFailureDoesNotPersistFileMetadata()
     {
-        var fixture = new Fixture();
-        fixture.Storage.SaveResult = Result.Failure("storage rejected");
+        var fixture = new Fixture { Storage = { SaveResult = Result.Failure("storage rejected") } };
 
         var upload = await fixture.UploadTextAsync("workspace-note.txt", "hello");
 
@@ -60,8 +59,7 @@ public sealed class FileWorkspaceWorkflowTests
     [Fact]
     public async Task MetadataFailureCleansUpStoredBytes()
     {
-        var fixture = new Fixture();
-        fixture.UnitOfWork.ThrowOnSave = true;
+        var fixture = new Fixture { UnitOfWork = { ThrowOnSave = true } };
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.UploadTextAsync("workspace-note.txt", "hello"));
 
@@ -85,8 +83,7 @@ public sealed class FileWorkspaceWorkflowTests
     [Fact]
     public async Task WorkspaceUploadRequiresContributeAuthorization()
     {
-        var fixture = new Fixture();
-        fixture.Authorization.CanUploadResult = false;
+        var fixture = new Fixture { Authorization = { CanUploadResult = false } };
 
         var upload = await fixture.UploadTextAsync("workspace-note.txt", "hello");
 
@@ -117,11 +114,11 @@ public sealed class FileWorkspaceWorkflowTests
                 UnitOfWork);
         }
 
-        public Guid TenantId { get; } = Guid.NewGuid();
+        private Guid TenantId { get; } = Guid.NewGuid();
         public Guid WorkspaceId { get; } = Guid.NewGuid();
-        public Guid UserId { get; } = Guid.NewGuid();
+        private Guid UserId { get; } = Guid.NewGuid();
         public FakeFileRepository Files { get; } = new();
-        public FakeFileDownloadGrantRepository Grants { get; } = new();
+        private FakeFileDownloadGrantRepository Grants { get; } = new();
         public FakeStorage Storage { get; } = new();
         public FakeAuthorization Authorization { get; } = new();
         public FakeUnitOfWork UnitOfWork { get; } = new();
@@ -194,7 +191,7 @@ public sealed class FileWorkspaceWorkflowTests
         }
 
         public Task<FileOwnerContext?> ResolveOwnerAsync(AttachmentOwnerType ownerType, Guid ownerId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<FileOwnerContext?>(ownerType == AttachmentOwnerType.Workspace ? new FileOwnerContext(ownerId) : null);
+            Task.FromResult(ownerType == AttachmentOwnerType.Workspace ? new FileOwnerContext(ownerId) : null);
     }
 
     private sealed class FakeFileDownloadGrantRepository : IFileDownloadGrantRepository
@@ -253,7 +250,7 @@ public sealed class FileWorkspaceWorkflowTests
         }
 
         public Task<Stream> OpenReadAsync(string storageKey, CancellationToken cancellationToken = default) =>
-            Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("file content")));
+            Task.FromResult<Stream>(new MemoryStream("file content"u8.ToArray()));
 
         public Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default)
         {
@@ -296,7 +293,7 @@ public sealed class FileWorkspaceWorkflowTests
     {
         public Guid? UserId => UserIdValue;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "fixture@example.test";
+        public string Email => "fixture@example.test";
         public SystemRole? SystemRole => global::Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }
@@ -305,7 +302,7 @@ public sealed class FileWorkspaceWorkflowTests
     {
         public Guid TenantId => TenantIdValue;
         public bool IsAvailable => true;
-        public string? TenantSlug => "tenant-a";
+        public string TenantSlug => "tenant-a";
         public bool IsPlatformScope => false;
     }
 

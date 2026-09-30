@@ -1,4 +1,3 @@
-using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
 using Coglatas.Application.Groups;
@@ -187,7 +186,6 @@ public sealed class CanonicalTaskCreateServiceTests
     {
         private Fixture(
             AppDbContext db,
-            CurrentTenantService currentTenant,
             MutableCurrentUser current,
             Tenant tenant,
             User actor,
@@ -201,7 +199,6 @@ public sealed class CanonicalTaskCreateServiceTests
             RecordingNotifications notifications)
         {
             Db = db;
-            CurrentTenant = currentTenant;
             Current = current;
             Tenant = tenant;
             Actor = actor;
@@ -216,7 +213,6 @@ public sealed class CanonicalTaskCreateServiceTests
         }
 
         public AppDbContext Db { get; }
-        public CurrentTenantService CurrentTenant { get; }
         public MutableCurrentUser Current { get; }
         public Tenant Tenant { get; }
         public User Actor { get; }
@@ -375,7 +371,6 @@ public sealed class CanonicalTaskCreateServiceTests
 
             return new Fixture(
                 db,
-                currentTenant,
                 current,
                 tenant,
                 actor,

@@ -245,7 +245,7 @@ public sealed class WpcFinal03WorkspaceMembershipBoundaryTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "wpc-final03@example.test";
+        public string Email => "wpc-final03@example.test";
         public SystemRole? SystemRole => global::Coglatas.Domain.Enums.SystemRole.NormalUser;
         public bool IsAuthenticated => true;
     }

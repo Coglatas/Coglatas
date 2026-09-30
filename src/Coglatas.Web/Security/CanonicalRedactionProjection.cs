@@ -1,6 +1,5 @@
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Security.Redaction;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Coglatas.Web.Security;
 
@@ -63,7 +62,7 @@ public static class CanonicalRedactionProjection
             FieldAccessPolicy: fieldAccessPolicy);
 
         var redactionService = requestServices.GetRequiredService<IRedactionService>();
-        var result = redactionService.Redact(context, source!, profile);
+        var result = redactionService.Redact(context, source, profile);
 
         if (result.Value is null or RedactedPayload)
         {

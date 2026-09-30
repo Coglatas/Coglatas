@@ -592,7 +592,7 @@ public sealed class WorkspaceCreationFoundationTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "wpc@example.test";
+        public string Email => "wpc@example.test";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.NormalUser;
         public bool IsAuthenticated => true;
     }

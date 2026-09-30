@@ -797,7 +797,7 @@ public sealed class MessageAdvancedSearchPostgreSqlTests
     {
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "issue-367@example.test";
+        public string Email => "issue-367@example.test";
         public SystemRole? SystemRole => null;
         public bool IsAuthenticated => true;
     }

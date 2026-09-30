@@ -1,4 +1,3 @@
-using Coglatas.Application.Common;
 using Coglatas.Domain.Enums;
 
 namespace Coglatas.Application.Channels;

@@ -62,8 +62,9 @@ Issue #587 adds `firefox-desktop` and `webkit-desktop` beside the existing
 Chromium desktop/mobile projects. This keeps the engine matrix bounded to the
 single COMPAT-04 `browser-engine` selection contract.
 
-`.github/workflows/compat-critical-preflight.yml` runs the profile as three
-independent PR jobs:
+`.github/workflows/compat-critical-preflight.yml` keeps the lightweight contract
+and Playwright-discovery preflight on pull requests, but runs the profile as three
+independent jobs only after a relevant change reaches `main`:
 
 | Job | Playwright project | Browser installed |
 | --- | --- | --- |
@@ -79,9 +80,10 @@ starting with its engine. The common runner validates the manifest and source,
 fails when selection is empty or partial, and appends `--retries=0` after all
 caller-supplied Playwright arguments.
 
-The workflow has read-only repository permissions, persists no checkout
-credential, references no protected secret or licensed build activation, and
-can run for an untrusted pull request. Selected critical tests may not contain
+The pull-request preflight has read-only repository permissions, persists no checkout
+credential, and references no protected secret or licensed build activation. The
+Chromium/Firefox/WebKit execution matrix is intentionally deferred until `main`.
+Selected critical tests may not contain
 inline `skip`, `fixme`, or expected-failure exceptions. The only existing
 quarantine mechanism is the reviewed contract entry described below, including
 its reason, owner, tracking Issue, and expiry. There are currently no
@@ -106,6 +108,9 @@ The two additional projects are enabled only when `COGLATAS_COMPAT_CRITICAL=1`, 
 the ordinary functional/static suite keeps its established Chromium pair. The
 matrix therefore reuses one COMPAT-04 `mobile` selection contract instead of
 maintaining a second title list or multiplying the full browser suite.
+
+`.github/workflows/mobile-compatibility.yml` executes this matrix only for relevant
+`main` pushes (or an explicit manual dispatch), not for pull requests.
 
 The mobile profile covers shell boot, navigation, representative form/list and
 overlay behavior, touch activation, and horizontal-overflow containment. The

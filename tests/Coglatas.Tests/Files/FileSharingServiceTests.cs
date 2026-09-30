@@ -1,4 +1,3 @@
-using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Files;
 using Coglatas.Application.Realtime;
@@ -149,15 +148,15 @@ public sealed class FileSharingServiceTests
                 UnitOfWork);
         }
 
-        public Guid TenantId { get; } = Guid.NewGuid();
+        private Guid TenantId { get; } = Guid.NewGuid();
         public Guid WorkspaceId { get; } = Guid.NewGuid();
         public Guid ActorUserId { get; } = Guid.NewGuid();
         public Guid ExternalUserId { get; } = Guid.NewGuid();
         public FakeGrantRepository Grants { get; } = new();
-        public FakeFileAuthorization Authorization { get; } = new();
+        private FakeFileAuthorization Authorization { get; } = new();
         public FakeWorkspaceAuthorization Workspaces { get; } = new();
-        public FixedClock Clock { get; } = new();
-        public FakeAudit Audit { get; } = new();
+        private FixedClock Clock { get; } = new();
+        private FakeAudit Audit { get; } = new();
         public FakeInvalidations Invalidations { get; } = new();
         public FakeUnitOfWork UnitOfWork { get; } = new();
         public FileSharingService Service { get; }
@@ -272,20 +271,20 @@ public sealed class FileSharingServiceTests
             Guid workspaceId,
             Guid userId,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<FileAccessGrantCandidate?>(Candidates.FirstOrDefault(candidate => candidate.UserId == userId));
+            Task.FromResult(Candidates.FirstOrDefault(candidate => candidate.UserId == userId));
 
         public Task<FileAccessGrant?> GetActiveGrantAsync(
             Guid fileObjectId,
             Guid grantId,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<FileAccessGrant?>(Grants.FirstOrDefault(grant =>
+            Task.FromResult(Grants.FirstOrDefault(grant =>
                 grant.FileObjectId == fileObjectId && grant.Id == grantId && grant.RevokedAt is null));
 
         public Task<FileAccessGrant?> GetActiveGrantForRecipientAsync(
             Guid fileObjectId,
             Guid recipientUserId,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<FileAccessGrant?>(Grants.FirstOrDefault(grant =>
+            Task.FromResult(Grants.FirstOrDefault(grant =>
                 grant.FileObjectId == fileObjectId && grant.RecipientUserId == recipientUserId && grant.RevokedAt is null));
 
         public Task AddAsync(FileAccessGrant grant, CancellationToken cancellationToken = default)
@@ -327,7 +326,7 @@ public sealed class FileSharingServiceTests
     {
         public Guid TenantId => Id;
         public bool IsAvailable => true;
-        public string? TenantSlug => "test";
+        public string TenantSlug => "test";
         public bool IsPlatformScope => false;
     }
 

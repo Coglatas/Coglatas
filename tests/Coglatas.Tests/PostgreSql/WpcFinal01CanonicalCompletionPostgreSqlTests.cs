@@ -591,7 +591,6 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
             }
         }
 
-        var taskId = Guid.Empty;
         var taskNotificationId = Guid.Empty;
         var operationalProject =
             activationState == ProjectActivationState.Activated &&
@@ -621,7 +620,6 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
                 StateVersion = 1
             };
             db.AddRange(task, notification);
-            taskId = task.Id;
             taskNotificationId = notification.Id;
         }
         await db.SaveChangesAsync();
@@ -631,7 +629,6 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
             authority.TenantSlug,
             authority.WorkspaceId,
             project.Id,
-            taskId,
             taskNotificationId,
             general?.Id ?? Guid.Empty,
             authority.OwnerUserId,
@@ -999,7 +996,6 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
         string TenantSlug,
         Guid WorkspaceId,
         Guid ProjectId,
-        Guid TaskId,
         Guid TaskNotificationId,
         Guid ProjectGeneralId,
         Guid OwnerUserId,
@@ -1031,21 +1027,21 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
 
     private sealed class MembershipScope(AppDbContext db, ProjectMembershipService service) : IAsyncDisposable
     {
-        public AppDbContext Db { get; } = db;
+        private AppDbContext Db { get; } = db;
         public ProjectMembershipService Service { get; } = service;
         public ValueTask DisposeAsync() => Db.DisposeAsync();
     }
 
     private sealed class VisibilityScope(AppDbContext db, ProjectVisibilityService service) : IAsyncDisposable
     {
-        public AppDbContext Db { get; } = db;
+        private AppDbContext Db { get; } = db;
         public ProjectVisibilityService Service { get; } = service;
         public ValueTask DisposeAsync() => Db.DisposeAsync();
     }
 
     private sealed class ActivationScope(AppDbContext db, ProjectActivationService service) : IAsyncDisposable
     {
-        public AppDbContext Db { get; } = db;
+        private AppDbContext Db { get; } = db;
         public ProjectActivationService Service { get; } = service;
         public ValueTask DisposeAsync() => Db.DisposeAsync();
     }

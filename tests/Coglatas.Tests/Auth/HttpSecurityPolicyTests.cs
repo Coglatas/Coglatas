@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -56,9 +55,11 @@ public sealed class HttpSecurityPolicyTests
     [Trait("Scope", "SEC-13")]
     public void AnonymousRateLimitIdentityIgnoresSpoofedForwardedHeader()
     {
-        var context = new DefaultHttpContext();
-        context.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.10");
-        context.Request.Headers["X-Forwarded-For"] = "198.51.100.77";
+        var context = new DefaultHttpContext
+        {
+            Connection = { RemoteIpAddress = IPAddress.Parse("203.0.113.10") },
+            Request = { Headers = { ["X-Forwarded-For"] = "198.51.100.77" } }
+        };
 
         var key = HttpSecurityPolicy.GetRateLimitPartitionKey(context);
 
@@ -71,11 +72,13 @@ public sealed class HttpSecurityPolicyTests
     public void AuthenticatedRateLimitIdentityUsesServerAuthenticatedUserId()
     {
         var userId = Guid.NewGuid();
-        var context = new DefaultHttpContext();
-        context.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.10");
-        context.User = new ClaimsPrincipal(new ClaimsIdentity(
-            [new Claim(ClaimTypes.NameIdentifier, userId.ToString())],
-            "cookie"));
+        var context = new DefaultHttpContext
+        {
+            Connection = { RemoteIpAddress = IPAddress.Parse("203.0.113.10") },
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim(ClaimTypes.NameIdentifier, userId.ToString())],
+                "cookie"))
+        };
 
         var key = HttpSecurityPolicy.GetRateLimitPartitionKey(context);
 
@@ -107,7 +110,8 @@ public sealed class HttpSecurityPolicyTests
                 .Features.Get<IServerAddressesFeature>()?.Addresses.Single()
                 ?? throw new InvalidOperationException("Test server address was not available.");
             // ReSharper disable once ShortLivedHttpClient
-            using var client = new HttpClient { BaseAddress = new Uri(address) };
+            using var client = new HttpClient();
+            client.BaseAddress = new Uri(address);
 
             for (var requestIndex = 0; requestIndex < 10; requestIndex++)
             {
@@ -204,9 +208,11 @@ public sealed class HttpSecurityPolicyTests
                 return Task.CompletedTask;
             },
             Options.Create(new SecurityOptions { MaxRequestBodySizeBytes = 1024 }));
-        var context = new DefaultHttpContext();
-        context.Request.ContentLength = 1025;
-        context.Response.Body = new MemoryStream();
+        var context = new DefaultHttpContext
+        {
+            Request = { ContentLength = 1025 },
+            Response = { Body = new MemoryStream() }
+        };
 
         await middleware.InvokeAsync(context);
 

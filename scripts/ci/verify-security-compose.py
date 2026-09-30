@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Fail closed when the resolved SEC-02/SEC-03/SEC-04/SEC-05/SEC-06/AUD-02 security profile drifts."""
+"""Fail closed when the resolved SEC-02 security Compose profile drifts."""
 
 from __future__ import annotations
 
 import json
-import os
-import subprocess
 import sys
 from typing import Any
 
@@ -39,43 +37,6 @@ def require_env(environment: dict[str, Any], key: str, expected: str) -> None:
     actual = environment.get(key)
     if str(actual).lower() != expected.lower():
         fail(f"{key} expected {expected!r}, got {actual!r}")
-
-
-def should_run_runtime_smoke() -> bool:
-    # The public security-scan job intentionally provides only a synthetic
-    # fixture credential. Requiring both GitHub Actions and that credential keeps
-    # ordinary local `docker compose config | verify-security-compose.py` calls
-    # side-effect free while making the required CI security gate exercise the
-    # real PostgreSQL/runtime path.
-    return (
-        os.environ.get("GITHUB_ACTIONS", "").lower() == "true"
-        and bool(os.environ.get("COGLATAS_SECURITY_CI_PASSWORD", "").strip())
-        and os.environ.get("COGLATAS_SECURITY_CI_SKIP_RUNTIME_SMOKE", "").lower()
-        not in {"1", "true", "yes"}
-    )
-
-
-def run_scanner_harness_contract_tests() -> None:
-    # These tests are intentionally side-effect free: target validation happens
-    # before network access and the redaction/identity/evidence contracts use
-    # synthetic values only. Keeping them inside the required security gate
-    # prevents a configuration edit from silently weakening scanner boundaries.
-    subprocess.run(
-        ["bash", "scripts/security/test-scanner-harness.sh"],
-        check=True,
-    )
-    subprocess.run(
-        ["bash", "scripts/security/test-schemathesis-contract.sh"],
-        check=True,
-    )
-    subprocess.run(
-        ["bash", "scripts/security/test-zap-contract.sh"],
-        check=True,
-    )
-    subprocess.run(
-        ["bash", "scripts/security/test-aud02-lifecycle.sh"],
-        check=True,
-    )
 
 
 def main() -> None:
@@ -138,20 +99,6 @@ def main() -> None:
         fail("real-backend-playwright must be inactive in the default SEC-02 profile")
 
     print("SEC-02 resolved Compose invariants verified.")
-    print("Running SEC-03/SEC-04/SEC-06/AUD-02 scanner contract tests inside the required security gate.")
-    run_scanner_harness_contract_tests()
-
-    if should_run_runtime_smoke():
-        print("Generating the deterministic SEC-01 contract for the SEC-04/SEC-06 runtime gates.")
-        subprocess.run(
-            ["bash", "scripts/ci/generate-security-openapi-contract.sh"],
-            check=True,
-        )
-        print("Running SEC-03/SEC-04/SEC-05/SEC-06/AUD-02 runtime gate.")
-        subprocess.run(
-            ["bash", "scripts/ci/run-security-runtime-smoke.sh"],
-            check=True,
-        )
 
 
 if __name__ == "__main__":

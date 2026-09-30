@@ -140,11 +140,11 @@ public sealed class AuditFindingDecisionServiceTests
             Service = service;
         }
 
-        public Guid TenantId { get; }
+        private Guid TenantId { get; }
         public Guid UserId { get; }
-        public Guid ArtifactVersionId { get; }
+        private Guid ArtifactVersionId { get; }
         public AppDbContext Context { get; }
-        public StubClaimsEvidenceService Claims { get; }
+        private StubClaimsEvidenceService Claims { get; }
         public StubAuditAuthorization Authorization { get; }
         public StubAuditLogger Audit { get; }
         public DbAuditFindingDecisionService Service { get; }
@@ -248,11 +248,11 @@ public sealed class AuditFindingDecisionServiceTests
 
     private sealed class StubClaimsEvidenceService(Guid artifactVersionId) : IAuditClaimsEvidenceService
     {
-        private readonly Dictionary<Guid, AuditClaimEvidenceResponse> claims = new();
+        private readonly Dictionary<Guid, AuditClaimEvidenceResponse> _claims = new();
 
         public void AddClaim(ArtifactClaim claim)
         {
-            claims[claim.Id] = new AuditClaimEvidenceResponse(
+            _claims[claim.Id] = new AuditClaimEvidenceResponse(
                 claim.Id,
                 claim.Ordinal,
                 claim.Text,
@@ -277,7 +277,7 @@ public sealed class AuditFindingDecisionServiceTests
                 artifactVersionId,
                 1,
                 "Audit report",
-                claims.Values.OrderBy(claim => claim.Ordinal).ToArray())));
+                _claims.Values.OrderBy(claim => claim.Ordinal).ToArray())));
         }
     }
 
@@ -295,7 +295,7 @@ public sealed class AuditFindingDecisionServiceTests
         {
             AuthorizeCalls++;
             return Task.FromResult(
-                capabilityKey == Coglatas.Application.Tenancy.CapabilityKeys.AuditReview && canReview
+                capabilityKey == Application.Tenancy.CapabilityKeys.AuditReview && canReview
                     ? Result.Success()
                     : Result.Failure(new ApplicationErrorDetail("CapabilityDenied", "Audit operation denied.")));
         }
@@ -305,7 +305,7 @@ public sealed class AuditFindingDecisionServiceTests
     {
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "reviewer@example.invalid";
+        public string Email => "reviewer@example.invalid";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }
@@ -314,7 +314,7 @@ public sealed class AuditFindingDecisionServiceTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "audit-tenant";
+        public string TenantSlug => "audit-tenant";
         public bool IsPlatformScope => false;
     }
 

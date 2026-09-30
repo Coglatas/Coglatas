@@ -4,7 +4,6 @@ using System.Text.Json;
 using Coglatas.Application;
 using Coglatas.Application.Auth;
 using Coglatas.Application.Common.Interfaces;
-using Coglatas.Application.Common.Tenancy;
 using Coglatas.Application.Notifications;
 using Coglatas.Domain.Entities;
 using Coglatas.Domain.Enums;
@@ -24,7 +23,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -82,7 +80,7 @@ public sealed class AuthSecurityHttpTests
         response.EnsureSuccessStatusCode();
         var payload = await response.Content.ReadFromJsonAsync<CsrfTokenResponse>();
         Assert.False(string.IsNullOrWhiteSpace(payload?.Token));
-        Assert.Equal(SecurityOptions.CsrfHeaderName, payload?.HeaderName);
+        Assert.Equal(SecurityOptions.CsrfHeaderName, payload.HeaderName);
         Assert.True(
             response.Headers.TryGetValues("Set-Cookie", out var cookies) &&
             cookies.Any(cookie => cookie.Contains(".Coglatas.Csrf=", StringComparison.Ordinal) &&
@@ -110,10 +108,8 @@ public sealed class AuthSecurityHttpTests
         await using var app = await AuthSecurityTestApp.CreateAsync();
         await app.LoginAndReadAsync();
 
-        using var request = new HttpRequestMessage(new HttpMethod(method), path)
-        {
-            Content = JsonContent.Create(new { })
-        };
+        using var request = new HttpRequestMessage(new HttpMethod(method), path);
+        request.Content = JsonContent.Create(new { });
         var response = await app.Client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -129,10 +125,8 @@ public sealed class AuthSecurityHttpTests
         await using var app = await AuthSecurityTestApp.CreateAsync();
         var token = await app.GetCsrfTokenAsync();
 
-        using var request = new HttpRequestMessage(new HttpMethod(method), "/api/not-found-for-csrf-test")
-        {
-            Content = JsonContent.Create(new { })
-        };
+        using var request = new HttpRequestMessage(new HttpMethod(method), "/api/not-found-for-csrf-test");
+        request.Content = JsonContent.Create(new { });
         request.Headers.TryAddWithoutValidation(SecurityOptions.CsrfHeaderName, token);
         var response = await app.Client.SendAsync(request);
 
@@ -158,10 +152,8 @@ public sealed class AuthSecurityHttpTests
         await app.LoginAndReadAsync();
         var csrfToken = await app.GetCsrfTokenAsync();
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/logout")
-        {
-            Content = JsonContent.Create(new { })
-        };
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/logout");
+        request.Content = JsonContent.Create(new { });
         request.Headers.TryAddWithoutValidation(SecurityOptions.CsrfHeaderName, csrfToken);
 
         using var response = await app.Client.SendAsync(request);
@@ -235,7 +227,7 @@ public sealed class AuthSecurityHttpTests
         private WebApplication App { get; }
         private string DataProtectionKeysPath { get; }
         public HttpClient Client { get; }
-        public Guid UserId { get; }
+        private Guid UserId { get; }
         public string Email { get; }
 
         public static async Task<AuthSecurityTestApp> CreateAsync(
@@ -341,19 +333,17 @@ public sealed class AuthSecurityHttpTests
         public async Task<HttpResponseMessage> LoginAsync()
         {
             var token = await GetCsrfTokenAsync();
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
-            {
-                Content = JsonContent.Create(new LoginRequest(Email, "Password123"))
-            };
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login");
+            request.Content = JsonContent.Create(new LoginRequest(Email, "Password123"));
             request.Headers.TryAddWithoutValidation(SecurityOptions.CsrfHeaderName, token);
             return await Client.SendAsync(request);
         }
 
-        public async Task<LoginResponse> LoginAndReadAsync()
+        public async Task LoginAndReadAsync()
         {
             var response = await LoginAsync();
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<LoginResponse>()
+            _ = await response.Content.ReadFromJsonAsync<LoginResponse>()
                 ?? throw new InvalidOperationException("Login response was empty.");
         }
 
@@ -472,7 +462,7 @@ public sealed class AuthSecurityHttpTests
             services.AddScoped<CurrentAuthorizationTargetResolver>();
             services.AddScoped<INotificationTargetResolver>(provider => provider.GetRequiredService<CurrentAuthorizationTargetResolver>());
             services.AddScoped<INotificationOpenService, NotificationOpenService>();
-            services.AddScoped<Coglatas.Application.Search.ISearchService, DbSearchService>();
+            services.AddScoped<Application.Search.ISearchService, DbSearchService>();
             services.AddScoped<Coglatas.Application.Audit.IAuditQueryService, DbAuditQueryService>();
             services.AddSingleton<IClock, SystemClock>();
         }

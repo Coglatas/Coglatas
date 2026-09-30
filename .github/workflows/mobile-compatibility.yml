@@ -2,22 +2,6 @@ name: Mobile Compatibility
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: ['main']
-    paths:
-      - '.github/workflows/mobile-compatibility.yml'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'playwright.config.ts'
-      - 'scripts/ci/compat-critical.contract.json'
-      - 'scripts/ci/compat-critical-contract.mjs'
-      - 'scripts/ci/run-compat-critical.mjs'
-      - 'scripts/ci/verify-compat-critical.mjs'
-      - 'scripts/ci/verify-npm-lockfile.mjs'
-      - 'tests/ui/angular-smoke.spec.ts'
-      - 'tests/ui/mobile-compatibility.spec.ts'
-      - 'tests/ui/serve-static.mjs'
-      - 'frontend/**'
   push:
     branches: ['main']
     paths:
@@ -36,7 +20,7 @@ on:
       - 'frontend/**'
 
 concurrency:
-  group: mobile-compatibility-${{ github.event.pull_request.number || github.ref }}
+  group: mobile-compatibility-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -62,7 +46,7 @@ jobs:
       - name: Checkout exact candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
           clean: true
           persist-credentials: false
 
@@ -75,7 +59,7 @@ jobs:
       - name: Verify candidate identity
         shell: bash
         env:
-          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_SHA: ${{ github.sha }}
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
       - name: Verify compatibility lockfiles

@@ -541,7 +541,7 @@ public sealed class Wpc02DProjectActivationPostgreSqlTests
 
     private sealed class ActivationScope(AppDbContext db, ProjectActivationService service) : IAsyncDisposable
     {
-        public AppDbContext Db { get; } = db;
+        private AppDbContext Db { get; } = db;
         public ProjectActivationService Service { get; } = service;
         public ValueTask DisposeAsync() => Db.DisposeAsync();
     }

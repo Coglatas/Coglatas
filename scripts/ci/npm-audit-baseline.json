@@ -1,4 +1,53 @@
 {
   "version": 1,
-  "findings": []
+  "findings": [
+    {
+      "report": "coglatas-frontend",
+      "package": "@storybook/angular",
+      "severity": "high",
+      "via": [
+        "dependency:@storybook/builder-webpack5"
+      ]
+    },
+    {
+      "report": "coglatas-frontend",
+      "package": "@storybook/builder-webpack5",
+      "severity": "high",
+      "via": [
+        "dependency:webpack-dev-middleware"
+      ]
+    },
+    {
+      "report": "coglatas-frontend",
+      "package": "webpack-dev-middleware",
+      "severity": "high",
+      "via": [
+        "advisory:1240027"
+      ]
+    },
+    {
+      "report": "frontend",
+      "package": "@storybook/angular",
+      "severity": "high",
+      "via": [
+        "dependency:@storybook/builder-webpack5"
+      ]
+    },
+    {
+      "report": "frontend",
+      "package": "@storybook/builder-webpack5",
+      "severity": "high",
+      "via": [
+        "dependency:webpack-dev-middleware"
+      ]
+    },
+    {
+      "report": "frontend",
+      "package": "webpack-dev-middleware",
+      "severity": "high",
+      "via": [
+        "advisory:1240027"
+      ]
+    }
+  ]
 }

@@ -164,7 +164,7 @@ public sealed class TaskExecutionControllerTests
             .GetMethod(nameof(TaskExecutionController.RequestRun))!
             .GetCustomAttribute<HttpPostAttribute>();
         Assert.NotNull(route);
-        Assert.Equal("api/tasks/{taskItemId:guid}/execution-runs", route!.Template);
+        Assert.Equal("api/tasks/{taskItemId:guid}/execution-runs", route.Template);
     }
 
     private static TaskExecutionController Controller(ITaskExecutionScopeService service) => new(service)
@@ -183,10 +183,10 @@ public sealed class TaskExecutionControllerTests
 
     private sealed class StubTaskExecutionScopeService : ITaskExecutionScopeService
     {
-        public Result<ProjectExecutionScopeResponse> ProjectResult { get; set; } = Failure<ProjectExecutionScopeResponse>("TASK_EXECUTION_NOT_FOUND");
-        public Result<TaskExecutionScopeResponse> TaskResult { get; set; } = Failure<TaskExecutionScopeResponse>("TASK_EXECUTION_NOT_FOUND");
-        public Result<TaskExecutionRunResponse> RunResult { get; set; } = Failure<TaskExecutionRunResponse>("TASK_EXECUTION_NOT_FOUND");
-        public Result<TaskExecutionScopeResponse> UpdateOverrideResult { get; set; } = Failure<TaskExecutionScopeResponse>("TASK_EXECUTION_NOT_FOUND");
+        public Result<ProjectExecutionScopeResponse> ProjectResult { get; init; } = Failure<ProjectExecutionScopeResponse>("TASK_EXECUTION_NOT_FOUND");
+        private Result<TaskExecutionScopeResponse> TaskResult { get; } = Failure<TaskExecutionScopeResponse>("TASK_EXECUTION_NOT_FOUND");
+        public Result<TaskExecutionRunResponse> RunResult { get; init; } = Failure<TaskExecutionRunResponse>("TASK_EXECUTION_NOT_FOUND");
+        public Result<TaskExecutionScopeResponse> UpdateOverrideResult { get; init; } = Failure<TaskExecutionScopeResponse>("TASK_EXECUTION_NOT_FOUND");
 
         public Task<Result<ProjectExecutionScopeResponse>> GetProjectScopeAsync(Guid projectId, CancellationToken cancellationToken = default) =>
             Task.FromResult(ProjectResult);

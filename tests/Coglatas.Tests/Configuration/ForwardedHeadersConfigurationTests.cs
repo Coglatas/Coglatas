@@ -1,7 +1,6 @@
 using System.Net;
 using Coglatas.Web.Configuration;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 
 namespace Coglatas.Tests.Configuration;

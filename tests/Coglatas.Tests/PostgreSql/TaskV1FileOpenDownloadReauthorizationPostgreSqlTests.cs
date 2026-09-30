@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
@@ -99,17 +98,15 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
 
     private sealed class Fixture : IAsyncDisposable
     {
-        private readonly AppDbContext db;
+        private readonly AppDbContext _db;
 
-        private Fixture(AppDbContext db, FileService service, StorageSpy storage, Guid tenantId, Guid workspaceId, Guid projectId, Guid taskId, Guid associationId, Guid fileObjectId, Guid userId, string storageKey)
+        private Fixture(AppDbContext db, FileService service, StorageSpy storage, Guid tenantId, Guid workspaceId, Guid associationId, Guid fileObjectId, Guid userId, string storageKey)
         {
-            this.db = db;
+            _db = db;
             Service = service;
             Storage = storage;
             TenantId = tenantId;
             WorkspaceId = workspaceId;
-            ProjectId = projectId;
-            TaskId = taskId;
             AssociationId = associationId;
             FileObjectId = fileObjectId;
             UserId = userId;
@@ -118,13 +115,11 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
 
         public FileService Service { get; }
         public StorageSpy Storage { get; }
-        public Guid TenantId { get; }
-        public Guid WorkspaceId { get; }
-        public Guid ProjectId { get; }
-        public Guid TaskId { get; }
+        private Guid TenantId { get; }
+        private Guid WorkspaceId { get; }
         public Guid AssociationId { get; }
-        public Guid FileObjectId { get; }
-        public Guid UserId { get; }
+        private Guid FileObjectId { get; }
+        private Guid UserId { get; }
         public string StorageKey { get; }
 
         public static async Task<Fixture> CreateAsync()
@@ -166,76 +161,76 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
             var authorization = new FileAuthorizationService(fileRepository, projectAuthorization, null!, null!, workspaceAuthorization);
             var storage = new StorageSpy();
             var service = new FileService(fileRepository, new FileDownloadGrantRepository(db), storage, authorization, new UploadPolicy(), new FeatureFlags(), new Quota(), currentUser, currentTenant, new Clock(), new DbAuditLogger(db, new Clock(), currentUser, currentTenant), new Sha256TokenHasher(), new NoopInvalidations(), new EfUnitOfWork(db));
-            return new Fixture(db, service, storage, tenant.Id, workspace.Id, project.Id, task.Id, association.Id, file.Id, user.Id, storageKey);
+            return new Fixture(db, service, storage, tenant.Id, workspace.Id, association.Id, file.Id, user.Id, storageKey);
         }
 
         public async Task SetWorkspaceMembershipAsync(MembershipStatus status)
         {
-            var member = await db.WorkspaceMembers.SingleAsync(value => value.WorkspaceId == WorkspaceId && value.UserId == UserId);
+            var member = await _db.WorkspaceMembers.SingleAsync(value => value.WorkspaceId == WorkspaceId && value.UserId == UserId);
             member.Status = status;
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
         public async Task MarkAssociationDeletedAsync()
         {
-            var item = await db.Attachments.SingleAsync(value => value.Id == AssociationId);
+            var item = await _db.Attachments.SingleAsync(value => value.Id == AssociationId);
             item.MarkDeleted(DateTimeOffset.UtcNow, UserId, "removed");
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
         public async Task SetFileStatusAsync(FileObjectStatus status)
         {
-            var item = await db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
+            var item = await _db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
             item.Status = status;
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
         public async Task MarkFileDeletedAsync()
         {
-            var item = await db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
+            var item = await _db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
             item.MarkDeleted(DateTimeOffset.UtcNow, UserId, "deleted");
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
         public async Task SetScanStatusAsync(FileScanStatus status)
         {
-            var item = await db.Attachments.SingleAsync(value => value.Id == AssociationId);
+            var item = await _db.Attachments.SingleAsync(value => value.Id == AssociationId);
             item.ScanStatus = status;
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
         public async Task SetFileWorkspaceAsync()
         {
             var marker = Guid.NewGuid().ToString("N");
             var workspace = new Workspace { TenantId = TenantId, Name = $"Other {marker}", Slug = $"other-{marker}", CreatedByUserId = UserId };
-            db.Workspaces.Add(workspace);
-            await db.SaveChangesAsync();
-            var item = await db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
+            _db.Workspaces.Add(workspace);
+            await _db.SaveChangesAsync();
+            var item = await _db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
             item.WorkspaceId = workspace.Id;
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
         public async Task SetFileProjectAsync()
         {
             var marker = Guid.NewGuid().ToString("N");
             var project = new Project { TenantId = TenantId, WorkspaceId = WorkspaceId, OwnerUserId = UserId, CreatedByUserId = UserId, Name = $"Other {marker}", Slug = $"other-{marker}" };
-            db.Projects.Add(project);
-            await db.SaveChangesAsync();
-            var item = await db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
+            _db.Projects.Add(project);
+            await _db.SaveChangesAsync();
+            var item = await _db.FileObjects.SingleAsync(value => value.Id == FileObjectId);
             item.ProjectId = project.Id;
-            await db.SaveChangesAsync();
-            db.ChangeTracker.Clear();
+            await _db.SaveChangesAsync();
+            _db.ChangeTracker.Clear();
         }
 
-        public Task<List<AuditLog>> AuditRowsAsync() => db.AuditLogs.AsNoTracking().ToListAsync();
+        public Task<List<AuditLog>> AuditRowsAsync() => _db.AuditLogs.AsNoTracking().ToListAsync();
 
-        public async ValueTask DisposeAsync() => await db.DisposeAsync();
+        public async ValueTask DisposeAsync() => await _db.DisposeAsync();
 
         private static AppDbContext CreateContext(string connectionString, Tenant? tenant)
         {
@@ -249,7 +244,7 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "task-file@example.test";
+        public string Email => "task-file@example.test";
         public SystemRole? SystemRole => global::Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }
@@ -258,6 +253,6 @@ public sealed class TaskV1FileOpenDownloadReauthorizationPostgreSqlTests
     private sealed class UploadPolicy : IFileUploadPolicy { public long MaxFileSizeBytes => 1024; public IReadOnlyCollection<string> AllowedExtensions => [".txt"]; public IReadOnlyCollection<string> AllowedContentTypes => ["text/plain"]; }
     private sealed class FeatureFlags : IFeatureFlagService { public Task<bool> IsEnabledAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult(true); public Task<Result> RequireEnabledAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task<IReadOnlyList<string>> GetEnabledFeaturesAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<string>>([]); }
     private sealed class Quota : IQuotaService { public Task<TenantUsageSnapshot> GetCurrentUsageAsync(Guid tenantId, CancellationToken cancellationToken = default) => throw new NotSupportedException(); public Task<Result> CanCreateUserAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task<Result> CanCreateProjectAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task<Result> CanUploadFileAsync(Guid tenantId, long size, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task<Result> CanInviteGuestAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task RecordApiRequestAsync(Guid tenantId, CancellationToken cancellationToken = default) => Task.CompletedTask; }
-    private sealed class StorageSpy : IFileStorageService { public int OpenReadCount { get; private set; } public Task<Result> SaveAsync(string key, Stream stream, string contentType, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task<Stream> OpenReadAsync(string key, CancellationToken cancellationToken = default) { OpenReadCount++; return Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("safe"))); } public Task DeleteAsync(string key, CancellationToken cancellationToken = default) => Task.CompletedTask; public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult(true); public Task<string?> CreateSignedReadUrlAsync(string key, TimeSpan expiresIn, CancellationToken cancellationToken = default) => Task.FromResult<string?>(null); }
+    private sealed class StorageSpy : IFileStorageService { public int OpenReadCount { get; private set; } public Task<Result> SaveAsync(string key, Stream stream, string contentType, CancellationToken cancellationToken = default) => Task.FromResult(Result.Success()); public Task<Stream> OpenReadAsync(string key, CancellationToken cancellationToken = default) { OpenReadCount++; return Task.FromResult<Stream>(new MemoryStream("safe"u8.ToArray())); } public Task DeleteAsync(string key, CancellationToken cancellationToken = default) => Task.CompletedTask; public Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default) => Task.FromResult(true); public Task<string?> CreateSignedReadUrlAsync(string key, TimeSpan expiresIn, CancellationToken cancellationToken = default) => Task.FromResult<string?>(null); }
     private sealed class NoopInvalidations : IBusinessInvalidationPublisher { public Task TaskChangedAsync(TaskItem task, Guid actor, string change, IEnumerable<string>? fields = null, IEnumerable<Guid>? affected = null, CancellationToken cancellationToken = default) => Task.CompletedTask; public Task ProjectChangedAsync(Project project, Guid actor, string change, CancellationToken cancellationToken = default) => Task.CompletedTask; public Task AnnouncementChangedAsync(Announcement announcement, Guid actor, string change, IEnumerable<Guid> audience, CancellationToken cancellationToken = default) => Task.CompletedTask; public Task FileChangedAsync(FileObject file, Attachment attachment, Guid actor, string change, CancellationToken cancellationToken = default) => Task.CompletedTask; }
 }

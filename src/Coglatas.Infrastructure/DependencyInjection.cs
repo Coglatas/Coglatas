@@ -100,7 +100,7 @@ public static class DependencyInjection
             var section = configuration.GetSection("FileStorage");
             options.Provider = section["Provider"] ?? "LocalFileSystem";
             options.RootPath = section["RootPath"] ?? string.Empty;
-            if (long.TryParse(section["MaxFileSizeBytes"] as string, out var maxFileSizeBytes))
+            if (long.TryParse(section["MaxFileSizeBytes"], out var maxFileSizeBytes))
             {
                 options.MaxFileSizeBytes = maxFileSizeBytes;
             }
@@ -117,7 +117,7 @@ public static class DependencyInjection
                 .Where(item => !string.IsNullOrWhiteSpace(item))
                 .Select(item => item!)
                 .ToArray();
-            options.UseSignedUrls = bool.TryParse(section["UseSignedUrls"] as string, out var useSignedUrls) && useSignedUrls;
+            options.UseSignedUrls = bool.TryParse(section["UseSignedUrls"], out var useSignedUrls) && useSignedUrls;
             options.BucketName = section["BucketName"];
             options.Region = section["Region"];
             options.Endpoint = section["Endpoint"];

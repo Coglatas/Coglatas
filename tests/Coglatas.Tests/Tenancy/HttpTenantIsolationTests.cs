@@ -8,7 +8,6 @@ using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
 using Coglatas.Application.Notifications;
-using Coglatas.Application.Projects;
 using Coglatas.Application.Workspaces;
 using Coglatas.Domain.Entities;
 using Coglatas.Domain.Enums;
@@ -20,7 +19,6 @@ using Coglatas.Web.Controllers;
 using Coglatas.Web.Extensions;
 using Coglatas.Web.Configuration;
 using Coglatas.Web.Middleware;
-using Coglatas.Web.Security;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -912,11 +910,9 @@ public sealed class HttpTenantIsolationTests
         await using var app = await HttpTenantIsolationTestApp.CreateAsync();
         var data = app.Data;
 
-        using var content = new MultipartFormDataContent
-        {
-            { new StringContent(AttachmentOwnerType.TaskItem.ToString()), "OwnerType" },
-            { new StringContent(data.TaskB.Id.ToString("D")), "OwnerId" }
-        };
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(nameof(AttachmentOwnerType.TaskItem)), "OwnerType");
+        content.Add(new StringContent(data.TaskB.Id.ToString("D")), "OwnerId");
         var file = new ByteArrayContent("hello"u8.ToArray());
         file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
         content.Add(file, "File", @"..\secret.txt");
@@ -942,12 +938,10 @@ public sealed class HttpTenantIsolationTests
         var privateName = $"owner-only-{Guid.NewGuid():N}.txt";
         Guid fileObjectId;
 
-        using (var upload = new MultipartFormDataContent
-               {
-                   { new StringContent(AttachmentOwnerType.Workspace.ToString()), "OwnerType" },
-                   { new StringContent(data.WorkspaceB.Id.ToString("D")), "OwnerId" }
-               })
+        using (var upload = new MultipartFormDataContent())
         {
+            upload.Add(new StringContent(nameof(AttachmentOwnerType.Workspace)), "OwnerType");
+            upload.Add(new StringContent(data.WorkspaceB.Id.ToString("D")), "OwnerId");
             var file = new ByteArrayContent("file"u8.ToArray());
             file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
             upload.Add(file, "File", privateName);
@@ -1066,12 +1060,10 @@ public sealed class HttpTenantIsolationTests
         var data = app.Data;
         Guid fileObjectId;
 
-        using (var upload = new MultipartFormDataContent
-               {
-                   { new StringContent(AttachmentOwnerType.Workspace.ToString()), "OwnerType" },
-                   { new StringContent(data.WorkspaceB.Id.ToString("D")), "OwnerId" },
-               })
+        using (var upload = new MultipartFormDataContent())
         {
+            upload.Add(new StringContent(nameof(AttachmentOwnerType.Workspace)), "OwnerType");
+            upload.Add(new StringContent(data.WorkspaceB.Id.ToString("D")), "OwnerId");
             var file = new ByteArrayContent("batch-selection"u8.ToArray());
             file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
             upload.Add(file, "File", "batch-selection.txt");
@@ -1140,12 +1132,10 @@ public sealed class HttpTenantIsolationTests
         Guid fileObjectId;
         Guid grantId;
 
-        using (var upload = new MultipartFormDataContent
-               {
-                   { new StringContent(AttachmentOwnerType.Workspace.ToString()), "OwnerType" },
-                   { new StringContent(data.WorkspaceB.Id.ToString("D")), "OwnerId" },
-               })
+        using (var upload = new MultipartFormDataContent())
         {
+            upload.Add(new StringContent(nameof(AttachmentOwnerType.Workspace)), "OwnerType");
+            upload.Add(new StringContent(data.WorkspaceB.Id.ToString("D")), "OwnerId");
             var file = new ByteArrayContent("sharing boundary"u8.ToArray());
             file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
             upload.Add(file, "File", privateName);
@@ -5035,7 +5025,7 @@ public sealed class HttpTenantIsolationTests
             services.AddScoped<CurrentAuthorizationTargetResolver>();
             services.AddScoped<INotificationTargetResolver>(provider => provider.GetRequiredService<CurrentAuthorizationTargetResolver>());
             services.AddScoped<INotificationOpenService, NotificationOpenService>();
-            services.AddScoped<Coglatas.Application.Search.ISearchService, DbSearchService>();
+            services.AddScoped<Application.Search.ISearchService, DbSearchService>();
             services.AddScoped<Coglatas.Application.Audit.IAuditQueryService, DbAuditQueryService>();
             services.AddSingleton<IClock, Coglatas.Infrastructure.Security.SystemClock>();
             services.AddScoped<IStudentRecordRepository, StudentRecordRepository>();
@@ -5108,25 +5098,25 @@ public sealed class HttpTenantIsolationTests
 
     private sealed class InMemoryFileStorageService : IFileStorageService
     {
-        private readonly Dictionary<string, byte[]> files = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, byte[]> _files = new(StringComparer.Ordinal);
 
         public async Task<Result> SaveAsync(string storageKey, Stream stream, string contentType, CancellationToken cancellationToken = default)
         {
             using var memory = new MemoryStream();
             await stream.CopyToAsync(memory, cancellationToken);
-            files[storageKey] = memory.ToArray();
+            _files[storageKey] = memory.ToArray();
             return Result.Success();
         }
 
         public Task<Stream> OpenReadAsync(string storageKey, CancellationToken cancellationToken = default)
         {
-            files.TryGetValue(storageKey, out var bytes);
+            _files.TryGetValue(storageKey, out var bytes);
             return Task.FromResult<Stream>(new MemoryStream(bytes ?? "test file"u8.ToArray()));
         }
 
         public Task DeleteAsync(string storageKey, CancellationToken cancellationToken = default)
         {
-            files.Remove(storageKey);
+            _files.Remove(storageKey);
             return Task.CompletedTask;
         }
 

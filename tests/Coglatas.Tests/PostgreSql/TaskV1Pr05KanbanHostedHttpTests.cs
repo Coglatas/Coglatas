@@ -599,13 +599,13 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
         private const string TenantHeader = "X-Tenant-Slug";
         private const string OutboxFailureConstraint = "CK_TaskV1Pr05_ForceOutboxFailure";
 
-        private readonly WebApplication app;
-        private readonly Uri baseAddress;
-        private readonly string connectionString;
-        private readonly string fileStoragePath;
-        private readonly string dataProtectionPath;
-        private readonly List<ActorHttpClient> actorClients = [];
-        private readonly List<HttpClient> anonymousClients = [];
+        private readonly WebApplication _app;
+        private readonly Uri _baseAddress;
+        private readonly string _connectionString;
+        private readonly string _fileStoragePath;
+        private readonly string _dataProtectionPath;
+        private readonly List<ActorHttpClient> _actorClients = [];
+        private readonly List<HttpClient> _anonymousClients = [];
 
         private KanbanHostedTestApp(
             WebApplication app,
@@ -615,11 +615,11 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
             string dataProtectionPath,
             HostedGraph graph)
         {
-            this.app = app;
-            this.baseAddress = baseAddress;
-            this.connectionString = connectionString;
-            this.fileStoragePath = fileStoragePath;
-            this.dataProtectionPath = dataProtectionPath;
+            _app = app;
+            _baseAddress = baseAddress;
+            _connectionString = connectionString;
+            _fileStoragePath = fileStoragePath;
+            _dataProtectionPath = dataProtectionPath;
             Graph = graph;
         }
 
@@ -717,10 +717,10 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
                     CookieContainer = new CookieContainer()
                 })
             {
-                BaseAddress = baseAddress
+                BaseAddress = _baseAddress
             };
             var actorClient = new ActorHttpClient(client, tenant.Slug);
-            actorClients.Add(actorClient);
+            _actorClients.Add(actorClient);
             await actorClient.LoginAsync(actor.Email, Password);
             return actorClient;
         }
@@ -734,9 +734,9 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
                     CookieContainer = new CookieContainer()
                 })
             {
-                BaseAddress = baseAddress
+                BaseAddress = _baseAddress
             };
-            anonymousClients.Add(client);
+            _anonymousClients.Add(client);
             using var request = new HttpRequestMessage(HttpMethod.Get, path);
             request.Headers.TryAddWithoutValidation(TenantHeader, tenant.Slug);
             return await client.SendAsync(request);
@@ -748,7 +748,7 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
             User user,
             MembershipStatus status)
         {
-            await using var scope = app.Services.CreateAsyncScope();
+            await using var scope = _app.Services.CreateAsyncScope();
             SetTenant(scope.ServiceProvider, tenant);
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var membership = await dbContext.WorkspaceMembers
@@ -762,7 +762,7 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
             User user,
             TenantUserStatus status)
         {
-            await using var scope = app.Services.CreateAsyncScope();
+            await using var scope = _app.Services.CreateAsyncScope();
             SetTenant(scope.ServiceProvider, tenant);
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var membership = await dbContext.TenantUsers.SingleAsync(item => item.UserId == user.Id);
@@ -772,7 +772,7 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
 
         public async Task<ConfigState> ReadConfigStateAsync()
         {
-            await using var scope = app.Services.CreateAsyncScope();
+            await using var scope = _app.Services.CreateAsyncScope();
             SetTenant(scope.ServiceProvider, Graph.TenantA);
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var definition = await dbContext.TaskWorkflowDefinitions
@@ -798,7 +798,7 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
 
         public async Task<MoveState> ReadMoveStateAsync(Guid targetStageId)
         {
-            await using var scope = app.Services.CreateAsyncScope();
+            await using var scope = _app.Services.CreateAsyncScope();
             SetTenant(scope.ServiceProvider, Graph.TenantA);
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var task = await dbContext.TaskItems
@@ -838,7 +838,7 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
 
         public async Task<IReadOnlyList<AuditLog>> ReadAuditLogsAsync(string action)
         {
-            await using var scope = app.Services.CreateAsyncScope();
+            await using var scope = _app.Services.CreateAsyncScope();
             SetTenant(scope.ServiceProvider, Graph.TenantA);
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             return await dbContext.AuditLogs
@@ -849,7 +849,7 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
 
         public async Task<IReadOnlyList<OutboxEvent>> ReadOutboxEventsAsync()
         {
-            await using var scope = app.Services.CreateAsyncScope();
+            await using var scope = _app.Services.CreateAsyncScope();
             SetTenant(scope.ServiceProvider, Graph.TenantA);
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             return await dbContext.OutboxEvents
@@ -862,7 +862,7 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
 
         public Task InstallOutboxFailureConstraintAsync() =>
             PostgreSqlMigrationTestDatabase.ExecuteAsync(
-                connectionString,
+                _connectionString,
                 $"""
                  ALTER TABLE outbox_events
                  ADD CONSTRAINT "{OutboxFailureConstraint}"
@@ -871,7 +871,7 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
 
         public Task RemoveOutboxFailureConstraintAsync() =>
             PostgreSqlMigrationTestDatabase.ExecuteAsync(
-                connectionString,
+                _connectionString,
                 $"""
                  ALTER TABLE outbox_events
                  DROP CONSTRAINT IF EXISTS "{OutboxFailureConstraint}";
@@ -879,13 +879,13 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
 
         public async ValueTask DisposeAsync()
         {
-            foreach (var client in actorClients)
+            foreach (var client in _actorClients)
                 client.Dispose();
-            foreach (var client in anonymousClients)
+            foreach (var client in _anonymousClients)
                 client.Dispose();
-            await app.DisposeAsync();
-            TryDeleteDirectory(Path.GetDirectoryName(fileStoragePath)!);
-            TryDeleteDirectory(Path.GetDirectoryName(dataProtectionPath)!);
+            await _app.DisposeAsync();
+            TryDeleteDirectory(Path.GetDirectoryName(_fileStoragePath)!);
+            TryDeleteDirectory(Path.GetDirectoryName(_dataProtectionPath)!);
         }
 
         private static async Task<HostedGraph> SeedAsync(IServiceProvider services, DateTimeOffset now)
@@ -1204,16 +1204,10 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
 
             return new HostedGraph(
                 tenantA,
-                tenantB,
                 manager,
                 member,
-                outsider,
-                tenantBManager,
                 workspace,
-                unauthorizedWorkspace,
-                crossTenantWorkspace,
                 project,
-                siblingProject,
                 unauthorizedProject,
                 crossTenantProject,
                 mainStages,
@@ -1319,10 +1313,8 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
         public async Task LoginAsync(string email, string password)
         {
             var token = await GetCsrfTokenAsync();
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
-            {
-                Content = JsonContent.Create(new LoginRequest(email, password))
-            };
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login");
+            request.Content = JsonContent.Create(new LoginRequest(email, password));
             request.Headers.TryAddWithoutValidation("X-Tenant-Slug", tenantSlug);
             request.Headers.TryAddWithoutValidation(SecurityOptions.CsrfHeaderName, token);
             using var response = await client.SendAsync(request);
@@ -1352,7 +1344,8 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
             HttpContent? content,
             bool includeCsrf)
         {
-            using var request = new HttpRequestMessage(method, path) { Content = content };
+            using var request = new HttpRequestMessage(method, path);
+            request.Content = content;
             request.Headers.TryAddWithoutValidation("X-Tenant-Slug", tenantSlug);
             if (includeCsrf)
             {
@@ -1391,16 +1384,10 @@ public sealed class TaskV1Pr05KanbanHostedHttpTests
 
     private sealed record HostedGraph(
         Tenant TenantA,
-        Tenant TenantB,
         User Manager,
         User Member,
-        User Outsider,
-        User TenantBManager,
         Workspace Workspace,
-        Workspace UnauthorizedWorkspace,
-        Workspace CrossTenantWorkspace,
         Project Project,
-        Project SiblingProject,
         Project UnauthorizedProject,
         Project CrossTenantProject,
         WorkflowStageIds MainStages,

@@ -43,7 +43,7 @@ public sealed class ArtifactUploadContractTests
         var services = new ServiceCollection();
         services.Configure<JsonOptions>(options =>
             options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
-        using var serviceProvider = services.BuildServiceProvider();
+        await using var serviceProvider = services.BuildServiceProvider();
         var context = new OpenApiOperationTransformerContext
         {
             DocumentName = "v1",
@@ -60,7 +60,7 @@ public sealed class ArtifactUploadContractTests
             }
         };
 
-        await new SecurityOpenApiOperationTransformer().TransformAsync(operation, context, default);
+        await new SecurityOpenApiOperationTransformer().TransformAsync(operation, context, CancellationToken.None);
 
         Assert.NotNull(schema.Required);
         Assert.Contains("file", schema.Required);
@@ -98,7 +98,7 @@ public sealed class ArtifactUploadContractTests
             }
         };
 
-        await new SecurityOpenApiOperationTransformer().TransformAsync(operation, context, default);
+        await new SecurityOpenApiOperationTransformer().TransformAsync(operation, context, CancellationToken.None);
 
         Assert.NotNull(operation.RequestBody.Content);
         Assert.Contains("application/json", operation.RequestBody.Content.Keys);
@@ -123,14 +123,14 @@ public sealed class ArtifactUploadContractTests
     public async Task Missing_file_is_rejected_before_calling_service()
     {
         var controller = new ArtifactsController(null!);
-        Assert.IsType<BadRequestObjectResult>(await controller.UploadVersion(Guid.NewGuid(), new(), default));
+        Assert.IsType<BadRequestObjectResult>(await controller.UploadVersion(Guid.NewGuid(), new(), CancellationToken.None));
     }
 
     [Fact]
     public async Task Attachment_missing_file_is_rejected_before_calling_service()
     {
         var controller = new AttachmentsController(null!);
-        Assert.IsType<BadRequestObjectResult>(await controller.Upload(new(), default));
+        Assert.IsType<BadRequestObjectResult>(await controller.Upload(new(), CancellationToken.None));
     }
 
     [Theory]
@@ -138,7 +138,7 @@ public sealed class ArtifactUploadContractTests
     [InlineData("Empty files are not allowed.", StatusCodes.Status400BadRequest)]
     public async Task Upload_preserves_missing_resource_and_validation_distinction(string error, int status)
     {
-        using var stream = new MemoryStream(new byte[] { 1 });
+        using var stream = new MemoryStream([1]);
         var controller = new ArtifactsController(new ArtifactStub(error));
         var form = new UploadArtifactVersionForm
         {
@@ -149,7 +149,7 @@ public sealed class ArtifactUploadContractTests
             }
         };
 
-        var result = Assert.IsType<ObjectResult>(await controller.UploadVersion(Guid.NewGuid(), form, default));
+        var result = Assert.IsType<ObjectResult>(await controller.UploadVersion(Guid.NewGuid(), form, CancellationToken.None));
 
         Assert.Equal(status, result.StatusCode);
     }

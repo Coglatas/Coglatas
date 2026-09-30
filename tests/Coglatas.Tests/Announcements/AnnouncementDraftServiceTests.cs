@@ -18,7 +18,7 @@ public sealed class AnnouncementDraftServiceTests
     [Fact]
     public async Task ApplicationOnlyCompositionProvidesFailClosedDraftPersistence()
     {
-        using var provider = new ServiceCollection()
+        await using var provider = new ServiceCollection()
             .AddApplication()
             .BuildServiceProvider();
         using var scope = provider.CreateScope();
@@ -219,7 +219,7 @@ public sealed class AnnouncementDraftServiceTests
         public RecordingInvalidations Invalidations { get; }
         public AnnouncementDraftService Service { get; }
         public Guid TenantId { get; }
-        public Guid WorkspaceId { get; }
+        private Guid WorkspaceId { get; }
 
         public static async Task<Fixture> CreateAsync()
         {
@@ -280,7 +280,7 @@ public sealed class AnnouncementDraftServiceTests
     {
         public Guid? UserId { get; set; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "author@example.test";
+        public string Email => "author@example.test";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.Teacher;
         public bool IsAuthenticated => UserId.HasValue;
     }
@@ -293,7 +293,7 @@ public sealed class AnnouncementDraftServiceTests
     private sealed class TestAudienceService : IAnnouncementAudienceService
     {
         public Queue<bool> Outcomes { get; } = [];
-        public bool IsAllowed { get; set; } = true;
+        private bool IsAllowed { get; } = true;
 
         public Task<Result<IReadOnlyList<AnnouncementAudienceOptionResponse>>> ListAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(Result<IReadOnlyList<AnnouncementAudienceOptionResponse>>.Success([]));

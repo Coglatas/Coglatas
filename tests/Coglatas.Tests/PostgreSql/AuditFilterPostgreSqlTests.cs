@@ -2,7 +2,6 @@ using Coglatas.Application.Audit;
 using Coglatas.Application.Common;
 using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
-using Coglatas.Application.Tenancy;
 using Coglatas.Domain.Entities;
 using Coglatas.Domain.Enums;
 using Coglatas.Infrastructure.Persistence;
@@ -111,7 +110,7 @@ public sealed class AuditFilterPostgreSqlTests
     {
         public Guid? UserId => user.Id;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => user.Email;
+        public string Email => user.Email;
         public SystemRole? SystemRole => user.SystemRole;
         public bool IsAuthenticated => true;
     }

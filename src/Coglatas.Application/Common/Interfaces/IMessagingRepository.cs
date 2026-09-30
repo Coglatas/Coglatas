@@ -1,4 +1,3 @@
-using Coglatas.Application.Common;
 using Coglatas.Application.Messaging;
 using Coglatas.Domain.Entities;
 

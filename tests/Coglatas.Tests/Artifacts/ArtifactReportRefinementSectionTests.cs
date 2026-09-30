@@ -298,9 +298,9 @@ public sealed class ArtifactReportRefinementSectionTests
 
     private sealed class ResearchPlans : IResearchPlanRepository
     {
-        private readonly Guid revisionId = Guid.NewGuid();
+        private readonly Guid _revisionId = Guid.NewGuid();
         public Task<ResearchPlanExecutionSnapshot?> GetCurrentExecutionSnapshotForTaskAsync(Guid taskItemId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<ResearchPlanExecutionSnapshot?>(new(revisionId, 7));
+            Task.FromResult<ResearchPlanExecutionSnapshot?>(new(_revisionId, 7));
         public Task<ResearchPlan?> GetForTaskAsync(Guid taskItemId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<ResearchPlan?> GetForTaskForUpdateAsync(Guid taskItemId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<ResearchPlanRevision?> GetRevisionAsync(Guid researchPlanId, Guid researchPlanRevisionId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
@@ -349,7 +349,7 @@ public sealed class ArtifactReportRefinementSectionTests
     {
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "section-refinement@example.invalid";
+        public string Email => "section-refinement@example.invalid";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }
@@ -358,7 +358,7 @@ public sealed class ArtifactReportRefinementSectionTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "section-refinement";
+        public string TenantSlug => "section-refinement";
         public bool IsPlatformScope => false;
     }
 

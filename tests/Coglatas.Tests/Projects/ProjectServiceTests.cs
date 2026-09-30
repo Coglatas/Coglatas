@@ -2323,8 +2323,7 @@ public sealed class ProjectServiceTests
         {
             Projects.ActivationEligibility = (userId, project) =>
                 Workspaces.Items.TryGetValue(project.WorkspaceId, out var workspace) &&
-                workspace.Status == WorkspaceStatus.Active &&
-                !workspace.DeletedAt.HasValue &&
+                workspace is { Status: WorkspaceStatus.Active, DeletedAt: null } &&
                 Workspaces.Members.Any(member =>
                     member.WorkspaceId == project.WorkspaceId &&
                     member.UserId == userId &&
@@ -2368,9 +2367,9 @@ public sealed class ProjectServiceTests
                 taskNotifications: TaskNotifications);
         }
 
-        public FakeUsers Users { get; } = new();
+        private FakeUsers Users { get; } = new();
         public FakeWorkspaces Workspaces { get; } = new();
-        public FakeGroups Groups { get; } = new();
+        private FakeGroups Groups { get; } = new();
         public FakeProjects Projects { get; } = new();
         public FakeCurrentUser Current { get; } = new();
         public FakeClock Clock { get; } = new();
@@ -2380,8 +2379,8 @@ public sealed class ProjectServiceTests
         public RecordingTaskNotificationProducer TaskNotifications { get; } = new();
         public RecordingInvalidations Invalidations { get; } = new();
         public RecordingAuthorizationChanges AuthorizationChanges { get; } = new();
-        public WorkspaceAuthorizationService WorkspaceAuthorization { get; }
-        public GroupAuthorizationService GroupAuthorization { get; }
+        private WorkspaceAuthorizationService WorkspaceAuthorization { get; }
+        private GroupAuthorizationService GroupAuthorization { get; }
         public ProjectAuthorizationService ProjectAuthorization { get; }
         public ProjectService Service { get; }
         public TaskCommandService Commands { get; }
@@ -2605,17 +2604,17 @@ public sealed class ProjectServiceTests
         public List<Comment> Comments { get; } = [];
         public List<WorkItemCollaborator> Collaborators { get; } = [];
         public List<WorkItemWatchState> Watches { get; } = [];
-        private readonly object memberLookupSync = new();
-        private readonly TaskCompletionSource firstMemberLookupEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly TaskCompletionSource releaseMemberLookups = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private int activeMemberLookups;
+        private readonly Lock _memberLookupSync = new();
+        private readonly TaskCompletionSource _firstMemberLookupEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _releaseMemberLookups = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _activeMemberLookups;
         public bool BlockMemberLookups { get; set; }
-        public Task FirstMemberLookupEntered => firstMemberLookupEntered.Task;
+        public Task FirstMemberLookupEntered => _firstMemberLookupEntered.Task;
         public int MaxConcurrentMemberLookups { get; private set; }
         public int ListTaskIdsWithArtifactsCallCount { get; private set; }
         public int ListActivatableProjectIdsCallCount { get; private set; }
         public Func<Guid, Project, bool>? ActivationEligibility { get; set; }
-        public void ReleaseMemberLookups() => releaseMemberLookups.TrySetResult();
+        public void ReleaseMemberLookups() => _releaseMemberLookups.TrySetResult();
 
         public Task<IReadOnlyList<Project>> ListVisibleAsync(Guid userId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<Project>>(ProjectItems.Values.Where(project => Members.Any(member => member.ProjectId == project.Id && member.UserId == userId)).ToList());
         public Task<IReadOnlyList<Guid>> ListActivatableProjectIdsAsync(Guid userId, IReadOnlyCollection<Guid> projectIds, CancellationToken cancellationToken = default)
@@ -2629,7 +2628,7 @@ public sealed class ProjectServiceTests
         public Task<IReadOnlyList<Guid>> ListCurrentReaderUserIdsAsync(Guid projectId, CancellationToken cancellationToken = default) =>
             Task.FromResult(CurrentReaderUserIds.TryGetValue(projectId, out var userIds)
                 ? userIds
-                : (IReadOnlyList<Guid>)Members
+                : Members
                     .Where(member => member.ProjectId == projectId)
                     .Select(member => member.UserId)
                     .Distinct()
@@ -2642,21 +2641,21 @@ public sealed class ProjectServiceTests
                 return Members.FirstOrDefault(member => member.ProjectId == projectId && member.UserId == userId);
             }
 
-            var active = Interlocked.Increment(ref activeMemberLookups);
-            lock (memberLookupSync)
+            var active = Interlocked.Increment(ref _activeMemberLookups);
+            lock (_memberLookupSync)
             {
                 MaxConcurrentMemberLookups = Math.Max(MaxConcurrentMemberLookups, active);
             }
 
-            firstMemberLookupEntered.TrySetResult();
+            _firstMemberLookupEntered.TrySetResult();
             try
             {
-                await releaseMemberLookups.Task.WaitAsync(cancellationToken);
+                await _releaseMemberLookups.Task.WaitAsync(cancellationToken);
                 return Members.FirstOrDefault(member => member.ProjectId == projectId && member.UserId == userId);
             }
             finally
             {
-                Interlocked.Decrement(ref activeMemberLookups);
+                Interlocked.Decrement(ref _activeMemberLookups);
             }
         }
         public Task<IReadOnlyList<ProjectMember>> ListMembersAsync(Guid projectId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ProjectMember>>(Members.Where(member => member.ProjectId == projectId).ToList());
@@ -2710,7 +2709,7 @@ public sealed class ProjectServiceTests
         public Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(Items.GetValueOrDefault(id));
         public Task<User?> GetByNormalizedEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default) => Task.FromResult(Items.Values.FirstOrDefault(user => user.NormalizedEmail == normalizedEmail));
         public Task<IReadOnlyList<User>> GetActiveByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<User>>(Items.Values.Where(user => ids.Contains(user.Id) && user.Status == UserStatus.Active && user.DeletedAt is null).ToArray());
+            Task.FromResult<IReadOnlyList<User>>(Items.Values.Where(user => ids.Contains(user.Id) && user is { Status: UserStatus.Active, DeletedAt: null }).ToArray());
         public Task AddAsync(User user, CancellationToken cancellationToken = default) { Items[user.Id] = user; return Task.CompletedTask; }
     }
 

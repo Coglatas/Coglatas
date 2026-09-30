@@ -2,7 +2,6 @@ using System.Reflection;
 using System.Text.Json;
 using Coglatas.Application.Common;
 using Coglatas.Application.Projects;
-using Coglatas.Domain.Entities;
 using Coglatas.Domain.Enums;
 using Coglatas.Web.Controllers;
 using Microsoft.AspNetCore.Http;
@@ -99,7 +98,7 @@ public sealed class TaskExecutionResultControllerTests
 
     private sealed class StubResultService : ITaskExecutionResultService
     {
-        public Result<TaskExecutionResultResponse> Latest { get; set; } =
+        public Result<TaskExecutionResultResponse> Latest { get; init; } =
             Result<TaskExecutionResultResponse>.Failure(new ApplicationErrorDetail(
                 "TASK_EXECUTION_RESULT_NOT_FOUND",
                 "The execution result was not found."));

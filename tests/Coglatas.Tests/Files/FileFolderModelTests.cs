@@ -2,7 +2,6 @@ using Coglatas.Application.Common.Interfaces;
 using Coglatas.Domain.Entities;
 using Coglatas.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Coglatas.Tests.Files;
 
@@ -18,7 +17,7 @@ public sealed class FileFolderModelTests
 
         var folder = db.Model.FindEntityType(typeof(FileFolder));
         Assert.NotNull(folder);
-        Assert.True(folder!.FindProperty(nameof(FileFolder.Version))!.IsConcurrencyToken);
+        Assert.True(folder.FindProperty(nameof(FileFolder.Version))!.IsConcurrencyToken);
         Assert.Equal(DeleteBehavior.Restrict,
             folder.FindNavigation(nameof(FileFolder.ParentFolder))!.ForeignKey.DeleteBehavior);
         Assert.Equal(DeleteBehavior.Restrict,
@@ -26,7 +25,7 @@ public sealed class FileFolderModelTests
 
         var root = db.Model.FindEntityType(typeof(FileFolderRootState));
         Assert.NotNull(root);
-        Assert.True(root!.FindProperty(nameof(FileFolderRootState.Version))!.IsConcurrencyToken);
+        Assert.True(root.FindProperty(nameof(FileFolderRootState.Version))!.IsConcurrencyToken);
         Assert.Contains(root.GetIndexes(), index =>
             index.IsUnique &&
             index.Properties.Count == 1 &&
@@ -36,7 +35,7 @@ public sealed class FileFolderModelTests
 
         var placement = db.Model.FindEntityType(typeof(FileFolderPlacement));
         Assert.NotNull(placement);
-        Assert.True(placement!.FindProperty(nameof(FileFolderPlacement.Version))!.IsConcurrencyToken);
+        Assert.True(placement.FindProperty(nameof(FileFolderPlacement.Version))!.IsConcurrencyToken);
         Assert.Contains(placement.GetIndexes(), index =>
             index.IsUnique &&
             index.Properties.Count == 1 &&

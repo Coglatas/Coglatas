@@ -1167,7 +1167,7 @@ public sealed class TaskV1Pr07DAuthorizedDeliveryTests
     {
         public Guid? UserId => userId;
         public Guid? SessionId => Guid.NewGuid();
-        public string? Email => "actor@example.invalid";
+        public string Email => "actor@example.invalid";
         public SystemRole? SystemRole => Coglatas.Domain.Enums.SystemRole.NormalUser;
         public bool IsAuthenticated => true;
     }
@@ -1193,7 +1193,7 @@ public sealed class TaskV1Pr07DAuthorizedDeliveryTests
 
     private sealed class RecordingAuthorizationChanges : IAuthorizationStateChangePublisher
     {
-        private readonly List<AuthorizationChange> pending = [];
+        private readonly List<AuthorizationChange> _pending = [];
         public List<AuthorizationChange> Committed { get; } = [];
 
         public Task PublishAsync(
@@ -1204,14 +1204,14 @@ public sealed class TaskV1Pr07DAuthorizedDeliveryTests
             string change,
             CancellationToken cancellationToken = default)
         {
-            pending.Add(new AuthorizationChange(tenantId, affectedUserId, scopeType, scopeId, change));
+            _pending.Add(new AuthorizationChange(tenantId, affectedUserId, scopeType, scopeId, change));
             return Task.CompletedTask;
         }
 
         public void Commit()
         {
-            Committed.AddRange(pending);
-            pending.Clear();
+            Committed.AddRange(_pending);
+            _pending.Clear();
         }
     }
 

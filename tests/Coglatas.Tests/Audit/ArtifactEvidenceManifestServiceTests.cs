@@ -61,7 +61,7 @@ public sealed class ArtifactEvidenceManifestServiceTests
         var result = await fixture.Service.AttachAsync(
             fixture.Version.Id,
             RequestForSource(
-                ArtifactEvidenceSourceKind.FileAttachment.ToString(),
+                nameof(ArtifactEvidenceSourceKind.FileAttachment),
                 sourceAttachmentId.ToString("D")));
 
         Assert.False(result.IsSuccess);
@@ -83,7 +83,7 @@ public sealed class ArtifactEvidenceManifestServiceTests
         var result = await fixture.Service.AttachAsync(
             fixture.Version.Id,
             RequestForSource(
-                ArtifactEvidenceSourceKind.ArtifactVersion.ToString(),
+                nameof(ArtifactEvidenceSourceKind.ArtifactVersion),
                 fixture.SecondVersion.Id.ToString("D")));
 
         Assert.False(result.IsSuccess);
@@ -175,11 +175,11 @@ public sealed class ArtifactEvidenceManifestServiceTests
                     ordinal,
                     $"Bounded claim {ordinal}.",
                     true,
-                    ArtifactClaimSupportStatus.Supported.ToString(),
-                    ArtifactClaimReviewStatus.Reviewed.ToString(),
+                    nameof(ArtifactClaimSupportStatus.Supported),
+                    nameof(ArtifactClaimReviewStatus.Reviewed),
                     [new ArtifactEvidenceManifestItem(
                         1,
-                        ArtifactEvidenceSourceKind.WebSnapshot.ToString(),
+                        nameof(ArtifactEvidenceSourceKind.WebSnapshot),
                         $"web:bounded-{ordinal}",
                         "Authorized source",
                         "Bounded evidence passage.",
@@ -198,7 +198,7 @@ public sealed class ArtifactEvidenceManifestServiceTests
         string claimText = "Audited claim.",
         string passage = "Bounded evidence passage.") =>
         RequestForSource(
-            ArtifactEvidenceSourceKind.WebSnapshot.ToString(),
+            nameof(ArtifactEvidenceSourceKind.WebSnapshot),
             "web:test-source",
             claimText,
             passage);
@@ -214,8 +214,8 @@ public sealed class ArtifactEvidenceManifestServiceTests
                 1,
                 claimText,
                 true,
-                ArtifactClaimSupportStatus.Supported.ToString(),
-                ArtifactClaimReviewStatus.Reviewed.ToString(),
+                nameof(ArtifactClaimSupportStatus.Supported),
+                nameof(ArtifactClaimReviewStatus.Reviewed),
                 new[]
                 {
                     new ArtifactEvidenceManifestItem(
@@ -265,17 +265,17 @@ public sealed class ArtifactEvidenceManifestServiceTests
         }
 
         public Guid TenantId { get; }
-        public AppDbContext Context { get; }
+        private AppDbContext Context { get; }
         public Artifact Artifact { get; }
         public ArtifactVersion Version { get; }
         public ArtifactVersion SecondVersion { get; }
         public ArtifactRepository Artifacts { get; }
         public ArtifactEvidenceRepository Evidence { get; }
-        public FileRepository Files { get; }
+        private FileRepository Files { get; }
         public StubArtifactAuthorization ArtifactAuthorization { get; }
         public StubFileAuthorization FileAuthorization { get; }
         public StubAuditAuthorization AuditAuthorization { get; }
-        public StubCurrentUser CurrentUser { get; }
+        private StubCurrentUser CurrentUser { get; }
         public FakeAuditLogger AuditLogger { get; }
         public DbUnitOfWork UnitOfWork { get; }
         public ArtifactEvidenceManifestService Service { get; }
@@ -451,7 +451,7 @@ public sealed class ArtifactEvidenceManifestServiceTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "evidence-manifest-test";
+        public string TenantSlug => "evidence-manifest-test";
         public bool IsPlatformScope => false;
     }
 
@@ -459,7 +459,7 @@ public sealed class ArtifactEvidenceManifestServiceTests
     {
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "audit-reviewer@example.invalid";
+        public string Email => "audit-reviewer@example.invalid";
         public SystemRole? SystemRole => global::Coglatas.Domain.Enums.SystemRole.User;
         public bool IsAuthenticated => true;
     }

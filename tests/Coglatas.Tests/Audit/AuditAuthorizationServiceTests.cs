@@ -80,8 +80,8 @@ public sealed class AuditAuthorizationServiceTests
 
     private sealed class Fixture
     {
-        private readonly Guid userId = Guid.NewGuid();
-        private readonly Guid tenantId = Guid.NewGuid();
+        private readonly Guid _userId = Guid.NewGuid();
+        private readonly Guid _tenantId = Guid.NewGuid();
 
         public Fixture(
             bool isTenantAdmin = false,
@@ -91,8 +91,8 @@ public sealed class AuditAuthorizationServiceTests
             AuditLogger = new CapturingAuditLogger();
             UnitOfWork = new CapturingUnitOfWork();
             Service = new AuditAuthorizationService(
-                new StubCurrentUser(userId, systemRole),
-                new StubCurrentTenant(tenantId),
+                new StubCurrentUser(_userId, systemRole),
+                new StubCurrentTenant(_tenantId),
                 new StubTenantAuthorizationService(isTenantAdmin),
                 new StubCapabilityGrantEvaluator(grants ?? []),
                 AuditLogger,
@@ -108,7 +108,7 @@ public sealed class AuditAuthorizationServiceTests
     {
         public Guid? UserId { get; } = userId;
         public Guid? SessionId => null;
-        public string? Email => "audit-test@example.invalid";
+        public string Email => "audit-test@example.invalid";
         public SystemRole? SystemRole { get; } = systemRole;
         public bool IsAuthenticated => true;
     }
@@ -117,7 +117,7 @@ public sealed class AuditAuthorizationServiceTests
     {
         public Guid TenantId { get; } = tenantId;
         public bool IsAvailable => true;
-        public string? TenantSlug => "audit-test";
+        public string TenantSlug => "audit-test";
         public bool IsPlatformScope => false;
     }
 
@@ -145,7 +145,7 @@ public sealed class AuditAuthorizationServiceTests
 
     private sealed class StubCapabilityGrantEvaluator(IReadOnlyCollection<string> grants) : ICapabilityGrantEvaluator
     {
-        private readonly HashSet<string> granted = new(grants, StringComparer.Ordinal);
+        private readonly HashSet<string> _granted = new(grants, StringComparer.Ordinal);
 
         public Task<bool> HasActiveGrantAsync(
             Guid subjectUserId,
@@ -155,11 +155,11 @@ public sealed class AuditAuthorizationServiceTests
             Guid? scopeId,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(granted.Contains(capabilityKey));
+            return Task.FromResult(_granted.Contains(capabilityKey));
         }
     }
 
-    public sealed class CapturingAuditLogger : IAuditLogger
+    private sealed class CapturingAuditLogger : IAuditLogger
     {
         public List<AuditLogEntry> Entries { get; } = [];
 
@@ -170,7 +170,7 @@ public sealed class AuditAuthorizationServiceTests
         }
     }
 
-    public sealed class CapturingUnitOfWork : IUnitOfWork
+    private sealed class CapturingUnitOfWork : IUnitOfWork
     {
         public int SaveCount { get; private set; }
 
