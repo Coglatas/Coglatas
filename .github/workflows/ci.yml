@@ -345,7 +345,7 @@ jobs:
         run: bash scripts/ci/route-main-ci-changes.sh
 
       - name: Create masked SEC-03 synthetic credential
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || steps.route.outputs.security == 'true'
         shell: bash
         run: |
           set -euo pipefail
