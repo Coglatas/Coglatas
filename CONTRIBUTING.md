@@ -17,15 +17,23 @@ not itself authorize use of repository-owned code outside this repository.
 
 ## Project language
 
-English is the canonical language for engineering and project collaboration in
-this repository. Authorized contributions should use English for source
-identifiers, code comments, docstrings, test names and descriptions,
-repository documentation, configuration documentation, commit messages, pull
-requests, and issues.
+English is the sole canonical language for engineering and project collaboration
+in this repository. Authorized contributions must use English for source
+identifiers, code comments, docstrings, test names and descriptions, repository
+and configuration documentation, new commit messages, branch names, issue and
+pull-request titles/bodies, comments/reviews, and project metadata.
 
-Intentional end-user localization and i18n resources are exempt. Localized
-product content should remain in the language required by the product rather
-than being rewritten solely to satisfy this engineering-language policy.
+Do not create or maintain parallel Japanese documentation or bilingual
+engineering records. Existing non-English engineering material is being migrated
+under [LANG-01](https://github.com/NYGsatoshi/Coglatas/issues/965); follow the
+[project language policy](docs/PROJECT_LANGUAGE.md) for translation, verification,
+provenance, and preservation requirements. Language cleanup does not authorize
+behavior changes, changes to issue/PR lifecycle state, or Git-history rewriting.
+
+Intentional end-user localization, IME/Unicode test fixtures, and exact attributed
+source evidence have narrow preservation exceptions. Localized product content
+must remain in the language required by the product. These exceptions do not
+permit non-English engineering prose or public disclosure of private material.
 
 ## Authorized collaborators
 
