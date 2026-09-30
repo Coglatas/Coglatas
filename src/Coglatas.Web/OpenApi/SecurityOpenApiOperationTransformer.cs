@@ -81,6 +81,14 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
         OpenApiOperation operation,
         OpenApiOperationTransformerContext context)
     {
+        // Kestrel rejects oversized request lines before routing, authentication,
+        // or application middleware. Its 414 response has no JSON error body.
+        operation.Responses ??= new OpenApiResponses();
+        operation.Responses.TryAdd("414", new OpenApiResponse
+        {
+            Description = "The request URI exceeds the server request-line limit."
+        });
+
         if (context.Description.RelativePath?.Contains('{') == true)
         {
             AddResponse(operation, "404", "The route value is invalid or the addressed resource does not exist.");
