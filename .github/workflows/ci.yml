@@ -46,6 +46,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
+      ASPNETCORE_ENVIRONMENT: Test
+      DOTNET_ENVIRONMENT: Test
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "1"
       DOTNET_MULTILEVEL_LOOKUP: "0"
