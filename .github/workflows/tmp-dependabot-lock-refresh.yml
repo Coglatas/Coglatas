@@ -6,7 +6,7 @@ on:
       - "fix/dependabot-webpack-dev-middleware-20260930"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   refresh-lockfiles:
@@ -15,8 +15,6 @@ jobs:
     steps:
       - name: Checkout branch
         uses: actions/checkout@v7
-        with:
-          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -52,12 +50,16 @@ jobs:
           }
           NODE
 
-      - name: Upload refreshed lockfiles
-        uses: actions/upload-artifact@v7
-        with:
-          name: dependabot-lock-refresh
-          path: |
-            frontend/package-lock.json
-            coglatas-frontend/package-lock.json
-          if-no-files-found: error
-          retention-days: 1
+      - name: Commit refreshed lockfiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- frontend/package-lock.json coglatas-frontend/package-lock.json; then
+            echo "Lockfiles are already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/package-lock.json coglatas-frontend/package-lock.json
+          git commit -m "fix(deps): refresh Storybook security lockfiles"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
