@@ -346,7 +346,7 @@ while IFS= read -r path; do
   [[ -n "$path" ]] || continue
 
   case "$path" in
-    .github/workflows/ci.yml|scripts/ci/route-main-ci-changes.sh|scripts/ci/require-needs-success.py)
+    .github/workflows/ci.yml|scripts/ci/route-main-ci-changes.sh|scripts/ci/require-needs-success.py|scripts/ci/validate-frontend-ci-helpers.sh)
       backend=true
       backend_ef=true
       backend_tests=true
