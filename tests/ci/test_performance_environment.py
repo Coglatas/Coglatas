@@ -5,6 +5,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 
@@ -172,6 +173,116 @@ class PerformanceEnvironmentContractTests(unittest.TestCase):
         self.assertIn("preflight.py", harness)
         self.assertIn("warmup.py", harness)
         self.assertIn("collect-environment.py", harness)
+
+
+class PerformanceEnvironmentRepeatStartTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.fixture = {
+            "fixtureVersion": 1,
+            "seedManifestVersion": 1,
+            "profile": "small",
+            "seed": 592001,
+            "fixtureHash": "a" * 64,
+            "cardinalities": {"tasks": 120},
+            "focus": {"projectTasks": 60},
+            "identities": {"workspaceId": "00000000-0000-0000-0000-000000000001"},
+        }
+        self.encoded_fixture = json.dumps(self.fixture).encode("utf-8-sig")
+
+    def compare_fixtures(self, first: bytes | None, second: bytes | None) -> subprocess.CompletedProcess[str]:
+        # Exercise the workflow's actual comparison, not a copy of its logic.
+        workflow = (ROOT / ".github/workflows/performance-environment.yml").read_text(encoding="utf-8")
+        marker = "      - name: Compare deterministic fixture identity and cardinality\n"
+        self.assertEqual(1, workflow.count(marker))
+        step = workflow.split(marker, 1)[1].split("\n      - name:", 1)[0]
+        script = textwrap.dedent(step.split("          python3 - <<'PY'\n", 1)[1].split("          PY", 1)[0])
+        first_literal = "'/tmp/perf02-fixture-first.json'"
+        self.assertEqual(1, script.count(first_literal))
+
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            first_path = temp / "first.json"
+            second_path = temp / "artifacts/performance/small/fixture.json"
+            second_path.parent.mkdir(parents=True)
+            if first is not None:
+                first_path.write_bytes(first)
+            if second is not None:
+                second_path.write_bytes(second)
+            # Isolate only the fixed first-input path; keep both decoding calls intact.
+            script = script.replace(first_literal, repr(str(first_path)))
+            return subprocess.run(
+                [sys.executable, "-c", script],
+                cwd=temp,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+    def test_repeat_start_accepts_utf8_with_or_without_bom(self) -> None:
+        for first_encoding in ("utf-8", "utf-8-sig"):
+            for second_encoding in ("utf-8", "utf-8-sig"):
+                with self.subTest(first=first_encoding, second=second_encoding):
+                    completed = self.compare_fixtures(
+                        json.dumps(self.fixture).encode(first_encoding),
+                        json.dumps(self.fixture).encode(second_encoding),
+                    )
+                    self.assertEqual(0, completed.returncode, completed.stderr)
+                    self.assertIn("repeat-start deterministic fixture verified:", completed.stdout)
+                    self.assertIn(self.fixture["fixtureHash"], completed.stdout)
+
+    def test_repeat_start_rejects_drift_in_every_compared_field(self) -> None:
+        mutations = {
+            "fixtureVersion": 2,
+            "seedManifestVersion": 2,
+            "profile": "medium",
+            "seed": 592002,
+            "fixtureHash": "b" * 64,
+            "cardinalities": {"tasks": 121},
+            "focus": {"projectTasks": 61},
+            "identities": {"workspaceId": "00000000-0000-0000-0000-000000000002"},
+        }
+        for key, changed in mutations.items():
+            with self.subTest(key=key):
+                second = json.dumps(self.fixture | {key: changed}).encode("utf-8-sig")
+                completed = self.compare_fixtures(self.encoded_fixture, second)
+                self.assertNotEqual(0, completed.returncode)
+                self.assertIn(f"PERF-02 repeat-start drift in {key}", completed.stderr)
+
+    def test_repeat_start_rejects_invalid_json_and_encoding_in_either_input(self) -> None:
+        for invalid, error in (
+            (b"\xef\xbb\xbf{not-json}", "JSONDecodeError"),
+            (b"{\xff}", "UnicodeDecodeError"),
+            (b"\xef\xbb\xbf" + self.encoded_fixture, "JSONDecodeError"),
+        ):
+            for side in (0, 1):
+                with self.subTest(invalid=invalid, side=side):
+                    inputs = [self.encoded_fixture, self.encoded_fixture]
+                    inputs[side] = invalid
+                    completed = self.compare_fixtures(*inputs)
+                    self.assertNotEqual(0, completed.returncode)
+                    self.assertIn(error, completed.stderr)
+
+    def test_repeat_start_rejects_missing_compared_fields_in_either_input(self) -> None:
+        for key in self.fixture:
+            incomplete = {name: value for name, value in self.fixture.items() if name != key}
+            for side in (0, 1):
+                with self.subTest(key=key, side=side):
+                    inputs = [self.encoded_fixture, self.encoded_fixture]
+                    inputs[side] = json.dumps(incomplete).encode("utf-8-sig")
+                    completed = self.compare_fixtures(*inputs)
+                    self.assertNotEqual(0, completed.returncode)
+                    self.assertIn("KeyError", completed.stderr)
+                    self.assertIn(key, completed.stderr)
+
+    def test_repeat_start_rejects_missing_files(self) -> None:
+        for side in (0, 1):
+            with self.subTest(side=side):
+                inputs: list[bytes | None] = [self.encoded_fixture, self.encoded_fixture]
+                inputs[side] = None
+                completed = self.compare_fixtures(*inputs)
+                self.assertNotEqual(0, completed.returncode)
+                self.assertIn("FileNotFoundError", completed.stderr)
 
 
 if __name__ == "__main__":
