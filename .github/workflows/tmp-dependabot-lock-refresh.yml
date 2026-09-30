@@ -1,0 +1,63 @@
+name: Temporary Dependabot lock refresh
+
+on:
+  push:
+    branches:
+      - "fix/dependabot-webpack-dev-middleware-20260930"
+
+permissions:
+  contents: read
+
+jobs:
+  refresh-lockfiles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Pin npm
+        run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+
+      - name: Refresh frontend lockfiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix frontend install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm --prefix coglatas-frontend install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Verify patched Storybook middleware resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          for (const path of ['frontend/package-lock.json', 'coglatas-frontend/package-lock.json']) {
+            const lock = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const matches = Object.entries(lock.packages ?? {})
+              .filter(([key]) => key.includes('@storybook') && key.endsWith('webpack-dev-middleware'))
+              .map(([key, value]) => [key, value.version]);
+            console.log(path, matches);
+            if (matches.length === 0 || matches.some(([, version]) => version !== '7.4.6')) {
+              process.exitCode = 1;
+            }
+          }
+          NODE
+
+      - name: Upload refreshed lockfiles
+        uses: actions/upload-artifact@v7
+        with:
+          name: dependabot-lock-refresh
+          path: |
+            frontend/package-lock.json
+            coglatas-frontend/package-lock.json
+          if-no-files-found: error
+          retention-days: 1
