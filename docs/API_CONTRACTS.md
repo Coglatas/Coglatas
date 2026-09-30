@@ -101,6 +101,8 @@ Outbox staging failure returns `DependencyUnavailable` without committing a
 partial resource. Replaying the same normalized request with the same scoped
 identity reconciles one logical resource; another actor/Tenant cannot recover
 it, current membership is rechecked, and reuse for another payload is HTTP 409.
+The generated Workspace-create OpenAPI contract includes the canonical error
+envelope for HTTP 409 conflicts and HTTP 503 dependency failures.
 
 Workspace-create failures use the full WPC error envelope. Exact cases include
 `MalformedJson`, `ValidationFailed`, `MissingIdempotencyKey`,

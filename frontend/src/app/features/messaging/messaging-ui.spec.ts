@@ -961,6 +961,93 @@ describe('Messaging MVP0 backend wiring', () => {
     expect(settled).toBe(true);
   });
 
+  it.each(['success', 'failure', 'authorization', 'workspace'] as const)(
+    'settles a dispatched send before routine catch-up and preserves immediate %s boundary handling',
+    async (outcome) => {
+      const events = new Subject<DurableRealtimeEvent>();
+      let catchUp: (() => Promise<void> | void) | null = null;
+      let clear: ((reason: 'authorization' | 'workspace') => void) | null = null;
+      await TestBed.configureTestingModule({
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: COGLATAS_AUTH_SESSION_MOCK, useValue: DEFAULT_AUTH_SESSION },
+          {
+            provide: FrontendFeatureFlagsService,
+            useValue: {
+              realtimeSignalREnabled: () => true,
+              optimisticMessagingEnabled: () => true,
+            },
+          },
+          {
+            provide: RealtimeFacade,
+            useValue: {
+              durableEvents$: events.asObservable(),
+              registerProtectedStateClearer: (
+                _owner: string,
+                callback: (reason: 'authorization' | 'workspace') => void,
+              ) => {
+                clear = callback;
+                return () => { clear = null; };
+              },
+              registerSubscription: () => () => undefined,
+              registerCatchUp: (_owner: string, callback: () => Promise<void> | void) => {
+                catchUp = callback;
+                return () => { catchUp = null; };
+              },
+            },
+          },
+        ],
+      }).compileComponents();
+      const httpMock = TestBed.inject(HttpTestingController);
+      const facade = TestBed.inject(MessagingFacade);
+      facade.loadConversation('conversation-a', 'channel', 'workspace-a');
+      flushConversationOpen(httpMock);
+      facade.setDraft('Send during transport registration');
+      facade.sendDraft();
+      const send = httpMock.expectOne('/api/conversations/conversation-a/messages');
+
+      const completion = catchUp?.();
+      expect(send.cancelled).toBe(false);
+      expect(facade.page().sending).toBe(true);
+      httpMock.expectNone('/api/conversations/conversation-a');
+
+      if (outcome === 'authorization' || outcome === 'workspace') {
+        clear?.(outcome);
+        expect(send.cancelled).toBe(true);
+        expect(facade.page().conversation.id).toBe('');
+        expect(facade.page().messages).toEqual([]);
+        await completion;
+        httpMock.expectNone('/api/conversations/conversation-a');
+      } else {
+        if (outcome === 'failure') {
+          send.flush({ error: 'Unavailable' }, { status: 500, statusText: 'Server Error' });
+        } else {
+          send.flush({
+            id: 'message-created',
+            workspaceId: 'workspace-a',
+            conversationId: 'conversation-a',
+            authorUserId: currentUserId,
+            authorDisplayName: 'Mock User A',
+            body: 'Send during transport registration',
+            attachments: [],
+            createdAt: '2026-07-09T01:05:00Z',
+            isDeleted: false,
+          });
+        }
+        await Promise.resolve();
+        expect(facade.page().sendState.status).toBe(outcome === 'failure' ? 'failed' : 'sent');
+        flushConversationOpen(httpMock);
+        await completion;
+        expect(facade.page().sending).toBe(false);
+        expect(facade.page().draft).toBe(outcome === 'failure'
+          ? 'Send during transport registration'
+          : '');
+      }
+      httpMock.verify();
+    },
+  );
+
   it('discards conversation metadata when access is denied between detail and messages', async () => {
     const events = new Subject<DurableRealtimeEvent>();
     let catchUp: (() => Promise<void> | void) | null = null;

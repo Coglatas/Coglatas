@@ -1395,9 +1395,20 @@ export class MessagingFacade {
     this.realtimeCatchUpCleanup = this.realtime.registerCatchUp(MESSAGING_REALTIME_OWNER, () => this.catchUpConversation(conversationId));
   }
 
-  private catchUpConversation(conversationId: string): Promise<void> | void {
+  private async catchUpConversation(conversationId: string): Promise<void> {
     if (this.loadedConversationId() !== conversationId) {
       return;
+    }
+    const currentGeneration = this.requestGeneration;
+    // Routine transport catch-up must not abort an already-dispatched command.
+    // Security and route boundaries still cancel requests synchronously through
+    // beginRequestGeneration; their generation change supersedes this wait.
+    while (this.protectedRequests.size > 0) {
+      await Promise.all([...this.protectedRequests].map((request) =>
+        new Promise<void>((resolve) => request.add(resolve))));
+      if (!this.isCurrentRequest(currentGeneration, conversationId)) {
+        return;
+      }
     }
     const routeKind = this.pageState().routeKind;
     const generation = this.beginRequestGeneration();
