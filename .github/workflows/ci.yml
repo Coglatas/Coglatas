@@ -358,13 +358,13 @@ jobs:
           printf 'COGLATAS_SECURITY_CI_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
 
       - name: Set up .NET SDK
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true'
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true' || steps.route.outputs.avmig_contract == 'true'
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
 
       - name: Restore
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true'
+        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true' || steps.route.outputs.avmig_contract == 'true'
         run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
 
       - name: Reject vulnerable NuGet packages
@@ -384,6 +384,10 @@ jobs:
       - name: Generate and verify SEC-01 / AV-MIG contract
         if: github.event_name != 'pull_request' || steps.route.outputs.avmig_contract == 'true'
         shell: bash
+        env:
+          # PRs verify the generated contract once; main/manual repeat generation
+          # to retain the deterministic-output gate without doubling PR build time.
+          COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS: ${{ github.event_name == 'pull_request' && '1' || '2' }}
         run: bash scripts/ci/generate-security-openapi-contract.sh
 
       - name: Validate Compose files
@@ -454,7 +458,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           echo "PR fast security mode: runtime DAST/fuzz/restart gates are deferred to main."
-          echo "Static dependency, Compose, SEC harness contracts, SEC-01/AV-MIG when routed, Trivy, and Gitleaks remain enforced."
+          echo "Dependency scans when manifests change, Compose/SEC harness contracts, one-pass SEC-01/AV-MIG when routed, Trivy, and Gitleaks remain enforced."
 
       - name: Build reusable security runtime image
         if: github.event_name != 'pull_request'

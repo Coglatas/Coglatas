@@ -554,27 +554,26 @@ while IFS= read -r path; do
       ;;
   esac
 
-  # AV-MIG contract routing.
+  # AV-MIG contract routing. Source/build inputs require the SEC-01 contract,
+  # but do not imply the NuGet dependency graph changed.
   case "$path" in
     global.json|NuGet.config|Directory.Build.*|src/*.csproj|docs/migration/avalonia/*|scripts/ci/*av_mig*|scripts/ci/generate-security-openapi-contract.sh|src/Coglatas.Web/*|src/Coglatas.Application/*|tests/Coglatas.Tests/OpenApi/*|tools/AvMig.SourceInspector/*)
       avmig_contract=true
       security=true
-      security_dotnet=true
       ;;
   esac
 
   # Security routing.
-  # Runtime/API implementation changes must execute the authenticated SEC-03/04/05/06
-  # Compose gate on pull requests as well as main. Otherwise contract and fuzz
-  # regressions are discovered only after merge.
+  # PRs run the fast static/contract gate for runtime/API implementation changes;
+  # live authenticated Core/Schemathesis/ZAP stacks are deferred to main/manual.
   case "$path" in
     src/Coglatas.Application/*|src/Coglatas.Domain/*|src/Coglatas.Infrastructure/*|src/Coglatas.Web/*|scripts/security/*|scripts/ci/run-security-runtime-smoke.sh|scripts/ci/run-security-runtime-parallel.sh|scripts/ci/generate-security-openapi-contract.sh|Dockerfile.security.runtime|.dockerignore|.config/*)
       security=true
-      security_dotnet=true
       security_compose=true
       ;;
   esac
 
+  # Only dependency/build manifests route the NuGet vulnerability scan.
   case "$path" in
     Coglatas.slnx|global.json|NuGet.config|Directory.Build.*|Directory.Packages.*|.config/*|src/*.csproj|tests/Coglatas.Tests/*.csproj)
       security=true

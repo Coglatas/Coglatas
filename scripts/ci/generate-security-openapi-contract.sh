@@ -6,6 +6,14 @@ cd "$repo_root"
 
 spec="${1:-artifacts/openapi/coglatas-openapi.json}"
 scratch_parent="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
+determinism_runs="${COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS:-2}"
+case "$determinism_runs" in
+  1|2) ;;
+  *)
+    echo "COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS must be 1 or 2." >&2
+    exit 2
+    ;;
+esac
 mkdir -p "$(dirname "$spec")"
 first="$(mktemp "$scratch_parent/coglatas-openapi.first.XXXXXX.json")"
 trap 'rm -f "$first"' EXIT
@@ -60,16 +68,20 @@ rm -f "$spec"
 generate_openapi
 python3 scripts/ci/verify-openapi.py "$spec"
 python3 scripts/ci/verify_av_mig_contract_boundary.py "$spec"
-cp "$spec" "$first"
 
-rm "$spec"
-generate_openapi
-python3 scripts/ci/verify-openapi.py "$spec"
-python3 scripts/ci/verify_av_mig_contract_boundary.py "$spec"
-if ! cmp --silent "$first" "$spec"; then
-  echo "SEC-01 OpenAPI output is not deterministic across repeated builds." >&2
-  diff -u "$first" "$spec" || true
-  exit 1
+if [[ "$determinism_runs" == "2" ]]; then
+  cp "$spec" "$first"
+  rm "$spec"
+  generate_openapi
+  python3 scripts/ci/verify-openapi.py "$spec"
+  python3 scripts/ci/verify_av_mig_contract_boundary.py "$spec"
+  if ! cmp --silent "$first" "$spec"; then
+    echo "SEC-01 OpenAPI output is not deterministic across repeated builds." >&2
+    diff -u "$first" "$spec" || true
+    exit 1
+  fi
+else
+  echo "SEC-01 deterministic repeat generation deferred by fast PR mode."
 fi
 
 dotnet src/Coglatas.Web/bin/Release/net10.0/Coglatas.Web.dll \

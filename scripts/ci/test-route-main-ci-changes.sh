@@ -171,7 +171,8 @@ printf 'public sealed class ProjectMutationService { public int Version => 2; }\
 head="$(commit_all "$repo" head)"
 output="$(route_repo "$repo" "$base" "$head")"
 assert_eq true "$(value_of "$output" security)" "runtime source security"
-assert_eq true "$(value_of "$output" security_dotnet)" "runtime source security dotnet"
+assert_eq true "$(value_of "$output" avmig_contract)" "runtime source AV-MIG contract"
+assert_eq false "$(value_of "$output" security_dotnet)" "runtime source dependency scan"
 assert_eq true "$(value_of "$output" security_compose)" "runtime source security compose"
 
 # Security harness changes must test the harness itself rather than passing on
@@ -185,6 +186,7 @@ printf 'echo changed\n' > "$repo/scripts/security/schemathesis-runner.sh"
 head="$(commit_all "$repo" head)"
 output="$(route_repo "$repo" "$base" "$head")"
 assert_eq true "$(value_of "$output" security_compose)" "security harness compose"
+assert_eq false "$(value_of "$output" security_dotnet)" "security harness dependency scan"
 
 # AV-MIG contract verification depends on the effective .NET SDK/build
 # configuration as well as source files. Each of these inputs must route the
@@ -204,6 +206,7 @@ for avmig_input in \
   head="$(commit_all "$repo" head)"
   output="$(route_repo "$repo" "$base" "$head")"
   assert_eq true "$(value_of "$output" avmig_contract)" "AV-MIG build input $avmig_input"
+  assert_eq true "$(value_of "$output" security_dotnet)" "AV-MIG build input dependency scan $avmig_input"
 done
 
 # Cross-cutting Common changes intentionally fail safe to the full backend suite.
