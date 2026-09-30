@@ -88,6 +88,15 @@ public sealed class DbSearchService(
             return Result<SearchResponse>.Failure("Search query or filters are required.");
         }
 
+        // PostgreSQL timestamptz parameters require offset zero. Preserve the
+        // requested instants and inclusive/exclusive bounds in every search lane.
+        request = request with
+        {
+            FromDate = request.FromDate?.ToUniversalTime(),
+            ToDate = request.ToDate?.ToUniversalTime(),
+            ToDateExclusive = request.ToDateExclusive?.ToUniversalTime()
+        };
+
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
         var userId = currentUser.UserId.Value;
