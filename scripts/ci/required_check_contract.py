@@ -328,32 +328,10 @@ def required_check_errors(relative: str, text: str, registry: dict[str, Any] | N
             name = _field(text, block, "name")
             if name not in {item["context"], f'"{item["context"]}"', f"'{item['context']}'"}:
                 errors.append(f"{relative}: required check job '{item['job']}' must keep name {item['context']!r}")
-            condition = _field(text, block, "if")
-            needs = _field(text, block, "needs")
-            if needs is None:
-                if condition is not None:
-                    errors.append(f"{relative}: required check job '{item['job']}' must not use job-level if")
-            else:
-                allowed_aggregate_conditions = {
-                    "always()",
-                    "${{ always() }}",
-                    '"${{ always() }}"',
-                    "'${{ always() }}'",
-                }
-                if condition not in allowed_aggregate_conditions:
-                    errors.append(
-                        f"{relative}: aggregate required check job '{item['job']}' must use if: always()"
-                    )
-                start, end, _ = block
-                job_text = "\n".join(_lines(text)[start:end])
-                if (
-                    "REQUIRED_NEEDS_JSON:" not in job_text
-                    or "toJSON(needs)" not in job_text
-                    or "python3 scripts/ci/require-needs-success.py" not in job_text
-                ):
-                    errors.append(
-                        f"{relative}: aggregate required check job '{item['job']}' must fail closed through require-needs-success.py"
-                    )
+            if _field(text, block, "if") is not None:
+                errors.append(f"{relative}: required check job '{item['job']}' must not use job-level if")
+            if _field(text, block, "needs") is not None:
+                errors.append(f"{relative}: required check job '{item['job']}' must not depend on another job")
         if _field(text, block, "continue-on-error") is not None:
             errors.append(f"{relative}: required check job '{item['job']}' must not use continue-on-error")
         raw = _field(text, block, "timeout-minutes")

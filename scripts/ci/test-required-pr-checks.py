@@ -107,7 +107,7 @@ jobs:
         errors = guard.required_check_errors(".github/workflows/publication-readiness.yml", text, REGISTRY)
         self.assertTrue(any("job-level if" in error for error in errors))
 
-    def test_needs_without_fail_closed_aggregator_is_rejected(self) -> None:
+    def test_needs_is_rejected(self) -> None:
         text = """
 on:
   pull_request:
@@ -119,50 +119,7 @@ jobs:
     timeout-minutes: 20
 """
         errors = guard.required_check_errors(".github/workflows/publication-readiness.yml", text, REGISTRY)
-        self.assertTrue(any("must use if: always()" in error for error in errors))
-        self.assertTrue(any("must fail closed" in error for error in errors))
-
-    def test_aggregate_required_job_must_use_unconditional_always(self) -> None:
-        text = """
-on:
-  pull_request:
-jobs:
-  publication-readiness:
-    name: publication-readiness
-    needs: prepare
-    if: ${{ needs.prepare.result == 'success' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - env:
-          REQUIRED_NEEDS_JSON: ${{ toJSON(needs) }}
-        run: python3 scripts/ci/require-needs-success.py
-"""
-        errors = guard.required_check_errors(".github/workflows/publication-readiness.yml", text, REGISTRY)
-        self.assertTrue(any("must use if: always()" in error for error in errors))
-
-    def test_fail_closed_aggregate_required_job_passes(self) -> None:
-        text = """
-on:
-  pull_request:
-jobs:
-  publication-readiness:
-    name: publication-readiness
-    needs:
-      - prepare
-      - verify
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - env:
-          REQUIRED_NEEDS_JSON: ${{ toJSON(needs) }}
-        run: python3 scripts/ci/require-needs-success.py
-"""
-        self.assertEqual(
-            [],
-            guard.required_check_errors(".github/workflows/publication-readiness.yml", text, REGISTRY),
-        )
+        self.assertTrue(any("must not depend" in error for error in errors))
 
     def test_continue_on_error_is_rejected(self) -> None:
         text = """
