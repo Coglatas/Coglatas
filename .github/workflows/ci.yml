@@ -277,6 +277,12 @@ jobs:
       - name: Build test project
         if: steps.execute.outputs.run == 'true'
         run: dotnet build tests/Coglatas.Tests/Coglatas.Tests.csproj --configuration Release --no-restore --disable-build-servers -m:1
+      - name: Restore .NET tools for PostgreSQL shard
+        if: steps.execute.outputs.run == 'true' && matrix.shard == '1' && (github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true')
+        run: dotnet tool restore
+      - name: Apply PostgreSQL migrations for PostgreSQL shard
+        if: steps.execute.outputs.run == 'true' && matrix.shard == '1' && (github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true')
+        run: dotnet ef database update --project src/Coglatas.Infrastructure --startup-project src/Coglatas.Web --configuration Release --no-build
       - name: Run test shard
         if: steps.execute.outputs.run == 'true'
         shell: bash
