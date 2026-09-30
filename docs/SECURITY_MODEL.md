@@ -684,6 +684,13 @@ preference state before it reauthorizes subscriptions or starts HTTP catch-up.
 This clear-before-reauthorize ordering prevents a revoked browser from keeping
 a protected projection visible.
 
+Routine conversation transport catch-up waits for already-dispatched HTTP
+requests to settle before reloading the authoritative conversation. It does not
+abort a send merely because subscription registration finishes later. Session,
+Tenant, Workspace, route, and authorization boundaries still cancel requests
+and clear protected state immediately; a superseded catch-up cannot reload the
+previous generation.
+
 ## Saved Message follow-up boundary
 
 `message_follow_ups` is current-user private state. Tenant filtering and the
