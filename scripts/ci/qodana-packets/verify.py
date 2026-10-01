@@ -25,6 +25,26 @@ def checked(args: list[str], cwd: Path, capture: bool = False) -> str:
                             stdout=subprocess.PIPE if capture else None)
     return result.stdout or ""
 
+def is_ancestor(repo: Path, before: str, after: str) -> bool:
+    result = subprocess.run(["git", "merge-base", "--is-ancestor", before, after], cwd=repo)
+    if result.returncode not in {0, 1}:
+        raise ValueError("Cannot establish revision ancestry")
+    return result.returncode == 0
+
+def integrated_pr_base(repo: Path, head: str, base: str) -> str | None:
+    for sha in [head, base]:
+        if not re.fullmatch(r"[0-9a-f]{40}", sha):
+            raise ValueError("Require immutable event head/base revisions")
+    if checked(["git", "rev-parse", "HEAD"], repo, capture=True).strip() != head:
+        raise ValueError("Checkout differs from event head")
+    return base if is_ancestor(repo, base, head) else None
+
+def resolve_source_baseline(repo: Path, configured: str, head: str, base: str) -> str:
+    integrated = integrated_pr_base(repo, head, base)
+    if integrated and is_ancestor(repo, configured, integrated):
+        return integrated
+    return configured
+
 def trx_inventory(path: Path) -> collections.Counter:
     root = ET.parse(path).getroot()
     summary = root.find("t:ResultSummary", NAMESPACE)
@@ -119,7 +139,7 @@ def main() -> None:
     temp = Path(os.environ["RUNNER_TEMP"]).resolve() / "qodana-packet-proof"
     temp.mkdir(exist_ok=False)
     evidence = source / "artifacts/qodana-packet-proof"
-    evidence.mkdir(parents=True, exist_ok=False)
+    evidence.mkdir(parents=True, exist_ok=True)
     config_dir = source / "scripts/ci/qodana-packets"
     selection = read_selection(config_dir, os.environ["PACKET_BRANCH"])
     if set(selection) != {"packet", "baseline_sha", "stage"}:
@@ -133,6 +153,9 @@ def main() -> None:
     if not re.fullmatch(r"[0-9a-f]{40}", head_sha):
         raise ValueError("Head must be an immutable full commit SHA")
     checked(["git", "merge-base", "--is-ancestor", baseline_sha, head_sha], source)
+    configured_baseline_sha = baseline_sha
+    event_base_sha = os.environ["PACKET_BASE_SHA"]
+    baseline_sha = resolve_source_baseline(source, baseline_sha, head_sha, event_base_sha)
     if checked(["dotnet", "--version"], source, capture=True).strip() != "10.0.401":
         raise ValueError("SDK drift: require 10.0.401")
     if not os.environ.get("POSTGRES_TEST_CONNECTION_STRING", "").strip():
@@ -189,6 +212,7 @@ def main() -> None:
     require_same(baseline, candidate)
     proof = {
         "packet": packet_id, "baseline_sha": baseline_sha, "head_sha": head_sha,
+        "configured_baseline_sha": configured_baseline_sha, "event_base_sha": event_base_sha,
         "stage": stage, "candidate_is_committed_head": stage == "verify",
         "sdk": "10.0.401", "postgresql": postgres_version,
         "canonical_helper_sha256": HELPER_SHA256, "historical_plan_sha256": PLAN_SHA256,

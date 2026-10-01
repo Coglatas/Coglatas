@@ -7,6 +7,16 @@ import unittest
 import r2_verify
 
 class R2BaselineTests(unittest.TestCase):
+    def test_main_integration_allows_only_own_fixed_test_and_auxiliary_files(self):
+        own = r2_verify.FIXED_TESTS["P11"][0]
+        r2_verify.require_baseline_paths([own, "scripts/ci/qodana-packets/selections/P11.json"], "P11", True)
+        for path in ["src/changed.cs", "frontend/package-lock.json", r2_verify.FIXED_TESTS["P13"][0]]:
+            with self.subTest(path=path):
+                with self.assertRaises(ValueError):
+                    r2_verify.require_baseline_paths([path], "P11", True)
+        with self.assertRaises(ValueError):
+            r2_verify.require_baseline_paths([own], "P11", False)
+
     def payload(self):
         root = Path(__file__).resolve().parent
         return json.loads((root / "r2-payload.json").read_text()), json.loads((root / "payload.json").read_text())
