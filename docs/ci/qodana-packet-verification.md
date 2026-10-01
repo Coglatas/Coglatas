@@ -23,7 +23,7 @@ The whole baseline-to-head diff still rejects every out-of-packet source,
 dependency or test change, and all frozen preimage/canonical-result checks remain.
 No moving branch is checked out and no prior-head evidence is reused.
 
-For R2 baseline-only stages, an integrated event base is compared against the
+For the R2 `baseline` stage, an integrated event base is compared against the
 entire head. Only auxiliary CI files and that packet's byte-exact fixed test may
 differ. The head is then the immutable test baseline, with production identical
 to the event base. Without an integrated base, the original configured baseline
@@ -31,21 +31,21 @@ and strict auxiliary-only diff rule remain. Both modes retain the original
 audited tests-first ancestor, pinned helper/plan and known-upstream byte checks.
 Proofs record configured, event, effective baseline and comparison revisions.
 
-P11/P13 support a fixed-tests-only `baseline` stage. Commit each exact supplied
+P11/P13 retain a fixed-tests-only `baseline` stage. Commit each exact supplied
 test on its isolated audited branch first, then normally integrate main before
-selecting an immutable baseline. The R2 helper runs only in dry-run mode on the
+selecting an immutable baseline. For this stage, the R2 helper runs only in dry-run mode on the
 audited tests-first revision. Source overlap is accepted only for byte-exact
 canonical upstream P06/P04/P07 edits in the explicitly mapped files. Unknown
 source drift stops verification. This stage executes focused/full backend and
 architecture tests without applying any production transformation; its evidence
 does not establish candidate acceptance or complete either packet.
 
-P14 supports only the same unchanged-production baseline stage. It has no
+P14 also retains the unchanged-production `baseline` stage. It has no
 supplied fixed test; `audit_test_sha` therefore selects the original audited
 source revision. No test/source diff is allowed against an integrated event
 base. The only mapped upstream source variant is canonical P04 in
-AnnouncementEngagementStore. The original R2 helper still runs only in dry-run
-mode, and P14 production transformations remain outside this runner.
+AnnouncementEngagementStore. For this stage, the original R2 helper runs only in dry-run
+mode and no P14 production transformation is applied.
 
 - `prepare`: require unchanged production source; execute the baseline first,
   then run the unmodified canonical helper in a clean Linux worktree and test
@@ -70,3 +70,22 @@ The artifact includes the canonical patch, source SHA-256 values, exact revision
 test inventories and evidence hashes. A prepare pass does not establish an
 integrated-head or main result, Qodana identity reconciliation, a budget ratchet,
 or authorization for behavior-sensitive packets.
+
+P11/P13/P14 also support `prepare` and `verify` after their unchanged-source
+baseline. The original R2 helper first validates its clean audited worktree;
+only after the current integrated baseline passes does the same unmodified
+helper apply there. Canonical output is integrated with the independently
+verified, byte-exact known upstream source using ordinary three-way file
+merging. Any conflict stops the packet. Expected preimages, hashes, fixed-test
+bytes, operations and counts are never amended.
+
+For `prepare`, the committed head remains production-identical to its selected
+baseline; only a separate candidate worktree receives the canonical integration.
+For `verify`, the entire baseline-to-head diff permits only the packet targets,
+its fixed test and auxiliary packet CI files, and every committed target must
+match the exact integrated canonical result. Both stages require focused, full
+backend, architecture and live PostgreSQL baseline/candidate execution with
+identical test inventories, zero failures/skips and nonzero totals. Proofs
+preserve the audited canonical patch, integrated candidate hashes and both
+inventories. A prepare pass is evidence for an uncommitted candidate, not packet
+completion or a substitute for actual-head verification and normal checks.

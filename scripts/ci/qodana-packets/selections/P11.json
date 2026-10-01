@@ -1,6 +1,6 @@
 {
   "packet": "P11",
-  "baseline_sha": "62618ba0f0da7f307e3aa3a4f9e536e11931250d",
+  "baseline_sha": "cb9216cd336b5d36d4a266006398ad31643d6fc8",
   "audit_test_sha": "36c88952f75b43d877a9fb00976ffc4e2ee06476",
-  "stage": "baseline"
+  "stage": "prepare"
 }
