@@ -1,0 +1,995 @@
+{
+  "plan": {
+    "schema_version": 1,
+    "repository": "NYGsatoshi/Coglatas",
+    "audit_source_sha": "64db0f5aaf8b4283360f4c6d7934c8ed89256024",
+    "latest_verified_inventory": {
+      "run_number": 2004,
+      "run_id": 36689640071,
+      "workflow": "Qodana Deep Analysis",
+      "analyzed_sha": "64db0f5aaf8b4283360f4c6d7934c8ed89256024",
+      "artifact_id": 11086775183,
+      "zip_sha256": "da815c2033ff4a4c47b749ef56cf8e352f5d77771f53ced335589b624e6df6c7",
+      "sarif_sha256": "6f1b59fe7bbcccdd97534e063e2f7205d3e722958f962664cac2352e7b81091b",
+      "guard_artifact_id": 11085699773,
+      "raw_count": 2480,
+      "critical": 0,
+      "unresolved": 0,
+      "model_failures": 0,
+      "rule_regressions": [],
+      "reconciliation": "Full multiset match by rule/path/fingerprint/line/column/message: all 2480 inherited; run103 indices2200 and2480 absent; no unmatched result."
+    },
+    "authority": {
+      "parent": 862,
+      "lanes": [
+        894,
+        895,
+        896,
+        897
+      ],
+      "manifest": 935,
+      "owner_decision_date": "2026-09-30"
+    },
+    "verification_status": {
+      "source_audit": "completed for the exact 71 edit candidates; no claim of exhaustive runtime proof for retained/held findings",
+      "dotnet_compilation": "NOT RUN in audit environment",
+      "postgresql_tests": "NOT RUN in audit environment",
+      "qodana_on_candidate": "NOT RUN; no implementation source was changed by this audit",
+      "base_qodana": "SUCCESSFUL exact-audit-source inventory: 2480, rule regressions=[], Critical/unresolved/model failures=0. Not a run of the proposed edits."
+    },
+    "budget_policy": "Do not edit baseline in source packets. After verified removal on successful exact-main full SARIF, create a separate metadata-only ratchet PR for only affected rules using min(current_budget, measured_current_count). Preserve existing zero budgets and historical sourceRevision/totalFindings. Do not claim metadata tightening as source remediation. Never raise budgets.",
+    "packets": [
+      {
+        "id": "P01",
+        "title": "Qualified type identities and two explicitly array-targeted expressions",
+        "run103_indices": [
+          2182,
+          2183,
+          2184,
+          2185,
+          2186,
+          2187,
+          2188,
+          2189,
+          2190,
+          2434,
+          2439
+        ],
+        "run2004_indices": [
+          2182,
+          2183,
+          2184,
+          2185,
+          2186,
+          2187,
+          2188,
+          2189,
+          2190,
+          2433,
+          2438
+        ],
+        "source_issues": [
+          936
+        ],
+        "test_filter": "FullyQualifiedName~FileNameSanitizer|FullyQualifiedName~Redaction|FullyQualifiedName~Tenant|FullyQualifiedName~DependencyInjection|FullyQualifiedName~TaskSubresource",
+        "files": [
+          {
+            "path": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+            "git_blob_sha": "4996cd887da4ce1a5881cc981877affabf6ad9b4",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "Coglatas.Domain.Enums.TaskPriority",
+                "new": "Domain.Enums.TaskPriority",
+                "count": 2
+              },
+              {
+                "kind": "replace",
+                "old": "Coglatas.Domain.Enums.ActivityLogType",
+                "new": "Domain.Enums.ActivityLogType",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/DependencyInjection.cs",
+            "git_blob_sha": "edfe713ea74a7befe59a5c7da19e5a086560275d",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "Coglatas.Application.Admin.IAdminRepository",
+                "new": "Application.Admin.IAdminRepository",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "Coglatas.Application.Files.IFileSelectionSnapshotService",
+                "new": "IFileSelectionSnapshotService",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "Coglatas.Application.Artifacts.IArtifactReportService",
+                "new": "Application.Artifacts.IArtifactReportService",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "Coglatas.Application.Artifacts.IArtifactReportRefinementService",
+                "new": "Application.Artifacts.IArtifactReportRefinementService",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "Coglatas.Application.Realtime.IOutboxEventRepository",
+                "new": "IOutboxEventRepository",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "Coglatas.Application.Search.ISearchService",
+                "new": "Application.Search.ISearchService",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Application/Files/FileNameSanitizer.cs",
+            "git_blob_sha": "d424e0162215af199c88bed06173893f856e24ab",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "private static readonly char[] AdditionalInvalidFileNameChars = { '<', '>', ':', '\"', '|', '?', '*' };",
+                "new": "private static readonly char[] AdditionalInvalidFileNameChars = ['<', '>', ':', '\"', '|', '?', '*'];",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/AppDbContext.cs",
+            "git_blob_sha": "2919d56282ab1ec6ca1e4a8dd0eae72641b19fef",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "method.Invoke(this, new object[] { modelBuilder });",
+                "new": "method.Invoke(this, [modelBuilder]);",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "new_tests": []
+      },
+      {
+        "id": "P02",
+        "title": "Pin six messaging array membership calls and one enum qualification",
+        "run103_indices": [
+          73,
+          74,
+          75,
+          76,
+          77,
+          78,
+          2191
+        ],
+        "run2004_indices": [
+          73,
+          74,
+          75,
+          76,
+          77,
+          78,
+          2191
+        ],
+        "source_issues": [
+          936
+        ],
+        "test_filter": "FullyQualifiedName~Messaging|FullyQualifiedName~Communication|FullyQualifiedName~Message|FullyQualifiedName~WorkspaceDashboard",
+        "files": [
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/MessagingRepository.cs",
+            "git_blob_sha": "375376ec720161cdd95155de541166894e61052c",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "currentIds.Contains(conversation.Id)",
+                "new": "Enumerable.Contains<Guid>(currentIds, conversation.Id)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "pageIds.Contains(conversation.Id)",
+                "new": "Enumerable.Contains<Guid>(pageIds, conversation.Id)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "rootIds.Contains(message.ThreadRootMessageId.Value)",
+                "new": "Enumerable.Contains<Guid>(rootIds, message.ThreadRootMessageId.Value)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "authorIds.Contains(authorId)",
+                "new": "Enumerable.Contains<Guid>(authorIds, authorId)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "authorIds.Contains(user.Id)",
+                "new": "Enumerable.Contains<Guid>(authorIds, user.Id)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "authorizedAuthorIds.Contains(user.Id)",
+                "new": "Enumerable.Contains<Guid>(authorizedAuthorIds, user.Id)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "c.Type == Domain.Enums.ConversationType.DirectMessage",
+                "new": "c.Type == ConversationType.DirectMessage",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "new_tests": []
+      },
+      {
+        "id": "P03",
+        "title": "Pin digest membership calls and remove the unused fence-helper parameter",
+        "run103_indices": [
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          2422
+        ],
+        "run2004_indices": [
+          84,
+          85,
+          86,
+          87,
+          88,
+          89,
+          90,
+          2421
+        ],
+        "source_issues": [
+          936,
+          944
+        ],
+        "test_filter": "FullyQualifiedName~TaskDeadlineDigest",
+        "files": [
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/TaskDeadlineDigestRepository.cs",
+            "git_blob_sha": "2cedac425a2334ed9cf3743a0d2365bbc14aec6c",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "workspaceIds.Contains(job.WorkspaceId)",
+                "new": "Enumerable.Contains<Guid>(workspaceIds, job.WorkspaceId)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "localDates.Contains(job.LocalDate)",
+                "new": "Enumerable.Contains<DateOnly>(localDates, job.LocalDate)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "workspaceIds.Contains(workspace.Id)",
+                "new": "Enumerable.Contains<Guid>(workspaceIds, workspace.Id)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "staleTokens.Contains(attempt.ClaimToken.Value)",
+                "new": "Enumerable.Contains<Guid>(staleTokens, attempt.ClaimToken.Value)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "dueIds.Contains(attempt.JobId)",
+                "new": "Enumerable.Contains<Guid>(dueIds, attempt.JobId)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "expectedProjects.Contains(project.Id)",
+                "new": "Enumerable.Contains<Guid>(expectedProjects, project.Id)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "onlyTaskIds.Contains(candidate.TaskId)",
+                "new": "Enumerable.Contains<Guid>(onlyTaskIds, candidate.TaskId)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "ResolveFenceDeadlineBeforeUtc(evaluatedCandidates)",
+                "new": "ResolveFenceDeadlineBeforeUtc()",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "private static DateTimeOffset ResolveFenceDeadlineBeforeUtc(\n        IReadOnlyCollection<TaskDeadlineDigestCandidate> evaluatedCandidates)",
+                "new": "private static DateTimeOffset ResolveFenceDeadlineBeforeUtc()",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "new_tests": []
+      },
+      {
+        "id": "P04",
+        "title": "Pin thirteen remaining array membership calls without changing provider queries",
+        "run103_indices": [
+          68,
+          69,
+          70,
+          71,
+          72,
+          79,
+          80,
+          81,
+          82,
+          83,
+          91,
+          92,
+          93
+        ],
+        "run2004_indices": [
+          68,
+          69,
+          70,
+          71,
+          72,
+          79,
+          80,
+          81,
+          82,
+          83,
+          91,
+          92,
+          93
+        ],
+        "source_issues": [
+          936
+        ],
+        "test_filter": "FullyQualifiedName~Announcement|FullyQualifiedName~Audit|FullyQualifiedName~FileAccess|FullyQualifiedName~Planning|FullyQualifiedName~Gantt|FullyQualifiedName~Kanban|FullyQualifiedName~Project|FullyQualifiedName~WorkspaceDashboard",
+        "files": [
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/AnnouncementEngagementStore.cs",
+            "git_blob_sha": "e46e52d61d1870ab1fa48d2b40be555d7c9057b1",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "recipientIds.Contains(read.UserId)",
+                "new": "Enumerable.Contains<Guid>(recipientIds, read.UserId)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/AuditPackageExportService.cs",
+            "git_blob_sha": "e0e2a18fe8cd233ccbea26029386324067026259",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "claimIds.Contains(finding.ArtifactClaimId)",
+                "new": "Enumerable.Contains<Guid>(claimIds, finding.ArtifactClaimId)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/DbAuditFindingsService.cs",
+            "git_blob_sha": "14577efeb9cad438e31181de61867ddc10242d85",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "claimIds.Contains(finding.ArtifactClaimId)",
+                "new": "Enumerable.Contains<Guid>(claimIds, finding.ArtifactClaimId)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "ownerIds.Contains(link.UserId)",
+                "new": "Enumerable.Contains<Guid>(ownerIds, link.UserId)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/FileAccessGrantRepository.cs",
+            "git_blob_sha": "2d1f897796fef8f2fe50340c89a64b722023013b",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "ids.Contains(grant.FileObjectId)",
+                "new": "Enumerable.Contains<Guid>(ids, grant.FileObjectId)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/PlanningRepository.cs",
+            "git_blob_sha": "d07912bec8babf48fd3301709787f4d2084d8909",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "taskIds.Contains(dependency.PredecessorTaskItemId)",
+                "new": "Enumerable.Contains<Guid>(taskIds, dependency.PredecessorTaskItemId)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "taskIds.Contains(dependency.SuccessorTaskItemId)",
+                "new": "Enumerable.Contains<Guid>(taskIds, dependency.SuccessorTaskItemId)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "taskIds.Contains(item.TaskItemId)",
+                "new": "Enumerable.Contains<Guid>(taskIds, item.TaskItemId)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/ProjectKanbanRepository.cs",
+            "git_blob_sha": "4dfb96e763f0317f4079e6d1370274ed41967639",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "cardIds.Contains(child.ParentTaskItemId.Value)",
+                "new": "Enumerable.Contains<Guid>(cardIds, child.ParentTaskItemId.Value)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/ProjectRepository.cs",
+            "git_blob_sha": "691144e6d2c00a89daa04804daa3c1c3dae39ae5",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "candidateIds.Contains(project.Id)",
+                "new": "Enumerable.Contains<Guid>(candidateIds, project.Id)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/WorkspaceDashboardQuery.cs",
+            "git_blob_sha": "e7dc1645e596aa175e91fcd73d6b706413ea38b3",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "workspaceIds.Contains(announcement.WorkspaceId.Value)",
+                "new": "Enumerable.Contains<Guid>(workspaceIds, announcement.WorkspaceId.Value)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "workspaceIds.Contains(conversation.WorkspaceId)",
+                "new": "Enumerable.Contains<Guid>(workspaceIds, conversation.WorkspaceId)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "workspaceIds.Contains(project.WorkspaceId)",
+                "new": "Enumerable.Contains<Guid>(workspaceIds, project.WorkspaceId)",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "new_tests": []
+      },
+      {
+        "id": "P05",
+        "title": "Five Boolean-complement enumerations and one local nullable-rank comparison",
+        "run103_indices": [
+          271,
+          2202,
+          2203,
+          2204,
+          2205,
+          2206
+        ],
+        "run2004_indices": [
+          271,
+          2201,
+          2202,
+          2203,
+          2204,
+          2205
+        ],
+        "source_issues": [
+          943
+        ],
+        "test_filter": "FullyQualifiedName~Kanban|FullyQualifiedName~TaskSubresource|FullyQualifiedName~ArtifactReportRefinement|FullyQualifiedName~AuditFinding|FullyQualifiedName~TaskInitialPlacement|FullyQualifiedName~TaskCommand",
+        "files": [
+          {
+            "path": "src/Coglatas.Application/Projects/ProjectKanbanService.cs",
+            "git_blob_sha": "bce29acfd98379feb47c2942eb44f68b1e680b11",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "!changedTasks.Any(item => item.Id == task.Id)",
+                "new": "changedTasks.All(item => item.Id != task.Id)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Application/Projects/TaskSubresourceService.cs",
+            "git_blob_sha": "37fb30fa29ed063df76380c0109ce2bb7ab6f583",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "!(await projects.ListWorkItemLabelsAsync(taskId, ct)).Any(x => x.LabelId == labelId)",
+                "new": "(await projects.ListWorkItemLabelsAsync(taskId, ct)).All(x => x.LabelId != labelId)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/DbArtifactReportRefinementService.cs",
+            "git_blob_sha": "20e78fb5cca5b5ccba57852e0b82254b6c5afdb9",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "!context.Document.Sections.SelectMany(item => item.Citations).Any(item => item.ArtifactClaimId == claim.Id)",
+                "new": "context.Document.Sections.SelectMany(item => item.Citations).All(item => item.ArtifactClaimId != claim.Id)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/DbAuditFindingDecisionService.cs",
+            "git_blob_sha": "4b30d226343f6e126dd208745e7267c502f62e90",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "!claimsResult.Value.Claims.Any(claim => claim.ClaimId == finding.ArtifactClaimId)",
+                "new": "claimsResult.Value.Claims.All(claim => claim.ClaimId != finding.ArtifactClaimId)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/DbAuditFindingReviewerMentionsService.cs",
+            "git_blob_sha": "a6e100087354d8ccfa5197a4fecd2c9d666b044d",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "!claimsResult.Value.Claims.Any(claim => claim.ClaimId == finding.ArtifactClaimId)",
+                "new": "claimsResult.Value.Claims.All(claim => claim.ClaimId != finding.ArtifactClaimId)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Application/Projects/TaskInitialPlacement.cs",
+            "git_blob_sha": "7c6caa5248f6be2d9b93082077aca65e34eaefe8",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "    private const int RankGap = 1000;",
+                "new": "    private const int RankGap = 1000;\n    private const long MaximumRankBeforeAppend = long.MaxValue - RankGap;",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "maximumRank.HasValue && maximumRank.Value > long.MaxValue - RankGap",
+                "new": "maximumRank is > MaximumRankBeforeAppend",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "new_tests": []
+      },
+      {
+        "id": "P06",
+        "title": "Remove two unused private-helper parameters without changing async delivery",
+        "run103_indices": [
+          2421,
+          2427
+        ],
+        "run2004_indices": [
+          2420,
+          2426
+        ],
+        "source_issues": [
+          944
+        ],
+        "test_filter": "FullyQualifiedName~CommunicationPolling|FullyQualifiedName~StudentRecord",
+        "files": [
+          {
+            "path": "src/Coglatas.Application/Communication/CommunicationPollingService.cs",
+            "git_blob_sha": "77b2a2b2cfa5991eacbb44c2bd72046067ecf143",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "private async Task<bool> AllowPollingAsync(Guid userId, string operation, Guid? workspaceId, CancellationToken cancellationToken)",
+                "new": "private async Task<bool> AllowPollingAsync(Guid userId, string operation, Guid? workspaceId)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "AllowPollingAsync(userId, \"unread_counts\", query.WorkspaceId, cancellationToken)",
+                "new": "AllowPollingAsync(userId, \"unread_counts\", query.WorkspaceId)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "AllowPollingAsync(userId, \"notifications\", query.WorkspaceId, cancellationToken)",
+                "new": "AllowPollingAsync(userId, \"notifications\", query.WorkspaceId)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "AllowPollingAsync(userId, \"updates\", query.WorkspaceId, cancellationToken)",
+                "new": "AllowPollingAsync(userId, \"updates\", query.WorkspaceId)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Application/StudentRecords/StudentRecordService.cs",
+            "git_blob_sha": "a9290ed6236b84f5102f6252ff5182e3094c3e11",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "AuditRestrictedDenialAsync(userId, record, requestedFields, access, cancellationToken)",
+                "new": "AuditRestrictedDenialAsync(record, requestedFields, access, cancellationToken)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "private async Task AuditRestrictedDenialAsync(\n        Guid userId,\n        StudentRecord record,",
+                "new": "private async Task AuditRestrictedDenialAsync(\n        StudentRecord record,",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "new_tests": []
+      },
+      {
+        "id": "P07",
+        "title": "Ten private digest counter names and equivalent transaction using scope",
+        "run103_indices": [
+          140,
+          150,
+          153,
+          163,
+          172,
+          173,
+          175,
+          182,
+          188,
+          189,
+          190
+        ],
+        "run2004_indices": [
+          140,
+          150,
+          153,
+          163,
+          172,
+          173,
+          175,
+          182,
+          188,
+          189,
+          190
+        ],
+        "source_issues": [
+          941,
+          944
+        ],
+        "test_filter": "FullyQualifiedName~TaskDeadlineDigest",
+        "files": [
+          {
+            "path": "src/Coglatas.Application/Notifications/TaskDeadlineDigestServices.cs",
+            "git_blob_sha": "df15bead4a691cc2edacc464fe256a14c360eb87",
+            "operations": [
+              {
+                "kind": "rename_identifiers",
+                "start": "public sealed class TaskDeadlineDigestDiagnostics\n{",
+                "end": "public sealed class TaskDeadlineDigestScheduler(",
+                "mapping": {
+                  "scheduled": "_scheduled",
+                  "claimed": "_claimed",
+                  "succeeded": "_succeeded",
+                  "succeededWithoutCandidates": "_succeededWithoutCandidates",
+                  "failures": "_failures",
+                  "terminalFailures": "_terminalFailures",
+                  "claimLosses": "_claimLosses",
+                  "invalidTimeZones": "_invalidTimeZones",
+                  "invalidPreferences": "_invalidPreferences",
+                  "operatorRestarts": "_operatorRestarts"
+                },
+                "counts": {
+                  "scheduled": 3,
+                  "claimed": 3,
+                  "succeeded": 3,
+                  "succeededWithoutCandidates": 3,
+                  "failures": 3,
+                  "terminalFailures": 3,
+                  "claimLosses": 3,
+                  "invalidTimeZones": 3,
+                  "invalidPreferences": 3,
+                  "operatorRestarts": 3
+                }
+              },
+              {
+                "kind": "unwrap_using",
+                "start": "                await using (var transaction = await repository.BeginGenerationTransactionAsync(cancellationToken))\n                {\n",
+                "end": "                }\n            }\n            catch (TaskDeadlineDigestRetryablePersistenceConflictException)",
+                "replacement": "                await using var transaction = await repository.BeginGenerationTransactionAsync(cancellationToken);\n",
+                "dedent": 4
+              }
+            ]
+          }
+        ],
+        "new_tests": [
+          {
+            "bundle_path": "regression-tests/P07_TaskDeadlineDigestDiagnosticsAuditTests.cs",
+            "destination": "tests/Coglatas.Tests/QodanaAudit/TaskDeadlineDigestDiagnosticsAuditTests.cs",
+            "sha256": "f5e466be19d21893108230b9ab9232f0f84dbd8163dade54b8e2c051bb555240"
+          }
+        ]
+      },
+      {
+        "id": "P08",
+        "title": "Four private realtime counter names",
+        "run103_indices": [
+          158,
+          159,
+          160,
+          186
+        ],
+        "run2004_indices": [
+          158,
+          159,
+          160,
+          186
+        ],
+        "source_issues": [
+          941
+        ],
+        "test_filter": "FullyQualifiedName~Realtime",
+        "files": [
+          {
+            "path": "src/Coglatas.Web/Realtime/RealtimeDiagnostics.cs",
+            "git_blob_sha": "46b2918311dc4b98c236f94f2fbfc86ef7e114bd",
+            "operations": [
+              {
+                "kind": "rename_identifiers",
+                "start": "public sealed class RealtimeDiagnostics\n{",
+                "end": "public sealed record RealtimeDiagnosticCounters(",
+                "mapping": {
+                  "dispatchSuccessCount": "_dispatchSuccessCount",
+                  "dispatchFailureCount": "_dispatchFailureCount",
+                  "subscriptionDenialCount": "_subscriptionDenialCount",
+                  "dispatcherFailureCount": "_dispatcherFailureCount"
+                },
+                "counts": {
+                  "dispatchSuccessCount": 3,
+                  "dispatchFailureCount": 3,
+                  "subscriptionDenialCount": 3,
+                  "dispatcherFailureCount": 3
+                }
+              }
+            ]
+          }
+        ],
+        "new_tests": [
+          {
+            "bundle_path": "regression-tests/P08_RealtimeDiagnosticsAuditTests.cs",
+            "destination": "tests/Coglatas.Tests/QodanaAudit/RealtimeDiagnosticsAuditTests.cs",
+            "sha256": "a57c116f426e33024d9ecdd81dca43fdca8d5e4be22a18f4602249b3714f080d"
+          }
+        ]
+      },
+      {
+        "id": "P09",
+        "title": "Private communication lock and three backing-field names",
+        "run103_indices": [
+          94,
+          161,
+          164,
+          192
+        ],
+        "run2004_indices": [
+          94,
+          161,
+          164,
+          192
+        ],
+        "source_issues": [
+          941,
+          944
+        ],
+        "test_filter": "FullyQualifiedName~CommunicationSafetyGuard|FullyQualifiedName~TaskSubresourceServiceTests|FullyQualifiedName~TaskV1CoreConcurrencyPostgreSqlTests|FullyQualifiedName~TaskV1Pr07BNotificationAtomicityPostgreSqlTests",
+        "files": [
+          {
+            "path": "src/Coglatas.Application/Messaging/InMemoryCommunicationSafetyGuard.cs",
+            "git_blob_sha": "f96484d7029b28619aa0f0b4e98643505bcc0cb2",
+            "operations": [
+              {
+                "kind": "rename_identifiers",
+                "start": "public sealed class InMemoryCommunicationSafetyGuard(",
+                "end": null,
+                "mapping": {
+                  "gate": "_gate",
+                  "windows": "_windows",
+                  "duplicatePosts": "_duplicatePosts"
+                },
+                "counts": {
+                  "gate": 4,
+                  "windows": 3,
+                  "duplicatePosts": 4
+                }
+              },
+              {
+                "kind": "replace",
+                "old": "private readonly object _gate = new();",
+                "new": "private readonly Lock _gate = new();",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "new_tests": [
+          {
+            "bundle_path": "regression-tests/P09_CommunicationSafetyGuardAuditTests.cs",
+            "destination": "tests/Coglatas.Tests/QodanaAudit/CommunicationSafetyGuardAuditTests.cs",
+            "sha256": "1491012bb21dd3b7cbbbbdde58be91bc1d830aebe4bb6a61643d7515d4022d13"
+          }
+        ]
+      },
+      {
+        "id": "P10",
+        "title": "Private redaction set names and constant-list construction",
+        "run103_indices": [
+          146,
+          147,
+          2435,
+          2436,
+          2438
+        ],
+        "run2004_indices": [
+          146,
+          147,
+          2434,
+          2435,
+          2437
+        ],
+        "source_issues": [
+          936,
+          941
+        ],
+        "test_filter": "FullyQualifiedName~Redaction|FullyQualifiedName~StudentRecord|FullyQualifiedName~TenantExport|FullyQualifiedName~AuditPackage|FullyQualifiedName~FieldAccessPolicySnapshotAuditTests",
+        "files": [
+          {
+            "path": "src/Coglatas.Application/Security/Redaction/IRedactionService.cs",
+            "git_blob_sha": "4c2fa2947b67fe0c931ed565da420c87338e3845",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "private readonly HashSet<CanonicalDataClassification> allowedClassifications;",
+                "new": "private readonly HashSet<CanonicalDataClassification> _allowedClassifications;",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "this.allowedClassifications",
+                "new": "_allowedClassifications",
+                "count": 2
+              },
+              {
+                "kind": "replace",
+                "old": "private readonly HashSet<string> allowedRestrictedFields;",
+                "new": "private readonly HashSet<string> _allowedRestrictedFields;",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "this.allowedRestrictedFields",
+                "new": "_allowedRestrictedFields",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "!allowedClassifications.Contains(classification)",
+                "new": "!_allowedClassifications.Contains(classification)",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "allowedRestrictedFields.Contains(NormalizeFieldName(fieldName))",
+                "new": "_allowedRestrictedFields.Contains(NormalizeFieldName(fieldName))",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "new[]\n        {\n            CanonicalDataClassification.Public,\n            CanonicalDataClassification.Internal\n        }",
+                "new": "[\n            CanonicalDataClassification.Public,\n            CanonicalDataClassification.Internal\n        ]",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "new[]\n        {\n            CanonicalDataClassification.Public,\n            CanonicalDataClassification.Internal,\n            CanonicalDataClassification.Confidential\n        }",
+                "new": "[\n            CanonicalDataClassification.Public,\n            CanonicalDataClassification.Internal,\n            CanonicalDataClassification.Confidential\n        ]",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "new[]\n            {\n                CanonicalDataClassification.Public,\n                CanonicalDataClassification.Internal,\n                CanonicalDataClassification.Confidential,\n                CanonicalDataClassification.Restricted\n            }",
+                "new": "[\n                CanonicalDataClassification.Public,\n                CanonicalDataClassification.Internal,\n                CanonicalDataClassification.Confidential,\n                CanonicalDataClassification.Restricted\n            ]",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "new_tests": [
+          {
+            "bundle_path": "regression-tests/P10_FieldAccessPolicySnapshotAuditTests.cs",
+            "destination": "tests/Coglatas.Tests/QodanaAudit/FieldAccessPolicySnapshotAuditTests.cs",
+            "sha256": "92c8d8098ef46eda4899d343157eeebd9ccd70027139a8f36acc7fbb70c4f8fc"
+          }
+        ]
+      }
+    ],
+    "latest_finding_dispositions": {
+      "APPLY_FIXED_PACKET": {
+        "count": 71,
+        "run2004_indices": "68-94,140,146-147,150,153,158-161,163-164,172-173,175,182,186,188-190,192,271,2182-2191,2201-2205,2420-2421,2426,2433-2435,2437-2438"
+      },
+      "HOLD_UNPROVEN_SURFACE": {
+        "count": 206,
+        "run2004_indices": "47-67,95,97-98,137-139,148,151-152,154-157,162,165-171,174,176-181,183-185,187,193-229,240,248,310,1493-1505,1508,1547,1572-1579,2151-2160,2162-2166,2207-2208,2230,2239,2244-2245,2248-2249,2259,2355-2388,2391-2419,2423,2427,2429"
+      },
+      "KEEP_BINDING_AND_LIFETIME": {
+        "count": 6,
+        "run2004_indices": "336-338,2169,2181,2436"
+      },
+      "KEEP_COMPATIBILITY_POLICY": {
+        "count": 2001,
+        "run2004_indices": "2-46,96,99-113,115-131,133-136,144,149,191,268-270,284-287,294-296,300-305,308-309,339-1492,1506-1507,1509-1510,1546,1566-1571,1580-2150,2161,2167-2168,2193-2195,2197-2198,2206,2209-2229,2231-2238,2240-2243,2246-2247,2250-2258,2260-2354,2428,2430,2467-2477,2479"
+      },
+      "KEEP_NOT_AUTHORIZED_IN_PACKET": {
+        "count": 61,
+        "run2004_indices": "114,143,233-239,241-247,249-267,272-283,288-293,297-299,306-307,2192,2196,2200"
+      },
+      "KEEP_PREVIOUS_DISPOSITION": {
+        "count": 132,
+        "run2004_indices": "1,132,141-142,145,230-232,311-335,1511-1545,1548-1565,2170-2180,2199,2389-2390,2422,2424-2425,2439-2466,2478"
+      },
+      "KEEP_TIMING_AND_LIFETIME": {
+        "count": 3,
+        "run2004_indices": "0,2431-2432"
+      }
+    },
+    "upstream_resolved_run103_indices": [
+      2200,
+      2480
+    ]
+  },
+  "helper": "#!/usr/bin/env python3\n\"\"\"Apply only the exact, source-hash-pinned edits in execution-plan.json.\n\nDefault mode prints a diff and changes nothing. No network, commit, push, rebase,\nmerge, baseline adjustment, or fallback patching is performed.\n\"\"\"\nfrom __future__ import annotations\nimport argparse\nimport difflib\nimport hashlib\nimport json\nimport os\nfrom pathlib import Path\nimport re\nimport subprocess\nimport sys\nimport tempfile\n\nclass Stop(RuntimeError):\n    \"\"\"A precondition failed; preserve the repository and stop this packet.\"\"\"\n\ndef git_blob_sha(data: bytes) -> str:\n    return hashlib.sha1(b'blob ' + str(len(data)).encode('ascii') + b'\\0' + data).hexdigest()\n\ndef safe_path(root: Path, relative: str) -> Path:\n    candidate = Path(relative)\n    if candidate.is_absolute() or '..' in candidate.parts:\n        raise Stop(f'Unsafe path: {relative}')\n    p = root / candidate\n    current = root\n    for part in candidate.parts:\n        current /= part\n        if current.is_symlink():\n            raise Stop(f'Symlink is not permitted: {relative}')\n    if not p.resolve().is_relative_to(root.resolve()):\n        raise Stop(f'Path escapes repository: {relative}')\n    return p\n\ndef only(text: str, needle: str, label: str) -> int:\n    count = text.count(needle)\n    if count != 1:\n        raise Stop(f'{label}: expected one exact anchor, found {count}: {needle[:90]!r}')\n    return text.index(needle)\n\ndef transform(text: str, operations: list[dict]) -> str:\n    # Work on logical newlines. Byte-level BOM/newline identity is restored later.\n    for op in operations:\n        kind = op['kind']\n        if kind == 'replace':\n            count = text.count(op['old'])\n            if count != op['count']:\n                raise Stop(f'Replacement count mismatch: expected {op[\"count\"]}, found {count}: {op[\"old\"]!r}')\n            text = text.replace(op['old'], op['new'])\n        elif kind == 'rename_identifiers':\n            start = only(text, op['start'], 'Rename start')\n            end = only(text, op['end'], 'Rename end') if op.get('end') else len(text)\n            if end <= start:\n                raise Stop('Reversed rename scope')\n            segment = text[start:end]\n            # All mappings target complete, audited private-field class scopes.\n            # Counts also reject accidental extra uses/comments/string literals.\n            for before, after in op['mapping'].items():\n                if re.search(r'\\b' + re.escape(after) + r'\\b', segment):\n                    raise Stop(f'Rename target already exists: {after}')\n                pattern = r'\\b' + re.escape(before) + r'\\b'\n                segment, count = re.subn(pattern, after, segment)\n                if count != op['counts'][before]:\n                    raise Stop(f'Identifier count mismatch for {before}: {count}')\n            text = text[:start] + segment + text[end:]\n        elif kind == 'unwrap_using':\n            start = only(text, op['start'], 'Using start')\n            end = only(text, op['end'], 'Using end')\n            body_start = start + len(op['start'])\n            if end <= body_start:\n                raise Stop('Invalid using scope')\n            body = text[body_start:end]\n            indent = ' ' * op['dedent']\n            lines = body.splitlines(keepends=True)\n            if any(line.strip() and not line.startswith(indent) for line in lines):\n                raise Stop('Unexpected indentation inside approved using scope')\n            dedented = ''.join(line[len(indent):] if line.strip() else line for line in lines)\n            # Remove ONLY the using block's closing brace, not try's closing brace.\n            end_without_using_brace = op['end'].split('\\n', 1)[1]\n            text = text[:start] + op['replacement'] + dedented + end_without_using_brace + text[end + len(op['end']):]\n        else:\n            raise Stop(f'Unsupported operation: {kind}')\n    return text\n\ndef transform_bytes(data: bytes, operations: list[dict]) -> bytes:\n    bom = b'\\xef\\xbb\\xbf' if data.startswith(b'\\xef\\xbb\\xbf') else b''\n    body = data[len(bom):]\n    if b'\\r' in body.replace(b'\\r\\n', b''):\n        raise Stop('Standalone CR line endings are unsupported')\n    crlf = b'\\r\\n' in body\n    if crlf and b'\\n' in body.replace(b'\\r\\n', b''):\n        raise Stop('Mixed line endings: stop instead of normalizing')\n    text = body.decode('utf-8').replace('\\r\\n', '\\n')\n    after = transform(text, operations)\n    if crlf:\n        after = after.replace('\\n', '\\r\\n')\n    return bom + after.encode('utf-8')\n\ndef command(root: Path, *args: str) -> str:\n    result = subprocess.run(['git', '-C', str(root), *args], text=True, capture_output=True)\n    if result.returncode:\n        raise Stop(f'git {args[0]} failed: {result.stderr.strip()}')\n    return result.stdout\n\ndef prepare(root: Path, packet: dict, plan_sha: str) -> list[tuple[Path, bytes, bytes]]:\n    changes = []\n    for f in packet['files']:\n        p = safe_path(root, f['path'])\n        if not p.is_file():\n            raise Stop(f'Missing approved source file: {f[\"path\"]}')\n        before = p.read_bytes()\n        if git_blob_sha(before) != f['git_blob_sha']:\n            raise Stop(f'Source drift: {f[\"path\"]}. Do not adapt or recreate the edit; return to audit owner.')\n        # Confirm committed source as well as worktree bytes.\n        committed_sha = command(root, 'rev-parse', f'HEAD:{f[\"path\"]}').strip()\n        if committed_sha != f['git_blob_sha']:\n            raise Stop(f'Committed source drift: {f[\"path\"]}')\n        after = transform_bytes(before, f['operations'])\n        if after == before:\n            raise Stop(f'No-op edit in {f[\"path\"]}')\n        changes.append((p, before, after))\n    return changes\n\ndef write_changes(changes: list[tuple[Path, bytes, bytes]]) -> None:\n    # All preconditions and transforms succeeded before any write. Roll back\n    # our own writes on error, but never overwrite concurrent external edits.\n    applied = []\n    try:\n        for path, before, after in changes:\n            if path.read_bytes() != before:\n                raise Stop(f'Concurrent source edit: {path}')\n            mode = path.stat().st_mode\n            fd, tmp = tempfile.mkstemp(prefix='.' + path.name + '.qodana-', dir=path.parent)\n            try:\n                with os.fdopen(fd, 'wb') as out:\n                    out.write(after)\n                    out.flush()\n                    os.fsync(out.fileno())\n                os.chmod(tmp, mode)\n                os.replace(tmp, path)\n            finally:\n                if os.path.exists(tmp): os.unlink(tmp)\n            applied.append((path, before, after))\n    except Exception:\n        for path, before, after in reversed(applied):\n            if path.read_bytes() == after:\n                path.write_bytes(before)\n        raise\n\ndef main() -> int:\n    parser = argparse.ArgumentParser(description=__doc__)\n    parser.add_argument('--repo', type=Path, required=True)\n    parser.add_argument('--plan', type=Path, default=Path(__file__).with_name('execution-plan.json'))\n    parser.add_argument('--packet', required=True)\n    parser.add_argument('--apply', action='store_true', help='write only after every precondition passes')\n    parser.add_argument('--check', action='store_true', help='explicit dry-run; this is the default')\n    args = parser.parse_args()\n    if args.apply and args.check:\n        raise Stop('Choose either --check or --apply')\n    root = args.repo.resolve()\n    plan = json.loads(args.plan.read_text(encoding='utf-8'))\n    matches = [p for p in plan['packets'] if p['id'] == args.packet]\n    if len(matches) != 1: raise Stop('Unknown or duplicate packet ID')\n    if command(root, 'rev-parse', '--show-toplevel').strip() != str(root):\n        raise Stop('--repo must be the repository root')\n    if command(root, 'status', '--porcelain').strip():\n        raise Stop('Working tree must be clean. Do not stash/reset unrelated work; use a separate worktree.')\n    # The audited revision must be available and remain an ancestor.\n    command(root, 'merge-base', '--is-ancestor', plan['audit_source_sha'], 'HEAD')\n    changes = prepare(root, matches[0], plan['audit_source_sha'])\n    for p, before, after in changes:\n        print(''.join(difflib.unified_diff(before.decode('utf-8-sig').splitlines(True),after.decode('utf-8-sig').splitlines(True),fromfile='a/'+str(p.relative_to(root)),tofile='b/'+str(p.relative_to(root)))),end='')\n    if args.apply:\n        write_changes(changes)\n        print(f'\\nApplied {args.packet}; no tests, commits, baseline changes or merges performed.')\n    else:\n        print(f'\\nCHECK PASSED: {args.packet}; no files changed.')\n    return 0\n\nif __name__ == '__main__':\n    try:\n        raise SystemExit(main())\n    except (Stop, OSError, UnicodeError, ValueError, KeyError) as error:\n        print(f'STOP: {error}', file=sys.stderr)\n        raise SystemExit(2)\n"
+}
