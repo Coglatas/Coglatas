@@ -191,6 +191,9 @@ def read_snapshot(revision: dict, token: str, evidence: Path, label: str) -> tup
     if digest(data) != revision["zip_sha256"]:
         raise ValueError("Downloaded ZIP digest mismatch")
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        sarif_entries = [{"path": entry.filename, "bytes": entry.file_size}
+                         for entry in archive.infolist() if "sarif" in entry.filename.lower()]
+        print(label + " SARIF archive entries " + json.dumps(sarif_entries, sort_keys=True), flush=True)
         matches = [entry for entry in archive.infolist()
                    if Path(entry.filename).name == "qodana.sarif.json"]
         if len(matches) != 1 or matches[0].file_size > MAX_BYTES:
