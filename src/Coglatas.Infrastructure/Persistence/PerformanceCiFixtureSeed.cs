@@ -76,7 +76,7 @@ public static class PerformanceCiFixtureSeed
 
         await SeedIdentityAndWorkspaceAsync(dbContext, passwordHasher, password, profile, plan, cancellationToken);
         await SeedProjectsAndWorkflowAsync(dbContext, profile, plan, cancellationToken);
-        await SeedMilestonesAsync(dbContext, profile, plan, cancellationToken);
+        await SeedMilestonesAsync(dbContext, plan, cancellationToken);
         await SeedTasksAsync(dbContext, profile, plan, cancellationToken);
         await SeedDependenciesAsync(dbContext, profile, plan, cancellationToken);
         await SeedConversationsAndMessagesAsync(dbContext, profile, plan, cancellationToken);
@@ -288,7 +288,6 @@ public static class PerformanceCiFixtureSeed
 
     private static async Task SeedMilestonesAsync(
         AppDbContext dbContext,
-        DatasetProfile profile,
         FixturePlan plan,
         CancellationToken cancellationToken)
     {
@@ -869,12 +868,11 @@ public static class PerformanceCiFixtureSeed
         }
     }
 
-    private static T AddWithId<T>(AppDbContext dbContext, T entity, Guid id)
+    private static void AddWithId<T>(AppDbContext dbContext, T entity, Guid id)
         where T : class
     {
         dbContext.Add(entity);
         dbContext.Entry(entity).Property("Id").CurrentValue = id;
-        return entity;
     }
 
     private static async Task FlushIfNeededAsync(
