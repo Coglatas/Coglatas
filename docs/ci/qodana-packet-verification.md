@@ -40,6 +40,13 @@ source drift stops verification. This stage executes focused/full backend and
 architecture tests without applying any production transformation; its evidence
 does not establish candidate acceptance or complete either packet.
 
+P14 supports only the same unchanged-production baseline stage. It has no
+supplied fixed test; `audit_test_sha` therefore selects the original audited
+source revision. No test/source diff is allowed against an integrated event
+base. The only mapped upstream source variant is canonical P04 in
+AnnouncementEngagementStore. The original R2 helper still runs only in dry-run
+mode, and P14 production transformations remain outside this runner.
+
 - `prepare`: require unchanged production source; execute the baseline first,
   then run the unmodified canonical helper in a clean Linux worktree and test
   its result. This produces evidence for an uncommitted candidate.

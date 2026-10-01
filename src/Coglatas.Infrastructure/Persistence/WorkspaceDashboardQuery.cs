@@ -186,7 +186,7 @@ public sealed class WorkspaceDashboardQuery(
             .VisibleAnnouncementsFor(userId, isSystemAdmin, clock.UtcNow)
             .Where(announcement =>
                 announcement.WorkspaceId.HasValue &&
-                workspaceIds.Contains(announcement.WorkspaceId.Value) &&
+                Enumerable.Contains(workspaceIds, announcement.WorkspaceId.Value) &&
                 !dbContext.AnnouncementReads.Any(read =>
                     read.AnnouncementId == announcement.Id &&
                     read.UserId == userId))
@@ -200,7 +200,7 @@ public sealed class WorkspaceDashboardQuery(
         var conversationCounts = await dbContext.Conversations
             .AsNoTracking()
             .Where(conversation =>
-                workspaceIds.Contains(conversation.WorkspaceId) &&
+                Enumerable.Contains(workspaceIds, conversation.WorkspaceId) &&
                 readableConversationIds.Contains(conversation.Id) &&
                 dbContext.Messages.Any(message =>
                     message.ConversationId == conversation.Id &&
@@ -219,7 +219,7 @@ public sealed class WorkspaceDashboardQuery(
 
         var projectCounts = await dbContext.VisibleProjectsFor(userId)
             .Where(project =>
-                workspaceIds.Contains(project.WorkspaceId) &&
+                Enumerable.Contains(workspaceIds, project.WorkspaceId) &&
                 (project.Status == ProjectStatus.Active ||
                  project.Status == ProjectStatus.Review))
             .GroupBy(project => new { project.WorkspaceId, project.Status })
