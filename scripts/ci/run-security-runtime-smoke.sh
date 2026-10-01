@@ -215,7 +215,8 @@ require_scanner_state() {
 dump_failure_state() {
   echo "Security runtime failed; dumping redacted Compose state." >&2
   "${compose[@]}" ps 2>&1 | security_scan_redact_stream >&2 || true
-  "${compose[@]}" logs --no-color postgres migrate app 2>&1 | security_scan_redact_stream >&2 || true
+  # Bound verbose SQL diagnostics; scanner failures and exit codes remain intact.
+  "${compose[@]}" logs --no-color --tail 200 postgres migrate app 2>&1 | security_scan_redact_stream >&2 || true
   if [[ -f artifacts/security/zap/preflight-stage.txt ]]; then
     grep -E '^stage=[a-z-]+$' artifacts/security/zap/preflight-stage.txt || true
   fi
