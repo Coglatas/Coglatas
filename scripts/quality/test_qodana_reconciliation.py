@@ -1,6 +1,7 @@
 """Fail closed on inventory drift, stale provenance and token forwarding."""
 import io
 import json
+import zipfile
 import unittest
 from unittest import mock
 import urllib.error
@@ -124,6 +125,31 @@ class ReconciliationTests(unittest.TestCase):
                     self.subTest(location=location), self.assertRaises(ValueError):
                 q.artifact_bytes(1, "test-token")
             download.assert_not_called()
+
+    @staticmethod
+    def zip_fixture(entries):
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            for path, content in entries:
+                archive.writestr(path, content)
+        return buffer.getvalue()
+
+    def test_canonical_root_allows_only_byte_identical_report_mirror(self):
+        data = self.zip_fixture([("qodana.sarif.json", b"raw"),
+                                 ("report/results/qodana.sarif.json", b"raw"),
+                                 ("log/clt.original.sarif.json", b"other")])
+        self.assertEqual(q.raw_sarif_from_zip(data), b"raw")
+
+    def test_conflicting_mirror_or_missing_canonical_root_stops(self):
+        for entries in [[("qodana.sarif.json", b"raw"), ("report/results/qodana.sarif.json", b"other")],
+                        [("report/results/qodana.sarif.json", b"raw")], [("qodana-short.sarif.json", b"short")]]:
+            with self.subTest(entries=entries), self.assertRaises(ValueError):
+                q.raw_sarif_from_zip(self.zip_fixture(entries))
+
+    def test_canonical_root_size_limit_stops_archive_bomb(self):
+        data = self.zip_fixture([("qodana.sarif.json", b"oversized")])
+        with mock.patch.object(q, "MAX_BYTES", 2), self.assertRaises(ValueError):
+            q.raw_sarif_from_zip(data)
 
 
 if __name__ == "__main__":

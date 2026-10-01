@@ -175,6 +175,22 @@ def artifact_bytes(artifact_id: int, token: str) -> bytes:
     return data
 
 
+def raw_sarif_from_zip(data: bytes) -> bytes:
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        roots = [entry for entry in archive.infolist() if entry.filename == "qodana.sarif.json"]
+        if len(roots) != 1 or roots[0].file_size > MAX_BYTES:
+            raise ValueError("Require one bounded canonical root SARIF file")
+        raw = archive.read(roots[0])
+        # Qodana also packages an identical report/results copy. A different
+        # copy remains ambiguous and must stop; do not select by basename alone.
+        mirrors = [entry for entry in archive.infolist()
+                   if entry.filename != "qodana.sarif.json" and Path(entry.filename).name == "qodana.sarif.json"]
+        for entry in mirrors:
+            if entry.file_size > MAX_BYTES or archive.read(entry) != raw:
+                raise ValueError("Conflicting or oversized packaged SARIF copy")
+    return raw
+
+
 def read_snapshot(revision: dict, token: str, evidence: Path, label: str) -> tuple[bytes, dict]:
     run = api(f"actions/runs/{revision['run_id']}", token)
     artifact = api(f"actions/artifacts/{revision['artifact_id']}", token)
@@ -193,12 +209,8 @@ def read_snapshot(revision: dict, token: str, evidence: Path, label: str) -> tup
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         sarif_entries = [{"path": entry.filename, "bytes": entry.file_size}
                          for entry in archive.infolist() if "sarif" in entry.filename.lower()]
-        print(label + " SARIF archive entries " + json.dumps(sarif_entries, sort_keys=True), flush=True)
-        matches = [entry for entry in archive.infolist()
-                   if Path(entry.filename).name == "qodana.sarif.json"]
-        if len(matches) != 1 or matches[0].file_size > MAX_BYTES:
-            raise ValueError("Require one bounded raw SARIF file")
-        raw = archive.read(matches[0])
+        print(label + " SARIF archive entries " + json.dumps(sarif_entries[:16], sort_keys=True), flush=True)
+    raw = raw_sarif_from_zip(data)
     (evidence / f"{label}.sarif.json").write_bytes(raw)
     provenance = {**revision, "sarif_sha256": digest(raw), "run_attempt": run.get("run_attempt"),
                   "artifact_created_at": artifact.get("created_at")}
