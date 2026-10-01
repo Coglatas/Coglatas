@@ -4,6 +4,8 @@
 # Invoke with an explicit project name, for example:
 # docker compose -p coglatas-real-backend-smoke -f infra/compose/test/real-backend-smoke.yml config
 
+name: coglatas
+
 services:
   postgres:
     image: postgres:18-alpine

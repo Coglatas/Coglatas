@@ -1,3 +1,5 @@
+name: coglatas
+
 services:
   app:
     build:

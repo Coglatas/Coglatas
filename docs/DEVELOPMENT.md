@@ -139,7 +139,7 @@ not fall back to Angular: `/api/*`, `/health`, `/health/live`,
 
 ```bash
 cp .env.example .env
-docker compose -f infra/compose/dev/full.yml up --build
+docker compose --env-file .env -f infra/compose/dev/full.yml up --build
 ```
 
 This optional profile:

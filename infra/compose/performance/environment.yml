@@ -1,5 +1,7 @@
 # PERF-02 isolated performance stack.
 # Never deploy this Compose file as a production/school environment.
+name: coglatas
+
 services:
   postgres:
     image: postgres:18-alpine

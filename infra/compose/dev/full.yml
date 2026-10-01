@@ -1,6 +1,8 @@
 # Optional full-container development stack.
 # Recommended default for contributors is infra/compose/dev/db.yml plus host .NET and Node.js.
 # This stack can be noticeably slower on Windows Docker Desktop because bind-mounted file watching uses polling.
+name: coglatas
+
 services:
   postgres:
     image: postgres:18-alpine

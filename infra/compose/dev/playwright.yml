@@ -1,5 +1,7 @@
 # Optional CI-parity runner for local Angular screenshot verification.
 # Do not approve Windows/macOS host-native screenshot baselines; use this Linux runner or GitHub Actions.
+name: coglatas
+
 services:
   angular-playwright:
     build:
