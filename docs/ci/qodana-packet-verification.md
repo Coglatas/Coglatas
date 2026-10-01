@@ -14,6 +14,15 @@ its packet must still match the branch. Unsupported branches fail closed.
 The initial reviewed scope is P01/P02/P04, which have no supplied new tests.
 Other packets require a reviewed runner extension before they can execute.
 
+The workflow records the immutable PR event head and base revisions before any
+checks, so a preflight failure still preserves revision evidence. If the event
+base is already an ancestor of the exact checked-out head and descends from the
+configured source baseline, P01/P02/P04 use that integrated base for fresh full
+baseline/candidate execution. Otherwise the configured baseline remains in use.
+The whole baseline-to-head diff still rejects every out-of-packet source,
+dependency or test change, and all frozen preimage/canonical-result checks remain.
+No moving branch is checked out and no prior-head evidence is reused.
+
 - `prepare`: require unchanged production source; execute the baseline first,
   then run the unmodified canonical helper in a clean Linux worktree and test
   its result. This produces evidence for an uncommitted candidate.
