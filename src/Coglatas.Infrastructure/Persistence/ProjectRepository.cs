@@ -49,7 +49,7 @@ public sealed class ProjectRepository(AppDbContext dbContext) : IProjectReposito
         return await dbContext.Projects
             .AsNoTracking()
             .Where(project =>
-                candidateIds.Contains(project.Id) &&
+                Enumerable.Contains(candidateIds, project.Id) &&
                 project.DeletedAt == null &&
                 project.VersionNo > 0 &&
                 project.Visibility.HasValue &&

@@ -41,7 +41,7 @@ public sealed class FileAccessGrantRepository(AppDbContext dbContext) : IFileAcc
         }
 
         var summaries = await EffectiveFileAccessGrantQuery.For(dbContext)
-            .Where(grant => ids.Contains(grant.FileObjectId))
+            .Where(grant => Enumerable.Contains(ids, grant.FileObjectId))
             .GroupBy(grant => grant.FileObjectId)
             .Select(group => new
             {
