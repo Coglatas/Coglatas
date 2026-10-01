@@ -1,6 +1,6 @@
 # SEC-02 multi-tenant security-test overlay.
 #
-# This file is intentionally layered on docker-compose.real-backend-smoke.yml so
+# This file is intentionally layered on infra/compose/test/real-backend-smoke.yml so
 # the security stack reuses the production image/migration path without reusing
 # the browser-smoke fixture. It is Test-only and must never be deployed as a
 # production perimeter profile.
@@ -8,8 +8,8 @@
 # Example:
 #   COGLATAS_SECURITY_CI_PASSWORD='synthetic-test-password' \
 #   docker compose -p coglatas-security-ci \
-#     -f docker-compose.real-backend-smoke.yml \
-#     -f docker-compose.security.yml up -d postgres migrate app
+#     -f infra/compose/test/real-backend-smoke.yml \
+#     -f infra/compose/security/security.yml up -d postgres migrate app
 
 services:
   postgres:

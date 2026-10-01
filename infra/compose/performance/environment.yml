@@ -21,7 +21,7 @@ services:
     working_dir: /src
     restart: "no"
     volumes:
-      - ./:/src
+      - ../../../:/src
       - performance_nuget:/root/.nuget/packages
     environment:
       ASPNETCORE_ENVIRONMENT: Test
@@ -39,7 +39,7 @@ services:
 
   app:
     build:
-      context: .
+      context: ../../..
       dockerfile: Dockerfile
       secrets:
         - syncfusion_license
@@ -84,7 +84,7 @@ services:
       Security__EnableCsrfProtection: "true"
       Security__EnableRateLimiting: "false"
     volumes:
-      - ./performance/datasets.json:/app/performance/datasets.json:ro
+      - ../../../performance/datasets.json:/app/performance/datasets.json:ro
       - ${COGLATAS_PERFORMANCE_EVIDENCE_DIR:?COGLATAS_PERFORMANCE_EVIDENCE_DIR is required}:/app/performance-evidence
       - performance_uploads:/app/storage/uploads
       - performance_data_protection:/app/data/protection-keys
@@ -102,12 +102,12 @@ services:
 
   performance-browser:
     build:
-      context: .
-      dockerfile: Dockerfile.playwright
+      context: ../../..
+      dockerfile: infra/docker/playwright.Dockerfile
     profiles: ["tooling"]
     working_dir: /work
     volumes:
-      - ./:/work
+      - ../../../:/work
     command: ["bash"]
 
 volumes:

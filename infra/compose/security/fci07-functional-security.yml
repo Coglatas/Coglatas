@@ -1,5 +1,5 @@
 # FCI-07 Functional authorization-negative overlay.
-# Layer after docker-compose.real-backend-smoke.yml and docker-compose.security.yml.
+# Layer after infra/compose/test/real-backend-smoke.yml and infra/compose/security/security.yml.
 # The application stays on the existing SEC-02/SEC-05 multi-tenant fixture while
 # the inherited Playwright image executes both canonical Functional negative owners.
 
