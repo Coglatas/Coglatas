@@ -23,10 +23,10 @@ This document does not claim a passing result until the exact PR head completes 
 
 - `global.json`
 - `Dockerfile`
-- `backend.Dockerfile`
+- `infra/docker/backend-dev.Dockerfile`
 - `docker-compose.yml`
-- `docker-compose.local.yml`
-- `docker-compose.real-backend-smoke.yml`
+- `infra/compose/dev/local.yml`
+- `infra/compose/test/real-backend-smoke.yml`
 - this verification record
 
 ## Configuration contract
@@ -108,9 +108,9 @@ dotnet publish src/AipPortal.Web/AipPortal.Web.csproj \
   --output artifacts/dotnet-10.0.302-publish
 
 docker compose config --quiet
-docker compose -f docker-compose.local.yml config --quiet
-docker compose -f docker-compose.real-backend-smoke.yml config --quiet
-docker build --pull --file backend.Dockerfile --tag aipsite-backend:dotnet-10.0.302 .
+docker compose -f infra/compose/dev/local.yml config --quiet
+docker compose -f infra/compose/test/real-backend-smoke.yml config --quiet
+docker build --pull --file infra/docker/backend-dev.Dockerfile --tag aipsite-backend:dotnet-10.0.302 .
 docker run --rm --entrypoint dotnet aipsite-backend:dotnet-10.0.302 --info
 ```
 

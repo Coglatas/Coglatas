@@ -16,7 +16,7 @@ Internet
 
 The external proxy owns certificates, TLS renewal, public DNS, and firewall
 policy. The Compose project does not own a certificate and is not a public HTTP
-listener. `docker-compose.onprem.yml` maps the application only to
+listener. `deploy/onprem/compose.yml` maps the application only to
 `127.0.0.1:${AIP_PORTAL_PORT:-8080}` by default; PostgreSQL has no host port.
 
 ## Required operator configuration
@@ -59,7 +59,7 @@ scheme, host, or client IP through forwarded headers.
 1. Render the Compose configuration and inspect the origin binding:
 
    ```bash
-   DB_PASSWORD='<strong secret>' docker compose -f docker-compose.onprem.yml config
+   DB_PASSWORD='<strong secret>' docker compose -f deploy/onprem/compose.yml config
    ss -ltn | grep ':8080'
    ```
 

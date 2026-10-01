@@ -98,11 +98,11 @@ Explicitly checked:
 
 2. Tighten development Docker credential defaults.
 
-   Docker development credentials are clearly development-only, `.env.example` is safe, and root/local compose validation succeeds with `.env.example`. `docker-compose.dev.yml` still has fallback development credentials for local convenience. Consider requiring explicit local overrides before sharing the dev environment broadly.
+   Docker development credentials are clearly development-only, `.env.example` is safe, and root/local compose validation succeeds with `.env.example`. `infra/compose/dev/full.yml` still has fallback development credentials for local convenience. Consider requiring explicit local overrides before sharing the dev environment broadly.
 
 3. Add a live local Docker smoke proof when Docker Desktop is available.
 
-   Compose schema validation passed, but this machine's Docker Desktop Linux engine was not running, so `docker compose -f docker-compose.db.yml up -d postgres` could not start PostgreSQL locally. CI contains PostgreSQL migration and Docker checks, but the local runtime path should be captured once the daemon is available.
+   Compose schema validation passed, but this machine's Docker Desktop Linux engine was not running, so `docker compose -f infra/compose/dev/db.yml up -d postgres` could not start PostgreSQL locally. CI contains PostgreSQL migration and Docker checks, but the local runtime path should be captured once the daemon is available.
 
 4. Expand optimistic concurrency where concurrent editing becomes user-facing.
 
@@ -177,10 +177,10 @@ Get-Content .github\workflows\ci.yml
 Docker and CI documentation:
 
 ```powershell
-Get-Content docker-compose.db.yml
-Get-Content docker-compose.dev.yml
-Get-Content docker-compose.local.yml
-Get-Content docker-compose.playwright.yml
+Get-Content infra/compose/dev/db.yml
+Get-Content infra/compose/dev/full.yml
+Get-Content infra/compose/dev/local.yml
+Get-Content infra/compose/dev/playwright.yml
 Get-Content README.dev-docker.md
 Get-Content README.dev-env.md
 Get-Content README.md
@@ -192,24 +192,24 @@ rg -n "postgres|database update|migrations|dotnet test|docker compose|gitleaks|t
 Docker validation:
 
 ```powershell
-docker compose -f docker-compose.db.yml config --quiet
-docker compose -f docker-compose.dev.yml config --quiet
-docker compose -f docker-compose.playwright.yml config --quiet
+docker compose -f infra/compose/dev/db.yml config --quiet
+docker compose -f infra/compose/dev/full.yml config --quiet
+docker compose -f infra/compose/dev/playwright.yml config --quiet
 docker compose config --quiet
-docker compose -f docker-compose.local.yml config --quiet
-docker compose -f docker-compose.onprem.yml config --quiet
+docker compose -f infra/compose/dev/local.yml config --quiet
+docker compose -f deploy/onprem/compose.yml config --quiet
 docker compose --env-file .env.example config --quiet
-docker compose --env-file .env.example -f docker-compose.local.yml config --quiet
-docker compose --env-file .env.example -f docker-compose.onprem.yml config --quiet
-docker compose --env-file .env.example -f docker-compose.playwright.yml config --quiet
-docker compose -f docker-compose.db.yml up -d postgres
+docker compose --env-file .env.example -f infra/compose/dev/local.yml config --quiet
+docker compose --env-file .env.example -f deploy/onprem/compose.yml config --quiet
+docker compose --env-file .env.example -f infra/compose/dev/playwright.yml config --quiet
+docker compose -f infra/compose/dev/db.yml up -d postgres
 ```
 
 Docker outcomes:
 
 - The compose `config --quiet` commands passed when required variables were supplied through `.env.example`.
 - Root/local compose validation without an env file failed as expected because `LOCAL_ADMIN_PASSWORD` is required.
-- `docker compose -f docker-compose.db.yml up -d postgres` failed before making changes because Docker Desktop's Linux engine was not running.
+- `docker compose -f infra/compose/dev/db.yml up -d postgres` failed before making changes because Docker Desktop's Linux engine was not running.
 
 EF and database readiness:
 
@@ -307,10 +307,10 @@ Secrets, config, CI, Docker, and operations:
 - `.gitignore`
 - `.env.example`
 - `.github/workflows/ci.yml`
-- `docker-compose.db.yml`
-- `docker-compose.dev.yml`
-- `docker-compose.local.yml`
-- `docker-compose.playwright.yml`
+- `infra/compose/dev/db.yml`
+- `infra/compose/dev/full.yml`
+- `infra/compose/dev/local.yml`
+- `infra/compose/dev/playwright.yml`
 - `README.md`
 - `README.dev-env.md`
 - `README.dev-docker.md`

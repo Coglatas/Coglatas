@@ -22,7 +22,7 @@ infrastructure only.
 6. `frontend npm run build-storybook` verifies Storybook can build from the
    Angular component source.
 7. Root `npm run test:ui:angular:docker` runs the Angular Playwright smoke in
-   the pinned Linux Playwright image from `docker-compose.playwright.yml`.
+   the pinned Linux Playwright image from `infra/compose/dev/playwright.yml`.
 
 ## Staged Playwright Plan
 

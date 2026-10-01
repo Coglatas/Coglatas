@@ -12,8 +12,8 @@ trees on the frozen submission SHA before distribution.
 - Direct .NET dependencies: project files under `src/` and `tests/`.
 - Resolved .NET dependencies: restore assets and `dotnet list package` output
   produced for the frozen SHA.
-- Container image provenance: `Dockerfile`, `backend.Dockerfile`,
-  `frontend.Dockerfile`, `Dockerfile.playwright`, and the selected Compose
+- Container image provenance: `Dockerfile`, `infra/docker/backend-dev.Dockerfile`,
+  `infra/docker/frontend-dev.Dockerfile`, `infra/docker/playwright.Dockerfile`, and the selected Compose
   files.
 
 This document intentionally does not copy every transitive package license out
