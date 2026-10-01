@@ -1,51 +1,53 @@
-# Qodana R2 identity reconciliation
+# Frozen Qodana identity reconciliation
 
-Issue #976 requires successful exact-main full analysis and measured identity
-comparison before any separate budget ratchet. This read-only workflow retrieves
-only pinned successful main Qodana Cloud runs and their complete inventory ZIPs.
-Repository tokens are never forwarded to artifact storage redirects.
+This read-only proof compares the complete successful Qodana inventories for the
+frozen audit and source main 2f1b9b711901a84bc425b1a4ce82eff76477e3d7.
+It changes no application source, inspection budget, suppression or frozen packet helper.
 
-The original R2 manifest assigns indices only to raw SARIF SHA-256
-`95a0556a7cedce7b9d4d6a6a49af9af710ffd2c414289d946b84ae4f6ff0bb4c`
-from audited source `9ff983078f2ddf85f21e4e16e0c9b7d6b1a403f6`.
-The originally recorded artifact 11091906317 is no longer returned by GitHub;
-run 36703159302 currently exposes replacement artifact 11104910082. Its archive
-digest is recorded separately. The replacement raw SARIF is independently recorded as
-`293b9b535ca32e87c1737297414816b4c271bf7123d5070520193814ac8209d0`,
-not the historical Cloud digest. Issue #976 already proved all 2,480 original
-Deep/R2 Cloud identities and result indices equal, with only retained test lines
-moving. The original Deep artifact 11086775183 remains available. Its raw bytes
-must match immutable SHA-256
-`6f1b59fe7bbcccdd97534e063e2f7205d3e722958f962664cac2352e7b81091b`
-and source `64db0f5aaf8b4283360f4c6d7934c8ed89256024`.
+The original Cloud artifact was replaced during a rerun. The original Deep raw
+SARIF remains byte-pinned to 6f1b59fe7bbcccdd97534e063e2f7205d3e722958f962664cac2352e7b81091b.
+Issue #976 independently established identical original/R2 identities and result
+indices. The verifier checks all 2480 ordered original/replay identities before
+using any frozen packet index. Historical Cloud digest
+95a0556a7cedce7b9d4d6a6a49af9af710ffd2c414289d946b84ae4f6ff0bb4c and replay digest
+293b9b535ca32e87c1737297414816b4c271bf7123d5070520193814ac8209d0 remain distinct.
 
-Before any frozen index is used, the verifier independently compares every one
-of the replay's identities and exact positions with that byte-pinned original
-inventory. Missing, new, changed or reordered identities stop proof. The original
-Deep digest, historical Cloud digest and replay digest remain distinct in the
-proof. No digest, operation count or frozen manifest is rewritten.
+Twelve landed packets select 94 exact findings for removal. P07/P09/P10 remain held.
+A count subtraction alone is insufficient: the complete retained identity
+multiset must match the actual head inventory.
 
-`qodana-reconciliation.json` binds the repository, full source revisions,
-successful analysis run IDs, artifact IDs and ZIP digests, plus the source packets
-whose removals are expected. The workflow rejects stale or failed run metadata,
-wrong artifact ownership/digests, empty or multi-run SARIF, wrong source
-provenance, unknown packet selections and malformed finding identities.
+## Reviewed retained fingerprints
 
-Identity is rule/path/partial fingerprints/message with exact multiplicity.
-Source line movement is permitted; changed messages, paths or fingerprints are
-not silently normalized. Every retained identity must remain and every selected
-fixed identity must disappear. Unexpected additions, unrelated removals or
-missing expected removals stop reconciliation.
+Qodana's equalIndicator/v1 also includes surrounding source context. The strict
+initial comparison detected 14 changed fingerprints, all with the same rule,
+path, message and exact source-token location. The warnings remain present.
 
-Proof artifacts preserve selection, raw baseline/head SARIF, independent raw
-digests, download provenance, measured per-rule removals, current rule counts and
-the retained inventory digest. The initial selection verifies the nine already
-merged packets on main `cb9216cd336b5d36d4a266006398ad31643d6fc8`.
-After P11/P13/P14 merge, update only the immutable head evidence and completed
-packet selection and repeat proof on the final source main revision.
+| Packet | Retained warnings | Source review |
+| --- | ---: | --- |
+| P01 | 8 | DTO declarations unchanged; nearby enum qualification shortened |
+| P06 | 1 | Async wrapper unchanged; audited unused private parameter removed |
+| P11 | 3 | Mutable EF properties retained; equivalent constant initializer uses nameof |
+| P12 | 1 | Positive-arm operator retained; audited equivalent false arm changed |
+| P14 | 1 | Public Id property retained; private field reference renamed |
 
-This workflow changes no application code, dependency, scanner setting, test
-oracle or budget. A separate metadata-only PR must later use
-`min(current_budget, measured_current_count)` for the affected rules, preserving
-zero budgets and historical baseline sourceRevision/totalFindings. Preparation
-and proof publication do not themselves complete #976.
+[qodana-retained-correspondences.json](qodana-retained-correspondences.json)
+records each complete old/new identity, both actual SARIF regions/context,
+both source blob hashes, declaration lines, packet and review rationale.
+No inferred or global fingerprint normalization is used. Each mapping must occur
+exactly once, refer to a landed packet, and bind to both immutable source/SARIF
+revisions. The API response path/blob and actual Git blob bytes must match.
+The retained token and declaration must match their exact source coordinates.
+Duplicates, absent mappings, unexpected warning additions/removals, other
+fingerprint changes and changed rule/path/message remain blocking.
+
+A verified correspondence is retained debt, never source remediation. The proof
+reports mapped_retained_findings separately from measured_removals and preserves
+both original and current identities in the artifact. Inspection budgets stay
+unchanged. Tests cover provenance drift, duplicate/multiplicity errors, source
+blob/region mismatch, token forwarding and unexpected findings.
+
+This isolated continuation preserves draft #999's exploratory failed results
+without rewriting history or suppressing Gitleaks. Its unrelated OpenAPI
+diagnostic was moved to #1001. Main's actual runtime security failure remains
+separate; reconciliation success does not establish all-CI success or authorize
+the pending OpenAPI patch or a budget ratchet.

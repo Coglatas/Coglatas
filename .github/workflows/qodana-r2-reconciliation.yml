@@ -39,6 +39,7 @@ jobs:
           python3 scripts/quality/reconcile_qodana.py
           docs/ci/qodana-reconciliation.json
           artifacts/qodana-reconciliation
+          docs/ci/qodana-retained-correspondences.json
       - name: Preserve raw inventories and reconciliation evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
