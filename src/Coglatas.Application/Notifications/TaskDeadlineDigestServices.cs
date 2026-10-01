@@ -241,13 +241,8 @@ public sealed record TaskDeadlineDigestTimeZoneResolution(
 /// infrastructure has classified as retryable. Provider exception types and
 /// SQLSTATE values deliberately remain in Infrastructure.
 /// </summary>
-public sealed class TaskDeadlineDigestRetryablePersistenceConflictException : Exception
-{
-    public TaskDeadlineDigestRetryablePersistenceConflictException()
-        : base("Task deadline digest persistence conflicted with concurrent state.")
-    {
-    }
-}
+public sealed class TaskDeadlineDigestRetryablePersistenceConflictException()
+    : Exception("Task deadline digest persistence conflicted with concurrent state.");
 
 public sealed class TaskDeadlineDigestGenerator(
     ITaskDeadlineDigestRepository repository,
