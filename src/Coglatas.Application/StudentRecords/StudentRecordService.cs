@@ -59,7 +59,7 @@ public sealed class StudentRecordService(
         var access = await authorization.AuthorizeRestrictedStudentRecordAsync(userId, record, requestedFields, cancellationToken);
         if (!access.IsAuthorizedForRecord)
         {
-            await AuditRestrictedDenialAsync(userId, record, requestedFields, access, cancellationToken);
+            await AuditRestrictedDenialAsync(record, requestedFields, access, cancellationToken);
             return Result<StudentRecordRestrictedResponse>.Failure("Student record not found.");
         }
 
@@ -189,7 +189,6 @@ public sealed class StudentRecordService(
     }
 
     private async Task AuditRestrictedDenialAsync(
-        Guid userId,
         StudentRecord record,
         IReadOnlyCollection<string> requestedFields,
         StudentRecordRestrictedAccess access,
