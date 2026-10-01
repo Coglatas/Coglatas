@@ -31,7 +31,7 @@ public sealed class CommunicationPollingService(
             return Result<ConversationUnreadPollingResponse>.Failure("Authentication is required.");
         }
 
-        if (!await AllowPollingAsync(userId, "unread_counts", query.WorkspaceId, cancellationToken))
+        if (!await AllowPollingAsync(userId, "unread_counts", query.WorkspaceId))
         {
             await AuditPollingAsync(userId, "unread_counts", "rate_limited", "rate_limited", query.WorkspaceId, 0, cancellationToken);
             return Result<ConversationUnreadPollingResponse>.Failure("Polling rate limit exceeded.");
@@ -72,7 +72,7 @@ public sealed class CommunicationPollingService(
             return Result<NotificationPollingResponse>.Failure("Authentication is required.");
         }
 
-        if (!await AllowPollingAsync(userId, "notifications", query.WorkspaceId, cancellationToken))
+        if (!await AllowPollingAsync(userId, "notifications", query.WorkspaceId))
         {
             await AuditPollingAsync(userId, "notifications", "rate_limited", "rate_limited", query.WorkspaceId, 0, cancellationToken);
             return Result<NotificationPollingResponse>.Failure("Polling rate limit exceeded.");
@@ -102,7 +102,7 @@ public sealed class CommunicationPollingService(
             return Result<CommunicationUpdatesPollingResponse>.Failure("Authentication is required.");
         }
 
-        if (!await AllowPollingAsync(userId, "updates", query.WorkspaceId, cancellationToken))
+        if (!await AllowPollingAsync(userId, "updates", query.WorkspaceId))
         {
             await AuditPollingAsync(userId, "updates", "rate_limited", "rate_limited", query.WorkspaceId, 0, cancellationToken);
             return Result<CommunicationUpdatesPollingResponse>.Failure("Polling rate limit exceeded.");
@@ -348,7 +348,7 @@ public sealed class CommunicationPollingService(
         return Result<CursorResolution>.Success(new CursorResolution(since, false));
     }
 
-    private async Task<bool> AllowPollingAsync(Guid userId, string operation, Guid? workspaceId, CancellationToken cancellationToken)
+    private async Task<bool> AllowPollingAsync(Guid userId, string operation, Guid? workspaceId)
     {
         var now = clock.UtcNow;
         var key = $"{CurrentTenantIdOrNull()}:{workspaceId}:{userId}:{operation}";
