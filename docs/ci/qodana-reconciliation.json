@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "repository": "NYGsatoshi/Coglatas",
+  "baseline": {
+    "sha": "9ff983078f2ddf85f21e4e16e0c9b7d6b1a403f6",
+    "run_id": 36703159302,
+    "artifact_id": 11104910082,
+    "zip_sha256": "e74bbd2bb68f939dd0d276be2e593efdd880fb1955b35a9931e5471608725437"
+  },
+  "head": {
+    "sha": "cb9216cd336b5d36d4a266006398ad31643d6fc8",
+    "run_id": 36867104942,
+    "artifact_id": 11165118221,
+    "zip_sha256": "ace7148737e076f605fc9777890eb2b917e7a2363e43854274c9814245079174"
+  },
+  "completed_packets": [
+    "P01",
+    "P02",
+    "P03",
+    "P04",
+    "P05",
+    "P06",
+    "P08",
+    "P12",
+    "P15"
+  ]
+}
