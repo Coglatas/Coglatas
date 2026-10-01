@@ -125,12 +125,12 @@ public sealed class TaskDeadlineDigestRepository(
         var workspaceIds = schedules.Select(schedule => schedule.WorkspaceId).Distinct().ToArray();
         var localDates = schedules.Select(schedule => schedule.LocalDate).Distinct().ToArray();
         var existing = await dbContext.TaskDeadlineDigestJobs
-            .Where(job => workspaceIds.Contains(job.WorkspaceId) && localDates.Contains(job.LocalDate))
+            .Where(job => Enumerable.Contains(workspaceIds, job.WorkspaceId) && Enumerable.Contains(localDates, job.LocalDate))
             .ToListAsync(cancellationToken);
         var byIdentity = existing.ToDictionary(job =>
             (job.WorkspaceId, job.UserId, job.LocalDate, job.PolicyVersion));
         var tenantByWorkspace = await dbContext.Workspaces
-            .Where(workspace => workspaceIds.Contains(workspace.Id))
+            .Where(workspace => Enumerable.Contains(workspaceIds, workspace.Id))
             .ToDictionaryAsync(workspace => workspace.Id, workspace => workspace.TenantId, cancellationToken);
 
         var changed = 0;
@@ -198,7 +198,7 @@ public sealed class TaskDeadlineDigestRepository(
             var staleTokens = stale.Where(job => job.ClaimToken.HasValue).Select(job => job.ClaimToken!.Value).ToArray();
             var staleAttempts = await dbContext.TaskDeadlineDigestAttempts
                 .Where(attempt => attempt.Status == TaskDeadlineDigestAttemptStatus.Claimed &&
-                                  attempt.ClaimToken.HasValue && staleTokens.Contains(attempt.ClaimToken.Value))
+                                  attempt.ClaimToken.HasValue && Enumerable.Contains(staleTokens, attempt.ClaimToken.Value))
                 .ToDictionaryAsync(attempt => attempt.ClaimToken!.Value, cancellationToken);
             foreach (var job in stale)
             {
@@ -239,7 +239,7 @@ public sealed class TaskDeadlineDigestRepository(
 
         var dueIds = due.Select(job => job.Id).ToArray();
         var pendingRestarts = await dbContext.TaskDeadlineDigestAttempts
-            .Where(attempt => dueIds.Contains(attempt.JobId) &&
+            .Where(attempt => Enumerable.Contains(dueIds, attempt.JobId) &&
                               attempt.Trigger == TaskDeadlineDigestAttemptTrigger.OperatorRestart &&
                               attempt.Status == TaskDeadlineDigestAttemptStatus.Pending)
             .ToDictionaryAsync(attempt => attempt.JobId, cancellationToken);
@@ -632,7 +632,7 @@ public sealed class TaskDeadlineDigestRepository(
                 {
                     groupIds = await dbContext.Projects
                         .AsNoTracking()
-                        .Where(project => expectedProjects.Contains(project.Id) && project.GroupId.HasValue)
+                        .Where(project => Enumerable.Contains(expectedProjects, project.Id) && project.GroupId.HasValue)
                         .OrderBy(project => project.GroupId)
                         .Select(project => project.GroupId!.Value)
                         .Distinct()
@@ -714,7 +714,7 @@ public sealed class TaskDeadlineDigestRepository(
             var currentCandidates = (await CurrentCandidatesQuery(
                     claim.JobId,
                     claim.ClaimToken,
-                    ResolveFenceDeadlineBeforeUtc(evaluatedCandidates),
+                    ResolveFenceDeadlineBeforeUtc(),
                     candidateIds)
                 .ToListAsync(cancellationToken))
                 .OrderBy(candidate => candidate.TaskId)
@@ -822,7 +822,7 @@ public sealed class TaskDeadlineDigestRepository(
             };
 
         if (onlyTaskIds is { Length: > 0 })
-            eligible = eligible.Where(candidate => onlyTaskIds.Contains(candidate.TaskId));
+            eligible = eligible.Where(candidate => Enumerable.Contains(onlyTaskIds, candidate.TaskId));
 
         return eligible
             .OrderBy(candidate => candidate.DeadlineAt)
@@ -1231,8 +1231,7 @@ public sealed class TaskDeadlineDigestRepository(
         await dbContext.Database.ExecuteSqlInterpolatedAsync(command, cancellationToken);
     }
 
-    private static DateTimeOffset ResolveFenceDeadlineBeforeUtc(
-        IReadOnlyCollection<TaskDeadlineDigestCandidate> evaluatedCandidates)
+    private static DateTimeOffset ResolveFenceDeadlineBeforeUtc()
     {
         // The validation is already narrowed by the evaluated task IDs. Keep
         // the deadline predicate broad so a concurrent deadline move outside

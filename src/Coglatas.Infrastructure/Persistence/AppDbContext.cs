@@ -745,7 +745,7 @@ public sealed class AppDbContext(
         var method = typeof(AppDbContext)
             .GetMethod(nameof(ApplyTenantQueryFilter), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
             .MakeGenericMethod(entityType.ClrType);
-        method.Invoke(this, new object[] { modelBuilder });
+        method.Invoke(this, [modelBuilder]);
     }
 
     private void ApplyTenantQueryFilter<TEntity>(ModelBuilder modelBuilder)

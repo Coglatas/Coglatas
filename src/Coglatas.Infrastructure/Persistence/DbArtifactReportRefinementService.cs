@@ -701,7 +701,7 @@ public sealed class DbArtifactReportRefinementService(
         }
 
         var claim = context.Claims.Values.SingleOrDefault(item => item.LogicalClaimId == targetLogicalId);
-        if (claim is null || !context.Document.Sections.SelectMany(item => item.Citations).Any(item => item.ArtifactClaimId == claim.Id))
+        if (claim is null || context.Document.Sections.SelectMany(item => item.Citations).All(item => item.ArtifactClaimId != claim.Id))
             return null;
         return new RefinementTarget(Truncate(claim.Text, 180), [claim.Id]);
     }

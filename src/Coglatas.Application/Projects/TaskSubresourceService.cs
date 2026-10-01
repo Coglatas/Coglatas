@@ -457,7 +457,7 @@ public sealed class TaskSubresourceService(
         try
         {
             if (save.Result == TaskCommandSaveResult.ConcurrencyConflict && await EditableTaskAsync(taskId, ct) is not null &&
-                !(await projects.ListWorkItemLabelsAsync(taskId, ct)).Any(x => x.LabelId == labelId))
+                (await projects.ListWorkItemLabelsAsync(taskId, ct)).All(x => x.LabelId != labelId))
                 return Result.Success();
             return Fail(save.Result == TaskCommandSaveResult.UniqueConflict ? "TASK_CONFLICT" : "TASK_STALE_VERSION", "Task has changed. Refetch and retry.");
         }

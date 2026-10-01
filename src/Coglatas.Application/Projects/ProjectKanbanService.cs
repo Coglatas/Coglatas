@@ -222,7 +222,7 @@ public sealed class ProjectKanbanService(
                 rebalanced && originalTargetRanks.TryGetValue(item.Id, out var originalRank) && item.SortKey != originalRank)
             .DistinctBy(item => item.Id)
             .ToList();
-        if (!changedTasks.Any(item => item.Id == task.Id) && (task.WorkflowStageId != sourceStageId || task.SortKey != sourceSortKey))
+        if (changedTasks.All(item => item.Id != task.Id) && (task.WorkflowStageId != sourceStageId || task.SortKey != sourceSortKey))
             changedTasks.Add(task);
 
         if (changedTasks.Count == 0 && transition is null)

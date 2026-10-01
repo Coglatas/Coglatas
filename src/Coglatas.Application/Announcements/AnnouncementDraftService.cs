@@ -942,9 +942,7 @@ public sealed class AnnouncementDraftService(
     private static bool HasValidTargetShape(AnnouncementDraftTargetRequest target) =>
         target.ChannelId.HasValue
             ? target.GroupId.HasValue && target.WorkspaceId.HasValue
-            : target.GroupId.HasValue
-                ? target.WorkspaceId.HasValue
-                : true;
+            : !target.GroupId.HasValue || target.WorkspaceId.HasValue;
 
     private bool TryCurrentActor(out Guid actorUserId, out string? error)
     {
