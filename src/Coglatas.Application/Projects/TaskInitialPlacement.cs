@@ -13,6 +13,7 @@ namespace Coglatas.Application.Projects;
 internal static class TaskInitialPlacement
 {
     private const int RankGap = 1000;
+    private const long MaximumRankBeforeAppend = long.MaxValue - RankGap;
 
     public static async Task<Result> ApplyAsync(
         IProjectRepository projects,
@@ -27,7 +28,7 @@ internal static class TaskInitialPlacement
             return Result.Failure("TASK_WORKFLOW_NOT_CONFIGURED|The Project workflow has no initial Stage.");
 
         var maximumRank = await projects.GetMaximumTaskSortKeyAsync(task.ProjectId, initialStage.Id, cancellationToken);
-        if (maximumRank.HasValue && maximumRank.Value > long.MaxValue - RankGap)
+        if (maximumRank is > MaximumRankBeforeAppend)
             return Result.Failure("TASK_ORDER_CAPACITY_EXHAUSTED|The initial Workflow Stage cannot accept another stable Task rank.");
 
         task.WorkflowStageId = initialStage.Id;

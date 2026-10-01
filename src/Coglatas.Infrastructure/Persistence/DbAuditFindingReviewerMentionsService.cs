@@ -60,7 +60,7 @@ public sealed class DbAuditFindingReviewerMentionsService(
 
         var claimsResult = await claimsEvidence.GetAsync(finding.ArtifactClaim.ArtifactVersionId, cancellationToken);
         if (!claimsResult.IsSuccess || claimsResult.Value is null ||
-            !claimsResult.Value.Claims.Any(claim => claim.ClaimId == finding.ArtifactClaimId))
+            claimsResult.Value.Claims.All(claim => claim.ClaimId != finding.ArtifactClaimId))
         {
             if (claimsResult.ErrorDetail?.Code is "AuthenticationRequired" or "CapabilityDenied" or "TenantMembershipRequired")
             {
