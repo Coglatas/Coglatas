@@ -1,0 +1,16 @@
+{
+  "head_sha": "2f1b9b711901a84bc425b1a4ce82eff76477e3d7",
+  "run_id": 36875754649,
+  "artifacts": [
+    {
+      "id": 11169246721,
+      "name": "openapi-3.1-contract",
+      "zip_sha256": "4f04058a4e97e7275fd476e171486ca25381eab632b5cf3cd93ccf9e3399c088"
+    },
+    {
+      "id": 11171010771,
+      "name": "security-scan-reports",
+      "zip_sha256": "ef1035b335ed126320d297ed25f36ff4e78d01d631f2ef9290c09115b9267a2a"
+    }
+  ]
+}
