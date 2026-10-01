@@ -40,6 +40,7 @@ jobs:
       POSTGRES_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
       PGPASSWORD: coglatas_ci_password
       PACKET_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PACKET_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       PACKET_BRANCH: ${{ github.head_ref }}
     steps:
       - name: Checkout exact PR head
@@ -54,11 +55,21 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Initialize revision evidence
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          evidence = Path("artifacts/qodana-packet-proof")
+          evidence.mkdir(parents=True, exist_ok=False)
+          (evidence / "revision-context.json").write_text(json.dumps({key: os.environ[key] for key in ["PACKET_HEAD_SHA", "PACKET_BASE_SHA", "PACKET_BRANCH"]}, indent=2) + "\n")
+          PY
+
       - name: Test packet evidence verifier
         run: python3 -m unittest discover -s scripts/ci/qodana-packets -p 'test_*.py' -v
 
-      - name: Run unchanged baseline before approved candidate
-        run: python3 scripts/ci/qodana-packets/verify.py
+      - name: Run selected packet verification
+        run: python3 scripts/ci/qodana-packets/dispatch.py
 
       - name: Preserve baseline and candidate evidence
         if: always()
