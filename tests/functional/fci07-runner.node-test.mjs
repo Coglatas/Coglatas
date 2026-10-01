@@ -20,8 +20,8 @@ test('FCI-07 runners are syntactically valid and keep the security fixture bound
   for (const gate of ['functional-fast', 'functional-full', 'functional-extended']) {
     assert.match(composeRunner, new RegExp(gate));
   }
-  assert.match(composeRunner, /docker-compose\.security\.yml/);
-  assert.match(composeRunner, /docker-compose\.fci07-functional-security\.yml/);
+  assert.match(composeRunner, /infra\/compose\/security\/security\.yml/);
+  assert.match(composeRunner, /infra\/compose\/security\/fci07-functional-security\.yml/);
 
   const overlay = readFileSync(overlayPath, 'utf8');
   const parsed = yaml.load(overlay);
