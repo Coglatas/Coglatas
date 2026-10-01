@@ -1,0 +1,40 @@
+name: Security runtime failure diagnostics
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/security-runtime-diagnostics.yml"
+permissions:
+  actions: read
+  contents: read
+jobs:
+  diagnose:
+    if: github.head_ref == 'fix/main-security-runtime-failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Summarize the completed main security failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api repos/NYGsatoshi/Coglatas/actions/jobs/110324952018/logs > "$RUNNER_TEMP/security-failure.log"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+          lines = Path(os.environ["RUNNER_TEMP"], "security-failure.log").read_text(errors="replace").splitlines()
+          markers = [
+              i for i, line in enumerate(lines)
+              if re.search(r"::group::security-.*\(exit [1-9]|::error::|Security runtime stage .*failed|SEC-0[3456].*(failed|blocker)|AUD-02.*failed|Traceback|Error response from daemon|no space left|connection refused|timed out|FAILED|AssertionError", line, re.I)
+          ]
+          selected = set()
+          for i in markers:
+              selected.update(range(max(0, i - 8), min(len(lines), i + 18)))
+          selected.update(range(max(0, len(lines) - 45), len(lines)))
+          print(f"Completed job: 110324952018; log lines: {len(lines)}; error matches: {len(markers)}")
+          for i in sorted(selected)[:1600]:
+              line = lines[i]
+              # Keep downloaded workflow commands inert in this diagnostic run.
+              print(f"{i + 1}: " + line.replace("::", ": :"))
+          PY
