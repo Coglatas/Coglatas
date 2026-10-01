@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run fixed P11/P13 tests before production edits; baseline evidence only."""
+"""Run unchanged P11/P13/P14 baselines; never apply production edits."""
 from __future__ import annotations
 import hashlib
 import json
@@ -15,6 +15,7 @@ FIXED_TESTS = {
     "P11": ("tests/Coglatas.Tests/Quality/QodanaFixedWireNameTests.cs", "c86474aad57b19211c96f9be18bc8621408d56527d062fa5a4d815d8c7ec4187"),
     "P13": ("tests/Coglatas.Tests/Quality/QodanaFixedExceptionContractTests.cs", "5bc14e1255c56f4efe1d6380f2f8da658235b273771273e1ac8b9cae981aa577"),
 }
+BASELINE_PACKETS = {"P11", "P13", "P14"}
 OVERLAPS = {
     "P11": {
         "src/Coglatas.Application/StudentRecords/StudentRecordService.cs": "P06",
@@ -22,6 +23,9 @@ OVERLAPS = {
     },
     "P13": {
         "src/Coglatas.Application/Notifications/TaskDeadlineDigestServices.cs": "P07",
+    },
+    "P14": {
+        "src/Coglatas.Infrastructure/Persistence/AnnouncementEngagementStore.cs": "P04",
     },
 }
 
@@ -61,6 +65,10 @@ def upstream_variant(packet_id: str, path: str, audited: bytes, current: bytes,
     raise ValueError(f"STOP: source differs from audited or exact known upstream packet: {path}")
 
 def require_test(repo: Path, packet_id: str) -> None:
+    if packet_id == "P14":
+        return  # The immutable extension supplies no P14 fixed test.
+    if packet_id not in FIXED_TESTS:
+        raise ValueError("Unsupported fixed-test packet")
     path, digest = FIXED_TESTS[packet_id]
     target = repo / path
     if target.is_symlink() or verify.sha256(target.read_bytes()) != digest:
@@ -68,7 +76,7 @@ def require_test(repo: Path, packet_id: str) -> None:
 
 def require_baseline_paths(changed: list[str], packet_id: str, integrated: bool) -> None:
     allowed = {".github/workflows/qodana-packet-verification.yml", "docs/ci/qodana-packet-verification.md"}
-    if integrated:
+    if integrated and packet_id in FIXED_TESTS:
         allowed.add(FIXED_TESTS[packet_id][0])
     for path in changed:
         if path not in allowed and not path.startswith("scripts/ci/qodana-packets/"):
@@ -81,7 +89,7 @@ def main() -> None:
     if set(selection) != {"packet", "baseline_sha", "audit_test_sha", "stage"}:
         raise ValueError("Unexpected R2 selection fields")
     packet_id = selection["packet"]
-    if packet_id not in FIXED_TESTS or selection["stage"] != "baseline":
+    if packet_id not in BASELINE_PACKETS or selection["stage"] != "baseline":
         raise ValueError("Only unchanged-production R2 baselines are supported")
     head_sha = os.environ["PACKET_HEAD_SHA"]
     for sha in [head_sha, selection["baseline_sha"], selection["audit_test_sha"]]:
@@ -137,7 +145,8 @@ def main() -> None:
         "baseline_sha": baseline_sha, "audit_test_sha": selection["audit_test_sha"],
         "configured_baseline_sha": selection["baseline_sha"], "event_base_sha": event_base_sha,
         "production_comparison_sha": comparison_sha,
-        "sdk": "10.0.401", "postgresql": version, "fixed_test_sha256": FIXED_TESTS[packet_id][1],
+        "sdk": "10.0.401", "postgresql": version,
+        "fixed_test_sha256": FIXED_TESTS[packet_id][1] if packet_id in FIXED_TESTS else None,
         "canonical_helper_sha256": HELPER_SHA256, "historical_plan_sha256": PLAN_SHA256,
         "known_upstream_packets": upstream, "baseline_source_sha256": source_hashes,
         "test_counts": {key: sum(value.values()) for key, value in inventory.items()},

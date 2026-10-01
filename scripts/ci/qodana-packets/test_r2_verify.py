@@ -7,6 +7,16 @@ import unittest
 import r2_verify
 
 class R2BaselineTests(unittest.TestCase):
+    def test_p14_requires_unchanged_production_and_has_no_supplied_fixed_test(self):
+        r2_verify.require_test(Path("unused"), "P14")
+        r2_verify.require_baseline_paths(["scripts/ci/qodana-packets/selections/P14.json"], "P14", True)
+        for path in ["src/Coglatas.Web/Realtime/HubSubscriptionRegistry.cs", r2_verify.FIXED_TESTS["P11"][0]]:
+            with self.subTest(path=path):
+                with self.assertRaises(ValueError):
+                    r2_verify.require_baseline_paths([path], "P14", True)
+        with self.assertRaises(ValueError):
+            r2_verify.require_test(Path("unused"), "P15")
+
     def test_main_integration_allows_only_own_fixed_test_and_auxiliary_files(self):
         own = r2_verify.FIXED_TESTS["P11"][0]
         r2_verify.require_baseline_paths([own, "scripts/ci/qodana-packets/selections/P11.json"], "P11", True)

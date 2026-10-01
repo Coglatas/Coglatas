@@ -124,7 +124,7 @@ public sealed class AnnouncementEngagementStore(AppDbContext dbContext) : IAnnou
             .Where(read =>
                 read.TenantId == tenantId &&
                 read.AnnouncementId == announcementId &&
-                recipientIds.Contains(read.UserId))
+                Enumerable.Contains(recipientIds, read.UserId))
             .Select(read => read.ReadAt)
             .ToListAsync(cancellationToken);
 
