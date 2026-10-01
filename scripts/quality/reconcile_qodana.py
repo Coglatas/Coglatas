@@ -149,6 +149,31 @@ def reconcile(baseline: list[dict], head: list[dict], removed_indices: set[int])
     }
 
 
+def diagnostic_identity_pairs(baseline: list[dict], head: list[dict], removed_indices: set[int],
+                              evidence: Path) -> None:
+    old_results = [r for i, r in enumerate(baseline) if i not in removed_indices]
+    before = collections.Counter(identity(r) for r in old_results)
+    after = collections.Counter(identity(r) for r in head)
+    missing, added = before - after, after - before
+    old_by_identity = {identity(r): r for r in old_results}
+    new_by_identity = {identity(r): r for r in head}
+    pairs = []
+    for old_identity, count in missing.items():
+        old_key = json.loads(old_identity)
+        candidates = [new_identity for new_identity in added
+                      if json.loads(new_identity)[0:2] == old_key[0:2]
+                      and json.loads(new_identity)[3] == old_key[3]]
+        if count == 1 and len(candidates) == 1 and added[candidates[0]] == 1:
+            new_identity = candidates[0]
+            pairs.append({"old_identity": old_identity, "new_identity": new_identity,
+                          "baseline_location": old_by_identity[old_identity]["locations"][0],
+                          "head_location": new_by_identity[new_identity]["locations"][0]})
+    diagnostic = {"missing": dict(missing), "added": dict(added), "unique_same_rule_path_message_pairs": pairs}
+    (evidence / "identity-drift.json").write_text(json.dumps(diagnostic, indent=2, sort_keys=True) + "\\n")
+    for pair in pairs[:30]:
+        print("IDENTITY_DRIFT_PAIR " + json.dumps(pair, sort_keys=True), flush=True)
+
+
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
@@ -255,6 +280,7 @@ def main() -> None:
     head_raw, head_provenance = read_snapshot(selection["head"], token, evidence, "head")
     head = sarif_results(head_raw, selection["head"]["sha"])
     removed = set().union(*(indices(packet) for packet in selection["completed_packets"]))
+    diagnostic_identity_pairs(baseline, head, removed, evidence)
     proof = {**reconcile(baseline, head, removed), "completed_packets": selection["completed_packets"],
              "baseline": baseline_provenance, "head": head_provenance,
              "identity_anchor": anchor_provenance,
