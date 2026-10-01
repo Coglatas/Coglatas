@@ -2,7 +2,6 @@
 **/obj/
 .git
 .git/
-.config/
 .nuget/
 .env
 .env.*
