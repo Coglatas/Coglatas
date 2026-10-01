@@ -3,8 +3,8 @@
 services:
   angular-playwright:
     build:
-      context: .
-      dockerfile: Dockerfile.playwright
+      context: ../../..
+      dockerfile: infra/docker/playwright.Dockerfile
     working_dir: /work
     # This runner is a single container: Playwright and its static Angular server
     # share the same network namespace and do not need a Compose project network.
@@ -17,7 +17,7 @@ services:
       NPM_CI_ATTEMPTS: "2"
       COGLATAS_PLAYWRIGHT_REUSE_HOST_BUILD: "${COGLATAS_PLAYWRIGHT_REUSE_HOST_BUILD:-false}"
     volumes:
-      - .:/work
+      - ../../../:/work
       - playwright-root-node-modules:/work/node_modules
       - playwright-frontend-node-modules:/work/frontend/node_modules
       - playwright-npm-cache:/root/.npm
