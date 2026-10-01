@@ -22,6 +22,7 @@ keys=(
   frontend_storybook
   frontend_playwright
   avmig_contract
+  avmig_selftests
   security
   security_dotnet
   security_compose
@@ -80,6 +81,7 @@ frontend_license_guard=false
 frontend_storybook=false
 frontend_playwright=false
 avmig_contract=false
+avmig_selftests=false
 security=false
 security_dotnet=false
 security_compose=false
@@ -346,7 +348,7 @@ while IFS= read -r path; do
   [[ -n "$path" ]] || continue
 
   case "$path" in
-    .github/workflows/ci.yml|scripts/ci/route-main-ci-changes.sh)
+    .github/workflows/ci.yml|scripts/ci/route-main-ci-changes.sh|scripts/ci/parallel-lane-lib.sh|scripts/ci/run-frontend-parallel.sh|scripts/ci/run-security-runtime-parallel.sh)
       backend=true
       backend_ef=true
       backend_tests=true
@@ -362,6 +364,7 @@ while IFS= read -r path; do
       frontend_license_guard=true
       frontend_storybook=true
       frontend_playwright=true
+      avmig_selftests=true
       security=true
       security_dotnet=true
       security_compose=true
@@ -554,27 +557,37 @@ while IFS= read -r path; do
       ;;
   esac
 
-  # AV-MIG contract routing.
+  # AV-MIG contract routing. Source/build inputs require the SEC-01 contract,
+  # but do not imply the NuGet dependency graph changed.
   case "$path" in
     global.json|NuGet.config|Directory.Build.*|src/*.csproj|docs/migration/avalonia/*|scripts/ci/*av_mig*|scripts/ci/generate-security-openapi-contract.sh|src/Coglatas.Web/*|src/Coglatas.Application/*|tests/Coglatas.Tests/OpenApi/*|tools/AvMig.SourceInspector/*)
       avmig_contract=true
       security=true
-      security_dotnet=true
+      ;;
+  esac
+
+  # Expensive verifier mutation suites validate the verifier/tooling itself.
+  # Ordinary API/Application changes still generate and verify the real contract,
+  # but only verifier/policy/toolchain or mutation-target changes rerun self-tests.
+  case "$path" in
+    global.json|NuGet.config|Directory.Build.*|src/*.csproj|docs/migration/avalonia/p0-api-boundary.json|scripts/ci/*av_mig*|scripts/ci/generate-security-openapi-contract.sh|tools/AvMig.SourceInspector/*|src/Coglatas.Web/Program.cs|src/Coglatas.Web/Realtime/AppHub.cs)
+      avmig_contract=true
+      avmig_selftests=true
+      security=true
       ;;
   esac
 
   # Security routing.
-  # Runtime/API implementation changes must execute the authenticated SEC-03/04/05/06
-  # Compose gate on pull requests as well as main. Otherwise contract and fuzz
-  # regressions are discovered only after merge.
+  # PRs run the fast static/contract gate for runtime/API implementation changes;
+  # live authenticated Core/Schemathesis/ZAP stacks are deferred to main/manual.
   case "$path" in
-    src/Coglatas.Application/*|src/Coglatas.Domain/*|src/Coglatas.Infrastructure/*|src/Coglatas.Web/*|scripts/security/*|scripts/ci/run-security-runtime-smoke.sh|scripts/ci/generate-security-openapi-contract.sh)
+    src/Coglatas.Application/*|src/Coglatas.Domain/*|src/Coglatas.Infrastructure/*|src/Coglatas.Web/*|scripts/security/*|scripts/ci/run-security-runtime-smoke.sh|scripts/ci/run-security-runtime-parallel.sh|scripts/ci/generate-security-openapi-contract.sh|Dockerfile.security.runtime|.dockerignore|.config/*)
       security=true
-      security_dotnet=true
       security_compose=true
       ;;
   esac
 
+  # Only dependency/build manifests route the NuGet vulnerability scan.
   case "$path" in
     Coglatas.slnx|global.json|NuGet.config|Directory.Build.*|Directory.Packages.*|.config/*|src/*.csproj|tests/Coglatas.Tests/*.csproj)
       security=true
@@ -655,6 +668,7 @@ if [[ -n "$summary_file" ]]; then
     echo "  - Storybook: $frontend_storybook"
     echo "  - Playwright: $frontend_playwright"
     echo "- AV-MIG contract: $avmig_contract"
+    echo "  - verifier mutation self-tests: $avmig_selftests"
     echo "- security: $security"
     echo "  - .NET dependency scan: $security_dotnet"
     echo "  - Compose validation: $security_compose"

@@ -6,12 +6,14 @@ These instructions apply to the entire repository unless a more specific `AGENTS
 
 ## Project Language
 
-English is the canonical engineering and project language for this repository.
-Use English for source identifiers, code comments, docstrings, test names and descriptions, repository documentation, configuration documentation, commit/PR/Issue text, and AI/code-review output.
+English is the sole canonical engineering and project language for this repository.
+Use English for source identifiers, code comments, docstrings, test names and descriptions, repository documentation, configuration documentation, new commit messages, branch names, Issue/PR titles and bodies, discussion/review comments, project metadata, and AI/code-review output.
 
-Intentional product localization and i18n resources are exempt from this rule. Do not translate or rewrite localized end-user content merely to satisfy the engineering-language policy.
+Do not create or maintain parallel Japanese documentation, bilingual engineering summaries, or Japanese-only companion artifacts. An instruction received in Japanese does not change the language of the repository artifact you produce.
 
-When adding or materially editing an engineering artifact, do not introduce new non-English prose unless the artifact is explicitly part of localization/i18n or another documented exception.
+Follow `docs/PROJECT_LANGUAGE.md` and migration tracker #965. Translate existing non-English engineering records in complete, reviewable batches; preserve requirements, decision status, evidence, references, checkbox states, and issue/PR lifecycle metadata. Record coverage and remaining work rather than claiming an incomplete migration is complete. Do not rewrite published Git history or change product behavior for language cleanup.
+
+Intentional product localization/i18n resources, Japanese IME/Unicode test data, and exact third-party/legal or diagnostic evidence have narrow preservation exceptions documented in the policy. These are not exceptions for engineering prose. Explain preserved non-English evidence in English, retain attribution, and never publish private specification content to satisfy this policy.
 
 ## Start Here
 
