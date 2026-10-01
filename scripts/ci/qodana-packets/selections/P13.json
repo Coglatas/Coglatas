@@ -2,5 +2,5 @@
   "packet": "P13",
   "baseline_sha": "cb9216cd336b5d36d4a266006398ad31643d6fc8",
   "audit_test_sha": "fb04f8dd0365a09790bca76dfb433453a5e67eef",
-  "stage": "prepare"
+  "stage": "verify"
 }
