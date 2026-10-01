@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 
 HELPER_SHA256 = "305c7f54d04ea3b83ddcc807c7b462a5a194a4ecebdc2ffb5c814626d7415a15"
 PLAN_SHA256 = "c129f5f0e6a89fef4ef64cb1b52f2ab67b62dfd295244976a10bdb9256447424"
-ALLOWED_PACKETS = {"P01", "P02", "P04"}
+ALLOWED_PACKETS = {"P01", "P02", "P04", "P11", "P13", "P14"}
 NAMESPACE = {"t": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
 
 def sha256(data: bytes) -> str:

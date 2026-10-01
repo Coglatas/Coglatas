@@ -68,8 +68,8 @@ jobs:
       - name: Test packet evidence verifier
         run: python3 -m unittest discover -s scripts/ci/qodana-packets -p 'test_*.py' -v
 
-      - name: Run unchanged baseline before approved candidate
-        run: python3 scripts/ci/qodana-packets/verify.py
+      - name: Run selected packet verification
+        run: python3 scripts/ci/qodana-packets/dispatch.py
 
       - name: Preserve baseline and candidate evidence
         if: always()
