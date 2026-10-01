@@ -20,6 +20,7 @@ def selection():
     return {"version": 1, "repository": q.REPOSITORY,
             "baseline": {"sha": q.AUDIT_SHA, "run_id": 1, "artifact_id": 2, "zip_sha256": "a" * 64},
             "head": {"sha": "b" * 40, "run_id": 3, "artifact_id": 4, "zip_sha256": "c" * 64},
+            "identity_anchor": {"sha": q.ORIGINAL_SHA, "run_id": 5, "artifact_id": 6, "zip_sha256": "d" * 64},
             "completed_packets": ["P11", "P13", "P14"]}
 
 
@@ -38,6 +39,7 @@ class ReconciliationTests(unittest.TestCase):
             lambda s: s.update(completed_packets=[]),
             lambda s: s.update(repository="other/repo"),
             lambda s: s["baseline"].update(sha="a" * 40),
+            lambda s: s["identity_anchor"].update(sha="a" * 40),
             lambda s: s["head"].update(sha="main"),
             lambda s: s["head"].update(zip_sha256="missing"),
             lambda s: s["head"].update(run_id=True),
@@ -150,6 +152,14 @@ class ReconciliationTests(unittest.TestCase):
         data = self.zip_fixture([("qodana.sarif.json", b"oversized")])
         with mock.patch.object(q, "MAX_BYTES", 2), self.assertRaises(ValueError):
             q.raw_sarif_from_zip(data)
+
+    def test_original_replay_requires_every_identity_and_its_exact_index(self):
+        original = [result("first"), result("second")]
+        q.require_ordered_identity_equivalence(original, [result("first", 100), result("second", 200)])
+        for replay in [[result("first")], [result("second"), result("first")],
+                       [result("first"), result("changed")]]:
+            with self.subTest(replay=replay), self.assertRaises(ValueError):
+                q.require_ordered_identity_equivalence(original, replay)
 
 
 if __name__ == "__main__":

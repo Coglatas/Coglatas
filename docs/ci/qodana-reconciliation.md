@@ -10,9 +10,20 @@ The original R2 manifest assigns indices only to raw SARIF SHA-256
 from audited source `9ff983078f2ddf85f21e4e16e0c9b7d6b1a403f6`.
 The originally recorded artifact 11091906317 is no longer returned by GitHub;
 run 36703159302 currently exposes replacement artifact 11104910082. Its archive
-digest is recorded separately. The replacement's raw SARIF must still match
-the historical digest before any frozen index is used. A mismatch stops proof;
-no old digest or manifest index is relabeled as new evidence.
+digest is recorded separately. The replacement raw SARIF is independently recorded as
+`293b9b535ca32e87c1737297414816b4c271bf7123d5070520193814ac8209d0`,
+not the historical Cloud digest. Issue #976 already proved all 2,480 original
+Deep/R2 Cloud identities and result indices equal, with only retained test lines
+moving. The original Deep artifact 11086775183 remains available. Its raw bytes
+must match immutable SHA-256
+`6f1b59fe7bbcccdd97534e063e2f7205d3e722958f962664cac2352e7b81091b`
+and source `64db0f5aaf8b4283360f4c6d7934c8ed89256024`.
+
+Before any frozen index is used, the verifier independently compares every one
+of the replay's identities and exact positions with that byte-pinned original
+inventory. Missing, new, changed or reordered identities stop proof. The original
+Deep digest, historical Cloud digest and replay digest remain distinct in the
+proof. No digest, operation count or frozen manifest is rewritten.
 
 `qodana-reconciliation.json` binds the repository, full source revisions,
 successful analysis run IDs, artifact IDs and ZIP digests, plus the source packets

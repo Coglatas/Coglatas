@@ -18,6 +18,8 @@ import zipfile
 REPOSITORY = "NYGsatoshi/Coglatas"
 AUDIT_SHA = "9ff983078f2ddf85f21e4e16e0c9b7d6b1a403f6"
 AUDIT_SARIF_SHA256 = "95a0556a7cedce7b9d4d6a6a49af9af710ffd2c414289d946b84ae4f6ff0bb4c"
+ORIGINAL_SHA = "64db0f5aaf8b4283360f4c6d7934c8ed89256024"
+ORIGINAL_SARIF_SHA256 = "6f1b59fe7bbcccdd97534e063e2f7205d3e722958f962664cac2352e7b81091b"
 PACKET_RANGES = {
     "P01": "2182-2190,2433,2438", "P02": "73-78,2191",
     "P03": "84-90,2421", "P04": "68-72,79-83,91-93",
@@ -49,7 +51,7 @@ def indices(packet: str) -> set[int]:
 
 
 def validate_selection(selection: dict) -> None:
-    if set(selection) != {"version", "repository", "baseline", "head", "completed_packets"}:
+    if set(selection) != {"version", "repository", "baseline", "head", "identity_anchor", "completed_packets"}:
         raise ValueError("Unexpected reconciliation selection fields")
     if selection["version"] != 1 or selection["repository"] != REPOSITORY:
         raise ValueError("Unsupported reconciliation repository/version")
@@ -58,7 +60,7 @@ def validate_selection(selection: dict) -> None:
         raise ValueError("Require distinct completed packets")
     if any(p not in PACKET_RANGES for p in packets):
         raise ValueError("Unsupported packet")
-    for revision in [selection["baseline"], selection["head"]]:
+    for revision in [selection["baseline"], selection["head"], selection["identity_anchor"]]:
         if set(revision) != {"sha", "run_id", "artifact_id", "zip_sha256"}:
             raise ValueError("Unexpected revision fields")
         if not re.fullmatch(r"[0-9a-f]{40}", revision["sha"]):
@@ -69,6 +71,8 @@ def validate_selection(selection: dict) -> None:
             raise ValueError("Require positive workflow/artifact identifiers")
     if selection["baseline"]["sha"] != AUDIT_SHA:
         raise ValueError("Frozen audited revision changed")
+    if selection["identity_anchor"]["sha"] != ORIGINAL_SHA:
+        raise ValueError("Frozen original identity anchor changed")
     assigned = [i for packet in PACKET_RANGES for i in indices(packet)]
     if len(assigned) != 114 or len(set(assigned)) != 114:
         raise ValueError("Frozen packet ownership overlap")
@@ -110,6 +114,15 @@ def identity(result: dict) -> str:
     # Source lines move during the exact edits. The frozen audit defines
     # identity by rule/path/fingerprints/message, retaining multiplicities.
     return json.dumps([rule, path, fingerprints, message], sort_keys=True, separators=(",", ":"))
+
+
+def require_ordered_identity_equivalence(original: list[dict], replay: list[dict]) -> str:
+    if len(original) != len(replay):
+        raise ValueError("Audited replay identity count changed")
+    for index, (left, right) in enumerate(zip(original, replay)):
+        if identity(left) != identity(right):
+            raise ValueError(f"Audited replay identity/order mismatch at index {index}")
+    return digest(json.dumps([identity(result) for result in original], separators=(",", ":")).encode())
 
 
 def reconcile(baseline: list[dict], head: list[dict], removed_indices: set[int]) -> dict:
@@ -194,11 +207,13 @@ def raw_sarif_from_zip(data: bytes) -> bytes:
 def read_snapshot(revision: dict, token: str, evidence: Path, label: str) -> tuple[bytes, dict]:
     run = api(f"actions/runs/{revision['run_id']}", token)
     artifact = api(f"actions/artifacts/{revision['artifact_id']}", token)
+    expected_name = "Qodana Deep Analysis" if label == "identity-anchor" else "Qodana Cloud Full Analysis"
+    expected_artifact_name = "qodana-full-inventory" if label == "identity-anchor" else "qodana-cloud-full-inventory"
     if (run.get("head_sha") != revision["sha"] or run.get("head_branch") != "main"
             or run.get("status") != "completed" or run.get("conclusion") != "success"
-            or run.get("name") != "Qodana Cloud Full Analysis"):
-        raise ValueError("Require successful immutable main Qodana Cloud run")
-    if (artifact.get("expired") or artifact.get("name") != "qodana-cloud-full-inventory"
+            or run.get("name") != expected_name):
+        raise ValueError("Require successful immutable main Qodana analysis run")
+    if (artifact.get("expired") or artifact.get("name") != expected_artifact_name
             or artifact.get("workflow_run", {}).get("id") != revision["run_id"]
             or artifact.get("workflow_run", {}).get("head_sha") != revision["sha"]
             or artifact.get("digest") != "sha256:" + revision["zip_sha256"]):
@@ -226,15 +241,27 @@ def main() -> None:
     evidence.mkdir(parents=True, exist_ok=True)
     (evidence / "selection.json").write_text(json.dumps(selection, indent=2) + "\n")
     token = os.environ["GH_TOKEN"]
+    anchor_raw, anchor_provenance = read_snapshot(selection["identity_anchor"], token, evidence, "identity-anchor")
+    original = sarif_results(anchor_raw, ORIGINAL_SHA, ORIGINAL_SARIF_SHA256)
+    if len(original) != 2480:
+        raise ValueError("Frozen original finding total differs")
     baseline_raw, baseline_provenance = read_snapshot(selection["baseline"], token, evidence, "baseline")
-    baseline = sarif_results(baseline_raw, AUDIT_SHA, AUDIT_SARIF_SHA256)
-    if len(baseline) != 2480:
-        raise ValueError("Frozen audited finding total differs")
+    baseline = sarif_results(baseline_raw, AUDIT_SHA)
+    # The immutable R2 audit explicitly proved all original/R2 identities and
+    # indices equal. Verify the original bytes, then independently verify every
+    # replay identity and its position. Never relabel replay bytes as the lost
+    # Cloud #107 digest or apply indices to an unverified fresh report.
+    ordered_identity_sha256 = require_ordered_identity_equivalence(original, baseline)
     head_raw, head_provenance = read_snapshot(selection["head"], token, evidence, "head")
     head = sarif_results(head_raw, selection["head"]["sha"])
     removed = set().union(*(indices(packet) for packet in selection["completed_packets"]))
     proof = {**reconcile(baseline, head, removed), "completed_packets": selection["completed_packets"],
-             "baseline": baseline_provenance, "head": head_provenance}
+             "baseline": baseline_provenance, "head": head_provenance,
+             "identity_anchor": anchor_provenance,
+             "historical_cloud_sarif_sha256": AUDIT_SARIF_SHA256,
+             "historical_cloud_bytes_available": digest(baseline_raw) == AUDIT_SARIF_SHA256,
+             "original_replay_ordered_identity_sha256": ordered_identity_sha256,
+             "identity_mapping_authority": "Issue #976 R2 audit: all 2480 original/R2 identities and indices match"}
     (evidence / "proof.json").write_text(json.dumps(proof, indent=2, sort_keys=True) + "\n")
     print("QODANA_RECONCILIATION " + json.dumps(proof, sort_keys=True), flush=True)
 

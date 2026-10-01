@@ -23,5 +23,11 @@
     "P08",
     "P12",
     "P15"
-  ]
+  ],
+  "identity_anchor": {
+    "sha": "64db0f5aaf8b4283360f4c6d7934c8ed89256024",
+    "run_id": 36689640071,
+    "artifact_id": 11086775183,
+    "zip_sha256": "da815c2033ff4a4c47b749ef56cf8e352f5d77771f53ced335589b624e6df6c7"
+  }
 }
