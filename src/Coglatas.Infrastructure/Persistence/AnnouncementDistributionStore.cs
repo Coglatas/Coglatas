@@ -44,8 +44,8 @@ public sealed class AnnouncementDistributionStore(AppDbContext dbContext, IClock
         LIMIT 1
         """;
 
-    private readonly Dictionary<Guid, IReadOnlyList<AnnouncementDraftTargetRequest>> inMemoryDraftTargets = [];
-    private readonly Dictionary<Guid, IReadOnlyList<AnnouncementDraftTargetRequest>> inMemoryAnnouncementTargets = [];
+    private readonly Dictionary<Guid, IReadOnlyList<AnnouncementDraftTargetRequest>> _inMemoryDraftTargets = [];
+    private readonly Dictionary<Guid, IReadOnlyList<AnnouncementDraftTargetRequest>> _inMemoryAnnouncementTargets = [];
 
     private enum SidecarTable
     {
@@ -67,7 +67,7 @@ public sealed class AnnouncementDistributionStore(AppDbContext dbContext, IClock
         await dbContext.SaveChangesAsync(cancellationToken);
         if (!UsesPostgreSql())
         {
-            inMemoryDraftTargets[draftId] = Copy(targets);
+            _inMemoryDraftTargets[draftId] = Copy(targets);
             return;
         }
 
@@ -89,7 +89,7 @@ public sealed class AnnouncementDistributionStore(AppDbContext dbContext, IClock
         if (!UsesPostgreSql())
         {
             await dbContext.SaveChangesAsync(cancellationToken);
-            inMemoryDraftTargets[draftId] = Copy(targets);
+            _inMemoryDraftTargets[draftId] = Copy(targets);
             return;
         }
 
@@ -133,7 +133,7 @@ public sealed class AnnouncementDistributionStore(AppDbContext dbContext, IClock
         }
         if (!UsesPostgreSql())
         {
-            return inMemoryDraftTargets.TryGetValue(draftId, out var targets)
+            return _inMemoryDraftTargets.TryGetValue(draftId, out var targets)
                 ? Copy(targets)
                 : [];
         }
@@ -157,7 +157,7 @@ public sealed class AnnouncementDistributionStore(AppDbContext dbContext, IClock
         }
         if (!UsesPostgreSql())
         {
-            return inMemoryAnnouncementTargets.TryGetValue(announcementId, out var targets)
+            return _inMemoryAnnouncementTargets.TryGetValue(announcementId, out var targets)
                 ? Copy(targets)
                 : [];
         }
@@ -185,7 +185,7 @@ public sealed class AnnouncementDistributionStore(AppDbContext dbContext, IClock
             await stagePublication(cancellationToken);
             StageFrozenCohortMarker(tenantId, announcementId);
             await dbContext.SaveChangesAsync(cancellationToken);
-            inMemoryAnnouncementTargets[announcementId] = Copy(targets);
+            _inMemoryAnnouncementTargets[announcementId] = Copy(targets);
             return;
         }
 

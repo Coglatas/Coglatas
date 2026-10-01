@@ -28,7 +28,7 @@ public sealed class TaskDeadlineDigestWorker(
     IOptions<TaskDeadlineDigestWorkerOptions> options,
     ILogger<TaskDeadlineDigestWorker> logger) : BackgroundService
 {
-    private readonly string claimOwner = $"{Environment.MachineName}:{Environment.ProcessId}:{Guid.NewGuid():N}";
+    private readonly string _claimOwner = $"{Environment.MachineName}:{Environment.ProcessId}:{Guid.NewGuid():N}";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -92,7 +92,7 @@ public sealed class TaskDeadlineDigestWorker(
             scope.ServiceProvider.GetRequiredService<ICurrentTenantAccessor>().SetTenant(tenantId, "task-deadline-digest");
             claims = await scope.ServiceProvider
                 .GetRequiredService<ITaskDeadlineDigestScheduler>()
-                .ScheduleAndClaimAsync(claimOwner, now, runSettings, cancellationToken);
+                .ScheduleAndClaimAsync(_claimOwner, now, runSettings, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

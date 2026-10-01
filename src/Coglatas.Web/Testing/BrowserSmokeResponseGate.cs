@@ -20,8 +20,8 @@ public sealed class BrowserSmokeResponseGateRegistry
     public const string ResponseHeaderName = "X-Aip-Browser-Smoke-Response-Gate";
 
     private static readonly TimeSpan MaximumLifetime = TimeSpan.FromSeconds(30);
-    private readonly ConcurrentDictionary<Guid, Gate> gates = new();
-    private readonly ConcurrentDictionary<Guid, Guid> gateIdsByOwner = new();
+    private readonly ConcurrentDictionary<Guid, Gate> _gates = new();
+    private readonly ConcurrentDictionary<Guid, Guid> _gateIdsByOwner = new();
 
     public static bool IsAllowedTarget(string method, string path)
     {
@@ -47,7 +47,7 @@ public sealed class BrowserSmokeResponseGateRegistry
     public bool TryArm(Guid gateId, Guid ownerUserId, string method, string path)
     {
         if (!IsAllowedTarget(method, path) ||
-            !gateIdsByOwner.TryAdd(ownerUserId, gateId))
+            !_gateIdsByOwner.TryAdd(ownerUserId, gateId))
         {
             return false;
         }
@@ -58,26 +58,26 @@ public sealed class BrowserSmokeResponseGateRegistry
             method,
             path,
             () => Complete(gateId, ownerUserId));
-        if (gates.TryAdd(gateId, gate))
+        if (_gates.TryAdd(gateId, gate))
         {
             return true;
         }
 
         gate.Dispose();
-        gateIdsByOwner.TryRemove(new KeyValuePair<Guid, Guid>(ownerUserId, gateId));
+        _gateIdsByOwner.TryRemove(new KeyValuePair<Guid, Guid>(ownerUserId, gateId));
         return false;
     }
 
     public BrowserSmokeResponseGateSnapshot? GetSnapshot(Guid gateId, Guid ownerUserId)
     {
-        return gates.TryGetValue(gateId, out var gate) && gate.OwnerUserId == ownerUserId
+        return _gates.TryGetValue(gateId, out var gate) && gate.OwnerUserId == ownerUserId
             ? gate.Snapshot()
             : null;
     }
 
     public bool TryRelease(Guid gateId, Guid ownerUserId)
     {
-        if (!gates.TryGetValue(gateId, out var gate) || gate.OwnerUserId != ownerUserId)
+        if (!_gates.TryGetValue(gateId, out var gate) || gate.OwnerUserId != ownerUserId)
         {
             return false;
         }
@@ -94,7 +94,7 @@ public sealed class BrowserSmokeResponseGateRegistry
         out BrowserSmokeResponseGateLease? lease)
     {
         lease = null;
-        if (!gates.TryGetValue(gateId, out var gate) ||
+        if (!_gates.TryGetValue(gateId, out var gate) ||
             gate.OwnerUserId != ownerUserId ||
             !string.Equals(gate.Method, method, StringComparison.Ordinal) ||
             !string.Equals(gate.Path, path, StringComparison.Ordinal) ||
@@ -109,24 +109,24 @@ public sealed class BrowserSmokeResponseGateRegistry
 
     internal void Complete(Guid gateId, Guid ownerUserId)
     {
-        if (gates.TryRemove(gateId, out var gate))
+        if (_gates.TryRemove(gateId, out var gate))
         {
             gate.Release();
             gate.Dispose();
         }
 
-        gateIdsByOwner.TryRemove(new KeyValuePair<Guid, Guid>(ownerUserId, gateId));
+        _gateIdsByOwner.TryRemove(new KeyValuePair<Guid, Guid>(ownerUserId, gateId));
     }
 
     internal sealed class Gate : IDisposable
     {
-        private readonly TaskCompletionSource release =
+        private readonly TaskCompletionSource _release =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly Timer expiry;
-        private int claimed;
-        private int ready;
-        private int released;
-        private int statusCode = -1;
+        private readonly Timer _expiry;
+        private int _claimed;
+        private int _ready;
+        private int _released;
+        private int _statusCode = -1;
 
         public Gate(
             Guid id,
@@ -139,7 +139,7 @@ public sealed class BrowserSmokeResponseGateRegistry
             OwnerUserId = ownerUserId;
             Method = method;
             Path = path;
-            expiry = new Timer(_ => expire(), null, MaximumLifetime, Timeout.InfiniteTimeSpan);
+            _expiry = new Timer(_ => expire(), null, MaximumLifetime, Timeout.InfiniteTimeSpan);
         }
 
         public Guid Id { get; }
@@ -149,36 +149,36 @@ public sealed class BrowserSmokeResponseGateRegistry
 
         public bool TryClaim()
         {
-            return Interlocked.CompareExchange(ref claimed, 1, 0) == 0;
+            return Interlocked.CompareExchange(ref _claimed, 1, 0) == 0;
         }
 
         public void MarkResponseReady(int responseStatusCode)
         {
-            Interlocked.Exchange(ref statusCode, responseStatusCode);
-            Interlocked.Exchange(ref ready, 1);
+            Interlocked.Exchange(ref _statusCode, responseStatusCode);
+            Interlocked.Exchange(ref _ready, 1);
         }
 
         public async Task WaitForReleaseAsync(CancellationToken cancellationToken)
         {
-            await release.Task.WaitAsync(cancellationToken);
+            await _release.Task.WaitAsync(cancellationToken);
         }
 
         public void Release()
         {
-            Interlocked.Exchange(ref released, 1);
-            release.TrySetResult();
+            Interlocked.Exchange(ref _released, 1);
+            _release.TrySetResult();
         }
 
         public BrowserSmokeResponseGateSnapshot Snapshot()
         {
-            var state = Volatile.Read(ref released) == 1
+            var state = Volatile.Read(ref _released) == 1
                 ? "released"
-                : Volatile.Read(ref ready) == 1
+                : Volatile.Read(ref _ready) == 1
                     ? "waiting"
-                    : Volatile.Read(ref claimed) == 1
+                    : Volatile.Read(ref _claimed) == 1
                         ? "claimed"
                         : "armed";
-            var responseStatusCode = Volatile.Read(ref statusCode);
+            var responseStatusCode = Volatile.Read(ref _statusCode);
             return new BrowserSmokeResponseGateSnapshot(
                 state,
                 responseStatusCode < 0 ? null : responseStatusCode);
@@ -186,36 +186,36 @@ public sealed class BrowserSmokeResponseGateRegistry
 
         public void Dispose()
         {
-            expiry.Dispose();
+            _expiry.Dispose();
         }
     }
 }
 
 public sealed class BrowserSmokeResponseGateLease
 {
-    private readonly BrowserSmokeResponseGateRegistry registry;
-    private readonly BrowserSmokeResponseGateRegistry.Gate gate;
+    private readonly BrowserSmokeResponseGateRegistry _registry;
+    private readonly BrowserSmokeResponseGateRegistry.Gate _gate;
 
     internal BrowserSmokeResponseGateLease(
         BrowserSmokeResponseGateRegistry registry,
         BrowserSmokeResponseGateRegistry.Gate gate)
     {
-        this.registry = registry;
-        this.gate = gate;
+        _registry = registry;
+        _gate = gate;
     }
 
-    public Guid Id => gate.Id;
+    public Guid Id => _gate.Id;
 
     public void MarkResponseReady(int statusCode)
     {
-        gate.MarkResponseReady(statusCode);
+        _gate.MarkResponseReady(statusCode);
     }
 
     public async Task WaitForReleaseAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await gate.WaitForReleaseAsync(cancellationToken);
+            await _gate.WaitForReleaseAsync(cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -223,7 +223,7 @@ public sealed class BrowserSmokeResponseGateLease
         }
         finally
         {
-            registry.Complete(gate.Id, gate.OwnerUserId);
+            _registry.Complete(_gate.Id, _gate.OwnerUserId);
         }
     }
 }

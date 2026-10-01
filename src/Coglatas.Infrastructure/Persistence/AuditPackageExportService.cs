@@ -139,7 +139,7 @@ public sealed class AuditPackageExportService(
             Metadata: new Dictionary<string, object?>
             {
                 ["artifactVersionId"] = request.ArtifactVersionId,
-                ["exportType"] = TenantExportType.AuditPackage.ToString()
+                ["exportType"] = nameof(TenantExportType.AuditPackage)
             }), cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
