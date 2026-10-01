@@ -6,7 +6,7 @@ public static class FileNameSanitizer
 {
     private const int MaxFileNameLength = 260;
     private const string FallbackFileName = "upload";
-    private static readonly char[] AdditionalInvalidFileNameChars = { '<', '>', ':', '"', '|', '?', '*' };
+    private static readonly char[] AdditionalInvalidFileNameChars = ['<', '>', ':', '"', '|', '?', '*'];
 
     public static string SanitizeOriginalFileName(string? fileName)
     {
