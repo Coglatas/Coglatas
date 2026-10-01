@@ -16,11 +16,11 @@ public sealed class AuditPackageExportWorker(
     Microsoft.Extensions.Options.IOptions<AuditPackageExportWorkerOptions> options,
     ILogger<AuditPackageExportWorker> logger) : BackgroundService
 {
-    private readonly AuditPackageExportWorkerOptions settings = options.Value;
+    private readonly AuditPackageExportWorkerOptions _settings = options.Value;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var delay = TimeSpan.FromSeconds(Math.Clamp(settings.PollSeconds, 1, 60));
+        var delay = TimeSpan.FromSeconds(Math.Clamp(_settings.PollSeconds, 1, 60));
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -49,7 +49,7 @@ public sealed class AuditPackageExportWorker(
 
     public async Task RunOnceAsync(CancellationToken cancellationToken = default)
     {
-        var staleBefore = DateTimeOffset.UtcNow.AddMinutes(-Math.Clamp(settings.StaleProcessingMinutes, 1, 120));
+        var staleBefore = DateTimeOffset.UtcNow.AddMinutes(-Math.Clamp(_settings.StaleProcessingMinutes, 1, 120));
         IReadOnlyList<Guid> tenantIds;
         await using (var platformScope = scopeFactory.CreateAsyncScope())
         {
@@ -62,7 +62,7 @@ public sealed class AuditPackageExportWorker(
 
             tenant.SetPlatformScope();
             tenantIds = await processor.ListQueuedTenantIdsAsync(
-                Math.Clamp(settings.TenantBatchSize, 1, 100),
+                Math.Clamp(_settings.TenantBatchSize, 1, 100),
                 staleBefore,
                 cancellationToken);
         }
@@ -79,7 +79,7 @@ public sealed class AuditPackageExportWorker(
                 DateTimeOffset.UtcNow,
                 cancellationToken);
             var jobIds = await processor.ListQueuedJobIdsAsync(
-                Math.Clamp(settings.JobBatchSize, 1, 25),
+                Math.Clamp(_settings.JobBatchSize, 1, 25),
                 cancellationToken);
             foreach (var jobId in jobIds)
             {

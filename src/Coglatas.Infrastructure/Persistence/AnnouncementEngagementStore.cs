@@ -17,7 +17,7 @@ namespace Coglatas.Infrastructure.Persistence;
 /// </summary>
 public sealed class AnnouncementEngagementStore(AppDbContext dbContext) : IAnnouncementEngagementStore
 {
-    private readonly HashSet<EngagementEventKey> inMemoryEvents = [];
+    private readonly HashSet<EngagementEventKey> _inMemoryEvents = [];
 
     public async Task RecordOnceAsync(
         Guid tenantId,
@@ -31,7 +31,7 @@ public sealed class AnnouncementEngagementStore(AppDbContext dbContext) : IAnnou
 
         if (!UsesPostgreSql())
         {
-            inMemoryEvents.Add(new EngagementEventKey(
+            _inMemoryEvents.Add(new EngagementEventKey(
                 tenantId,
                 announcementId,
                 recipientToken,
@@ -133,7 +133,7 @@ public sealed class AnnouncementEngagementStore(AppDbContext dbContext) : IAnnou
             .ToHashSet(StringComparer.Ordinal);
         var engagementEvents = UsesPostgreSql()
             ? await ReadEventsAsync(tenantId, announcementId, cancellationToken)
-            : inMemoryEvents
+            : _inMemoryEvents
                 .Where(item => item.TenantId == tenantId && item.AnnouncementId == announcementId)
                 .Select(item => new EngagementEvent(item.RecipientToken, item.Action))
                 .ToArray();

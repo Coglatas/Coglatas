@@ -16,7 +16,7 @@ public sealed class OutboxDispatcher(
     ILogger<OutboxDispatcher> logger) : BackgroundService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private readonly string lockOwner = $"{Environment.MachineName}:{Environment.ProcessId}:{Guid.NewGuid():N}";
+    private readonly string _lockOwner = $"{Environment.MachineName}:{Environment.ProcessId}:{Guid.NewGuid():N}";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -51,7 +51,7 @@ public sealed class OutboxDispatcher(
             var now = DateTimeOffset.UtcNow;
             var configured = options.Value;
             events = await repository.ClaimDueAsync(
-                lockOwner,
+                _lockOwner,
                 now,
                 configured.DispatcherBatchSize,
                 TimeSpan.FromSeconds(Math.Max(1, configured.ProcessingLockSeconds)),

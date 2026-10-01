@@ -17,9 +17,9 @@ namespace Coglatas.Infrastructure.Persistence;
 /// </summary>
 public sealed class GuardedArtifactReportRefinementService : IArtifactReportRefinementService
 {
-    private readonly DbArtifactReportRefinementService inner;
-    private readonly ArtifactReportRefinementCommitGuardUnitOfWork commitGuard;
-    private readonly ICurrentUser currentUser;
+    private readonly DbArtifactReportRefinementService _inner;
+    private readonly ArtifactReportRefinementCommitGuardUnitOfWork _commitGuard;
+    private readonly ICurrentUser _currentUser;
 
     public GuardedArtifactReportRefinementService(
         AppDbContext db,
@@ -36,13 +36,13 @@ public sealed class GuardedArtifactReportRefinementService : IArtifactReportRefi
         IAuditLogger auditLogger,
         IUnitOfWork unitOfWork)
     {
-        this.currentUser = currentUser;
-        commitGuard = new ArtifactReportRefinementCommitGuardUnitOfWork(
+        _currentUser = currentUser;
+        _commitGuard = new ArtifactReportRefinementCommitGuardUnitOfWork(
             db,
             unitOfWork,
             artifactAuthorization,
             projectAuthorization);
-        inner = new DbArtifactReportRefinementService(
+        _inner = new DbArtifactReportRefinementService(
             db,
             artifacts,
             artifactAuthorization,
@@ -55,7 +55,7 @@ public sealed class GuardedArtifactReportRefinementService : IArtifactReportRefi
             currentUser,
             clock,
             auditLogger,
-            commitGuard);
+            _commitGuard);
     }
 
     public Task<Result<ArtifactReportRefinementPreflightResponse>> PreflightAsync(
@@ -64,7 +64,7 @@ public sealed class GuardedArtifactReportRefinementService : IArtifactReportRefi
         ArtifactReportRefinementTargetKind targetKind,
         Guid targetLogicalId,
         CancellationToken cancellationToken = default) =>
-        inner.PreflightAsync(projectId, baseArtifactVersionId, targetKind, targetLogicalId, cancellationToken);
+        _inner.PreflightAsync(projectId, baseArtifactVersionId, targetKind, targetLogicalId, cancellationToken);
 
     public async Task<Result<ArtifactReportRefinementResponse>> RefineAsync(
         Guid projectId,
@@ -72,14 +72,14 @@ public sealed class GuardedArtifactReportRefinementService : IArtifactReportRefi
         RefineArtifactReportRequest request,
         CancellationToken cancellationToken = default)
     {
-        var userId = currentUser.UserId ?? Guid.Empty;
-        if (!currentUser.IsAuthenticated || userId == Guid.Empty)
-            return await inner.RefineAsync(projectId, baseArtifactVersionId, request, cancellationToken);
+        var userId = _currentUser.UserId ?? Guid.Empty;
+        if (!_currentUser.IsAuthenticated || userId == Guid.Empty)
+            return await _inner.RefineAsync(projectId, baseArtifactVersionId, request, cancellationToken);
 
-        commitGuard.Begin(projectId, baseArtifactVersionId, userId);
+        _commitGuard.Begin(projectId, baseArtifactVersionId, userId);
         try
         {
-            return await inner.RefineAsync(projectId, baseArtifactVersionId, request, cancellationToken);
+            return await _inner.RefineAsync(projectId, baseArtifactVersionId, request, cancellationToken);
         }
         catch (RefinementCommitAuthorizationChangedException)
         {
@@ -95,7 +95,7 @@ public sealed class GuardedArtifactReportRefinementService : IArtifactReportRefi
         }
         finally
         {
-            commitGuard.End();
+            _commitGuard.End();
         }
     }
 }
@@ -112,16 +112,16 @@ public sealed class ArtifactReportRefinementCommitGuardUnitOfWork(
     IArtifactAuthorizationService artifactAuthorization,
     IProjectAuthorizationService projectAuthorization) : IUnitOfWork
 {
-    private CommitContext? context;
+    private CommitContext? _context;
 
     public void Begin(Guid projectId, Guid baseArtifactVersionId, Guid userId) =>
-        context = new CommitContext(projectId, baseArtifactVersionId, userId);
+        _context = new CommitContext(projectId, baseArtifactVersionId, userId);
 
-    public void End() => context = null;
+    public void End() => _context = null;
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        if (context is not { } commit)
+        if (_context is not { } commit)
             return await inner.SaveChangesAsync(cancellationToken);
 
         var artifactEntry = db.ChangeTracker.Entries<Artifact>()

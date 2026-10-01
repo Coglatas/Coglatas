@@ -15,12 +15,12 @@ public sealed record HubSubscription(
 
 public sealed class HubSubscriptionRegistry
 {
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, HubSubscription>> subscriptions = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, ConcurrentQueue<DateTimeOffset>> attempts = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, HubSubscription>> _subscriptions = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, ConcurrentQueue<DateTimeOffset>> _attempts = new(StringComparer.Ordinal);
 
     public bool TryRecordAttempt(string connectionId, DateTimeOffset now, int perMinuteLimit)
     {
-        var queue = attempts.GetOrAdd(connectionId, _ => new ConcurrentQueue<DateTimeOffset>());
+        var queue = _attempts.GetOrAdd(connectionId, _ => new ConcurrentQueue<DateTimeOffset>());
         while (queue.TryPeek(out var oldest) && oldest <= now.AddMinutes(-1))
         {
             queue.TryDequeue(out _);
@@ -37,7 +37,7 @@ public sealed class HubSubscriptionRegistry
 
     public bool TryAdd(HubSubscription subscription, int maximumSubscriptions)
     {
-        var connectionSubscriptions = subscriptions.GetOrAdd(subscription.ConnectionId, _ => new ConcurrentDictionary<string, HubSubscription>(StringComparer.Ordinal));
+        var connectionSubscriptions = _subscriptions.GetOrAdd(subscription.ConnectionId, _ => new ConcurrentDictionary<string, HubSubscription>(StringComparer.Ordinal));
         var key = Key(subscription.SubscriptionType, subscription.ResourceId);
         if (connectionSubscriptions.ContainsKey(key))
         {
@@ -50,13 +50,13 @@ public sealed class HubSubscriptionRegistry
     public bool TryRemove(string connectionId, RealtimeSubscriptionType subscriptionType, Guid resourceId, out HubSubscription? subscription)
     {
         subscription = null;
-        return subscriptions.TryGetValue(connectionId, out var connectionSubscriptions) &&
+        return _subscriptions.TryGetValue(connectionId, out var connectionSubscriptions) &&
             connectionSubscriptions.TryRemove(Key(subscriptionType, resourceId), out subscription);
     }
 
     public IReadOnlyList<HubSubscription> GetForTarget(Guid tenantId, RealtimeSubscriptionType subscriptionType, Guid resourceId)
     {
-        return subscriptions.Values
+        return _subscriptions.Values
             .SelectMany(connectionSubscriptions => connectionSubscriptions.Values)
             .Where(subscription =>
                 subscription.TenantId == tenantId &&
@@ -67,8 +67,8 @@ public sealed class HubSubscriptionRegistry
 
     public IReadOnlyList<HubSubscription> RemoveConnection(string connectionId)
     {
-        attempts.TryRemove(connectionId, out _);
-        return subscriptions.TryRemove(connectionId, out var connectionSubscriptions)
+        _attempts.TryRemove(connectionId, out _);
+        return _subscriptions.TryRemove(connectionId, out var connectionSubscriptions)
             ? connectionSubscriptions.Values.ToList()
             : [];
     }
@@ -76,7 +76,7 @@ public sealed class HubSubscriptionRegistry
     public IReadOnlyList<HubSubscription> RemoveForUser(Guid tenantId, Guid userId)
     {
         var removed = new List<HubSubscription>();
-        foreach (var (connectionId, connectionSubscriptions) in subscriptions)
+        foreach (var (connectionId, connectionSubscriptions) in _subscriptions)
         {
             foreach (var (key, subscription) in connectionSubscriptions)
             {
@@ -88,7 +88,7 @@ public sealed class HubSubscriptionRegistry
 
             if (connectionSubscriptions.IsEmpty)
             {
-                subscriptions.TryRemove(connectionId, out _);
+                _subscriptions.TryRemove(connectionId, out _);
             }
         }
 

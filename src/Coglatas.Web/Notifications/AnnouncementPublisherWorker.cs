@@ -24,7 +24,7 @@ public sealed class AnnouncementPublisherWorker(
     IOptions<AnnouncementPublisherWorkerOptions> options,
     ILogger<AnnouncementPublisherWorker> logger) : BackgroundService
 {
-    private readonly string claimOwner = $"{Environment.MachineName}:{Environment.ProcessId}:{Guid.NewGuid():N}";
+    private readonly string _claimOwner = $"{Environment.MachineName}:{Environment.ProcessId}:{Guid.NewGuid():N}";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -89,7 +89,7 @@ public sealed class AnnouncementPublisherWorker(
             claims = await scope.ServiceProvider
                 .GetRequiredService<IAnnouncementPublicationProcessor>()
                 .ClaimDueAsync(
-                    claimOwner,
+                    _claimOwner,
                     clock.UtcNow,
                     Math.Clamp(options.Value.ClaimBatchSize, 1, 50),
                     TimeSpan.FromSeconds(Math.Max(1, options.Value.ClaimTimeoutSeconds)),

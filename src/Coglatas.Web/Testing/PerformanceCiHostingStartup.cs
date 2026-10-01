@@ -42,11 +42,11 @@ internal sealed class PerformanceCiFixtureHostedService(
     IConfiguration configuration,
     IHostEnvironment environment) : IHostedLifecycleService
 {
-    private bool seeded;
+    private bool _seeded;
 
     public async Task StartingAsync(CancellationToken cancellationToken)
     {
-        if (seeded)
+        if (_seeded)
         {
             return;
         }
@@ -114,7 +114,7 @@ internal sealed class PerformanceCiFixtureHostedService(
             evidencePath,
             cancellationToken);
 
-        seeded = true;
+        _seeded = true;
     }
 
     public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
