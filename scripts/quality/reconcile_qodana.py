@@ -169,7 +169,7 @@ def diagnostic_identity_pairs(baseline: list[dict], head: list[dict], removed_in
                           "baseline_location": old_by_identity[old_identity]["locations"][0],
                           "head_location": new_by_identity[new_identity]["locations"][0]})
     diagnostic = {"missing": dict(missing), "added": dict(added), "unique_same_rule_path_message_pairs": pairs}
-    (evidence / "identity-drift.json").write_text(json.dumps(diagnostic, indent=2, sort_keys=True) + "\\n")
+    (evidence / "identity-drift.json").write_text(json.dumps(diagnostic, indent=2, sort_keys=True) + "\n")
     for pair in pairs[:30]:
         print("IDENTITY_DRIFT_PAIR " + json.dumps(pair, sort_keys=True), flush=True)
 

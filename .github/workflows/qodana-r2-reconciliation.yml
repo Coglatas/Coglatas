@@ -32,6 +32,10 @@ jobs:
           git rev-parse HEAD > artifacts/qodana-reconciliation/proof-source-head.txt
       - name: Test reconciliation rejection gates
         run: python3 -m unittest discover -s scripts/quality -p test_qodana_reconciliation.py -v
+      - name: Inspect immutable failed main contract evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/quality/diagnose_security_contract.py
       - name: Reconcile immutable main SARIF identities
         env:
           GH_TOKEN: ${{ github.token }}
