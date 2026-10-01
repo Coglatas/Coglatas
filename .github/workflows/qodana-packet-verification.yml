@@ -40,6 +40,7 @@ jobs:
       POSTGRES_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
       PGPASSWORD: coglatas_ci_password
       PACKET_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PACKET_BRANCH: ${{ github.head_ref }}
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -56,8 +57,8 @@ jobs:
       - name: Test packet evidence verifier
         run: python3 -m unittest discover -s scripts/ci/qodana-packets -p 'test_*.py' -v
 
-      - name: Run unchanged baseline before approved candidate
-        run: python3 scripts/ci/qodana-packets/verify.py
+      - name: Run selected packet verification
+        run: python3 scripts/ci/qodana-packets/dispatch.py
 
       - name: Preserve baseline and candidate evidence
         if: always()

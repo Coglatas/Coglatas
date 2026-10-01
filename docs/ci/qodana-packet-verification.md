@@ -6,9 +6,22 @@ The supplemental workflow runs on `qodana/packet-` PR branches with read-only
 permissions, no protected secrets, ephemeral hosted runners and PostgreSQL 18.
 Existing required checks, routing, budgets and test expectations are unchanged.
 
-`selection.json` selects an immutable baseline, one approved packet and a stage.
+`selections/P02.json` or `selections/P04.json` selects an immutable baseline,
+one approved packet and a stage for the matching PR branch. Separate packet
+files allow source PRs to run in parallel without editing a shared selection.
+The legacy `selection.json` is used only when no packet-specific file exists;
+its packet must still match the branch. Unsupported branches fail closed.
 The initial reviewed scope is P01/P02/P04, which have no supplied new tests.
 Other packets require a reviewed runner extension before they can execute.
+
+P11/P13 support a fixed-tests-only `baseline` stage. Commit each exact supplied
+test on its isolated audited branch first, then normally integrate main before
+selecting an immutable baseline. The R2 helper runs only in dry-run mode on the
+audited tests-first revision. Source overlap is accepted only for byte-exact
+canonical upstream P06/P04/P07 edits in the explicitly mapped files. Unknown
+source drift stops verification. This stage executes focused/full backend and
+architecture tests without applying any production transformation; its evidence
+does not establish candidate acceptance or complete either packet.
 
 - `prepare`: require unchanged production source; execute the baseline first,
   then run the unmodified canonical helper in a clean Linux worktree and test
