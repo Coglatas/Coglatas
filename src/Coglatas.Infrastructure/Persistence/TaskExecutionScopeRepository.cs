@@ -18,8 +18,8 @@ public sealed class TaskExecutionScopeRepository(AppDbContext dbContext) : ITask
         Converters = { new JsonStringEnumConverter() }
     };
 
-    private readonly Dictionary<(TaskExecutionSourcePolicyOwnerType Type, Guid Id), TaskExecutionSourcePolicyDocument> pendingUpserts = [];
-    private readonly HashSet<(TaskExecutionSourcePolicyOwnerType Type, Guid Id)> pendingDeletes = [];
+    private readonly Dictionary<(TaskExecutionSourcePolicyOwnerType Type, Guid Id), TaskExecutionSourcePolicyDocument> _pendingUpserts = [];
+    private readonly HashSet<(TaskExecutionSourcePolicyOwnerType Type, Guid Id)> _pendingDeletes = [];
 
     public Task<ProjectExecutionScope?> GetProjectScopeAsync(Guid projectId, CancellationToken cancellationToken = default) =>
         dbContext.ProjectExecutionScopes.AsNoTracking().SingleOrDefaultAsync(scope => scope.ProjectId == projectId, cancellationToken);
@@ -68,8 +68,8 @@ public sealed class TaskExecutionScopeRepository(AppDbContext dbContext) : ITask
         Guid ownerId,
         CancellationToken cancellationToken = default)
     {
-        if (pendingDeletes.Contains((ownerType, ownerId))) return null;
-        if (pendingUpserts.TryGetValue((ownerType, ownerId), out var staged)) return staged;
+        if (_pendingDeletes.Contains((ownerType, ownerId))) return null;
+        if (_pendingUpserts.TryGetValue((ownerType, ownerId), out var staged)) return staged;
         if (!UsesPostgreSql() || ownerId == Guid.Empty) return null;
 
         var connection = dbContext.Database.GetDbConnection();
@@ -122,19 +122,19 @@ public sealed class TaskExecutionScopeRepository(AppDbContext dbContext) : ITask
         if (!document.Policy.TryNormalize(out var normalized, out _, out _))
             throw new ArgumentException("Source-policy document is invalid.", nameof(document));
 
-        pendingDeletes.Remove((document.OwnerType, document.OwnerId));
-        pendingUpserts[(document.OwnerType, document.OwnerId)] = document with { Policy = normalized };
+        _pendingDeletes.Remove((document.OwnerType, document.OwnerId));
+        _pendingUpserts[(document.OwnerType, document.OwnerId)] = document with { Policy = normalized };
     }
 
     public void StageSourcePolicyDocumentDelete(TaskExecutionSourcePolicyOwnerType ownerType, Guid ownerId)
     {
         if (ownerType == TaskExecutionSourcePolicyOwnerType.Run)
             throw new InvalidOperationException("Run source-policy snapshots are immutable.");
-        pendingUpserts.Remove((ownerType, ownerId));
-        pendingDeletes.Add((ownerType, ownerId));
+        _pendingUpserts.Remove((ownerType, ownerId));
+        _pendingDeletes.Add((ownerType, ownerId));
     }
 
-    public bool HasPendingSourcePolicyDocuments => pendingUpserts.Count > 0 || pendingDeletes.Count > 0;
+    public bool HasPendingSourcePolicyDocuments => _pendingUpserts.Count > 0 || _pendingDeletes.Count > 0;
 
     public async Task FlushPendingSourcePolicyDocumentsAsync(CancellationToken cancellationToken = default)
     {
@@ -148,7 +148,7 @@ public sealed class TaskExecutionScopeRepository(AppDbContext dbContext) : ITask
         var connection = dbContext.Database.GetDbConnection();
         if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken);
 
-        foreach (var key in pendingDeletes.OrderBy(item => item.Type).ThenBy(item => item.Id))
+        foreach (var key in _pendingDeletes.OrderBy(item => item.Type).ThenBy(item => item.Id))
         {
             await using var command = connection.CreateCommand();
             command.Transaction = dbContext.Database.CurrentTransaction?.GetDbTransaction();
@@ -161,7 +161,7 @@ public sealed class TaskExecutionScopeRepository(AppDbContext dbContext) : ITask
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
 
-        foreach (var document in pendingUpserts.Values.OrderBy(item => item.OwnerType).ThenBy(item => item.OwnerId))
+        foreach (var document in _pendingUpserts.Values.OrderBy(item => item.OwnerType).ThenBy(item => item.OwnerId))
         {
             if (document.OwnerType != TaskExecutionSourcePolicyOwnerType.Run &&
                 !await ItemIdentitiesBelongToPolicyScopeAsync(document, cancellationToken))
@@ -213,8 +213,8 @@ public sealed class TaskExecutionScopeRepository(AppDbContext dbContext) : ITask
 
     public void ClearPendingSourcePolicyDocuments()
     {
-        pendingUpserts.Clear();
-        pendingDeletes.Clear();
+        _pendingUpserts.Clear();
+        _pendingDeletes.Clear();
     }
 
     public async Task<IReadOnlyList<Attachment>> ListProjectSourceAttachmentsAsync(
