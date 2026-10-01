@@ -172,7 +172,7 @@ public sealed class MessagingRepository(AppDbContext dbContext) : IMessagingRepo
         {
             var currentIds = currentByOriginal.Values.Distinct().ToArray();
             var nodes = await ReadableConversationCandidates(userId)
-                .Where(conversation => currentIds.Contains(conversation.Id))
+                .Where(conversation => Enumerable.Contains(currentIds, conversation.Id))
                 .Select(conversation => new ConversationAuthorizationNode(
                     conversation.Id,
                     conversation.WorkspaceId,
@@ -382,7 +382,7 @@ public sealed class MessagingRepository(AppDbContext dbContext) : IMessagingRepo
 
         var selected = await dbContext.Conversations
             .AsNoTracking()
-            .Where(conversation => pageIds.Contains(conversation.Id))
+            .Where(conversation => Enumerable.Contains(pageIds, conversation.Id))
             .ToDictionaryAsync(conversation => conversation.Id, cancellationToken);
         var items = pageIds
             .Where(selected.ContainsKey)
@@ -521,7 +521,7 @@ public sealed class MessagingRepository(AppDbContext dbContext) : IMessagingRepo
             .Where(c =>
                 c.WorkspaceId == workspaceId &&
                 c.ProjectId == projectId &&
-                c.Type == Domain.Enums.ConversationType.DirectMessage &&
+                c.Type == ConversationType.DirectMessage &&
                 c.Members.Count == 2)
             .FirstOrDefaultAsync(c =>
                 c.Members.Any(m => m.UserId == userAId && m.LeftAt == null && m.RemovedAt == null && m.CanRead) &&
@@ -728,7 +728,7 @@ public sealed class MessagingRepository(AppDbContext dbContext) : IMessagingRepo
             .Where(message =>
                 message.ConversationId == conversationId &&
                 message.ThreadRootMessageId.HasValue &&
-                rootIds.Contains(message.ThreadRootMessageId.Value));
+                Enumerable.Contains(rootIds, message.ThreadRootMessageId.Value));
         var aggregates = await replyQuery
             .GroupBy(message => message.ThreadRootMessageId!.Value)
             .Select(group => new
@@ -952,10 +952,10 @@ public sealed class MessagingRepository(AppDbContext dbContext) : IMessagingRepo
 
         var authorIds = messages.Select(message => message.AuthorUserId).Distinct().ToArray();
         var authorizedAuthorIds = await AuthorizedConversationAuthorIds(tenantId.Value, conversationId)
-            .Where(authorId => authorIds.Contains(authorId))
+            .Where(authorId => Enumerable.Contains(authorIds, authorId))
             .ToArrayAsync(cancellationToken);
         var authors = await dbContext.Users
-            .Where(user => authorIds.Contains(user.Id) && authorizedAuthorIds.Contains(user.Id))
+            .Where(user => Enumerable.Contains(authorIds, user.Id) && Enumerable.Contains(authorizedAuthorIds, user.Id))
             .ToDictionaryAsync(user => user.Id, cancellationToken);
         foreach (var message in messages)
         {
