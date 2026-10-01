@@ -7,6 +7,7 @@ using Coglatas.Application.Integrations;
 using Coglatas.Application.Messaging;
 using Coglatas.Application.Projects;
 using Coglatas.Application.TenantAdministration;
+using Coglatas.Application.Workspaces;
 using Coglatas.Web.Controllers;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
@@ -94,6 +95,15 @@ public sealed class SecurityOpenApiSchemaTransformer : IOpenApiSchemaTransformer
             // constructor-based schema otherwise marks nullable parameters as
             // required, which contradicts the service's merge behavior.
             schema.Required?.Clear();
+            return;
+        }
+
+        if (requestType == typeof(CreateWorkspaceRequest))
+        {
+            // Workspace creation normalizes omitted description and icon to null.
+            // Keep the generated contract aligned with that existing runtime behavior.
+            schema.Required?.Remove("description");
+            schema.Required?.Remove("icon");
             return;
         }
 

@@ -59,6 +59,27 @@ def require_operation(
     return operation
 
 
+def require_workspace_create_contract(document: dict[str, object]) -> None:
+    components = document.get("components")
+    schemas = components.get("schemas") if isinstance(components, dict) else None
+    workspace = schemas.get("CreateWorkspaceRequest") if isinstance(schemas, dict) else None
+    if not isinstance(workspace, dict) or workspace.get("required") != ["name"]:
+        fail("Workspace creation must require name and permit omitted description/icon")
+    properties = workspace.get("properties")
+    if not isinstance(properties, dict):
+        fail("Workspace creation properties must be present")
+    require_wire_schema(properties, "name", {"string"})
+    require_wire_schema(properties, "description", {"string", "null"})
+    require_wire_schema(properties, "icon", {"string", "null"})
+    operation = require_operation(document.get("paths"), "/api/workspaces", "post", "Workspace create")
+    body = operation.get("requestBody")
+    content = body.get("content") if isinstance(body, dict) else None
+    media = content.get("application/json") if isinstance(content, dict) else None
+    schema = media.get("schema") if isinstance(media, dict) else None
+    if not isinstance(schema, dict) or schema.get("$ref") != "#/components/schemas/CreateWorkspaceRequest":
+        fail("Workspace create must reference the verified request schema")
+
+
 def require_security_contract(document: dict[str, object]) -> None:
     components = document.get("components")
     security_schemes = components.get("securitySchemes") if isinstance(components, dict) else None
@@ -238,6 +259,7 @@ def main() -> None:
     )
     require_wire_schema(schemas, "OptionalString", {"null", "string"})
     require_security_contract(document)
+    require_workspace_create_contract(document)
 
     print(
         "SEC-01 OpenAPI verification passed: "
