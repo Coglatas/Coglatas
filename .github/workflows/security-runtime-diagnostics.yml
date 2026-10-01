@@ -26,7 +26,7 @@ jobs:
           lines = Path(os.environ["RUNNER_TEMP"], "security-failure.log").read_text(errors="replace").splitlines()
           markers = [
               i for i, line in enumerate(lines)
-              if "|" not in line and re.search(r"security-.*\\(exit [0-9]|::error::|SEC-0[3456].*(failed|passed|verified)|AUD-02.*(failed|verified)|FAILURES|API accepted schema-violating request|Invalid component|SECURITY_SCAN_PROGRESS role_scan|One or more parallel CI lanes failed", line, re.I)
+              if "|" not in line and re.search(r"security-.*\(exit [0-9]|::error::|SEC-0[3456].*(failed|passed|verified)|AUD-02.*(failed|verified)|FAILURES|API accepted schema-violating request|Invalid component|SECURITY_SCAN_PROGRESS role_scan|One or more parallel CI lanes failed", line, re.I)
           ]
           selected = set()
           for i in markers:
