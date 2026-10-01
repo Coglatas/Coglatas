@@ -1,0 +1,37 @@
+name: Query Contract Failure Reproduction
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  reproduce:
+    name: Pinned query contract failure reproduction
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'ci/query-contract-reproduction'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Read digest-bound failed main artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/quality/diagnose_security_contract.py
+      - name: Reproduce with the exact SEC-04 image
+        run: >-
+          docker run --rm --network none --user "$(id -u):$(id -g)" --entrypoint python
+          -v "$PWD:/work"
+          schemathesis/schemathesis:4.25.2@sha256:72d6907a936f7b5f08f137c8f84c89eb3ab7834956d9af416e7b6510ebe4e065
+          /work/scripts/quality/reproduce_query_schema.py
+      - name: Preserve proposal diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: query-contract-proposal-${{ github.event.pull_request.head.sha }}
+          path: artifacts/query-contract
+          if-no-files-found: error
+          retention-days: 30
