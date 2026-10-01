@@ -45,7 +45,7 @@ public sealed class AuditPackageExportService(
             ? 0
             : await dbContext.Set<ArtifactFinding>()
                 .AsNoTracking()
-                .CountAsync(finding => claimIds.Contains(finding.ArtifactClaimId), cancellationToken);
+                .CountAsync(finding => Enumerable.Contains(claimIds, finding.ArtifactClaimId), cancellationToken);
         var sourceCount = projection.Value.Claims
             .SelectMany(claim => claim.Evidence)
             .Select(evidence => evidence.SourceId)

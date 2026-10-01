@@ -119,7 +119,7 @@ public sealed class ProjectKanbanRepository(AppDbContext dbContext) : IProjectKa
             .Where(child =>
                 child.ProjectId == projectId &&
                 child.ParentTaskItemId.HasValue &&
-                cardIds.Contains(child.ParentTaskItemId.Value) &&
+                Enumerable.Contains(cardIds, child.ParentTaskItemId.Value) &&
                 !child.DeletedAt.HasValue)
             .GroupBy(child => child.ParentTaskItemId!.Value)
             .Select(group => new
