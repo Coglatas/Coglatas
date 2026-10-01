@@ -11,7 +11,7 @@
     "test:ui:angular": "node tests/ui/run-angular-playwright.mjs",
     "test:ui:compat-critical": "node scripts/ci/run-compat-critical.mjs",
     "test:ui:angular:docker": "node tests/ui/run-angular-playwright-compose.mjs",
-    "test:ui:angular:docker:update-snapshots": "docker compose -f docker-compose.playwright.yml run --build --rm angular-playwright bash -lc \"npm ci && npm --prefix frontend ci && npm --prefix frontend run build && npm run test:ui:angular -- --update-snapshots\"",
+    "test:ui:angular:docker:update-snapshots": "docker compose -f infra/compose/dev/playwright.yml run --build --rm angular-playwright bash -lc \"npm ci && npm --prefix frontend ci && npm --prefix frontend run build && npm run test:ui:angular -- --update-snapshots\"",
     "test:functional": "bash scripts/ci/functional-compose-harness.sh",
     "test:functional:runner": "bash scripts/ci/functional-compose-harness.sh --self-test && bash scripts/ci/verify-functional-trust-boundary.sh .github/workflows/licensed-real-backend-acceptance.yml && node --test tests/ui/real-backend-smoke-compose-helpers.node-test.mjs",
     "test:functional:fci07": "bash scripts/ci/run-fci07-functional-security.sh functional-fast",

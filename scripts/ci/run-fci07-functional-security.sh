@@ -20,6 +20,6 @@ if [[ -z "${COGLATAS_SECURITY_CI_PASSWORD:-}" ]]; then
 fi
 
 export COGLATAS_FCI07_GATE="$gate"
-export FUNCTIONAL_COMPOSE_FILES="docker-compose.real-backend-smoke.yml,docker-compose.security.yml,docker-compose.fci07-functional-security.yml"
+export FUNCTIONAL_COMPOSE_FILES="infra/compose/test/real-backend-smoke.yml,infra/compose/security/security.yml,infra/compose/security/fci07-functional-security.yml"
 
 exec bash scripts/ci/functional-compose-harness.sh

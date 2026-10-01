@@ -7,9 +7,9 @@ on:
       - "performance/**"
       - "scripts/performance/**"
       - "scripts/ci/verify-performance-environment.py"
-      - "docker-compose.performance.yml"
-      - "docker-compose.performance.pr.yml"
-      - "Dockerfile.playwright"
+      - "infra/compose/performance/environment.yml"
+      - "infra/compose/performance/pr.yml"
+      - "infra/docker/playwright.Dockerfile"
       - "src/**"
       - "package-lock.json"
 

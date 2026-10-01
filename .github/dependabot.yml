@@ -90,7 +90,7 @@ updates:
       - dependency-name: "node"
         update-types:
           - "version-update:semver-major"
-      # Dockerfile.playwright must stay on the exact browser/runtime version
+      # infra/docker/playwright.Dockerfile must stay on the exact browser/runtime version
       # resolved by the root @playwright/test lockfile. Upgrade the image only
       # as part of the coordinated npm Playwright update and compatibility pass.
       - dependency-name: "playwright"

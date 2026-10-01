@@ -49,7 +49,7 @@ process.env.PLAYWRIGHT_ANGULAR_CACHE_VOLUME = angularCacheVolume;
 ensureDockerVolume(npmCacheVolume);
 ensureDockerVolume(angularCacheVolume);
 
-const composeArgs = ['compose', '-p', projectName, '-f', 'docker-compose.playwright.yml'];
+const composeArgs = ['compose', '-p', projectName, '-f', 'infra/compose/dev/playwright.yml'];
 
 console.log(`Using Docker Compose project: ${projectName}`);
 console.log(`Using persistent npm cache volume: ${npmCacheVolume}`);

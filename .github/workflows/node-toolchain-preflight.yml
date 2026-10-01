@@ -4,8 +4,8 @@ on:
   pull_request:
     paths:
       - "Dockerfile"
-      - "backend.Dockerfile"
-      - "frontend.Dockerfile"
+      - "infra/docker/backend-dev.Dockerfile"
+      - "infra/docker/frontend-dev.Dockerfile"
       - "package.json"
       - "frontend/package.json"
       - ".github/workflows/**"
@@ -14,8 +14,8 @@ on:
     branches: ["main"]
     paths:
       - "Dockerfile"
-      - "backend.Dockerfile"
-      - "frontend.Dockerfile"
+      - "infra/docker/backend-dev.Dockerfile"
+      - "infra/docker/frontend-dev.Dockerfile"
       - "package.json"
       - "frontend/package.json"
       - ".github/workflows/**"

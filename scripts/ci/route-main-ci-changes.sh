@@ -545,7 +545,7 @@ while IFS= read -r path; do
       frontend=true
       frontend_playwright=true
       ;;
-    Dockerfile.playwright|docker-compose.playwright.yml|playwright.config.*|scripts/ci/npm-ci-retry.sh)
+    infra/docker/playwright.Dockerfile|infra/compose/dev/playwright.yml|playwright.config.*|scripts/ci/npm-ci-retry.sh)
       frontend=true
       frontend_playwright=true
       ;;
@@ -581,7 +581,7 @@ while IFS= read -r path; do
   # PRs run the fast static/contract gate for runtime/API implementation changes;
   # live authenticated Core/Schemathesis/ZAP stacks are deferred to main/manual.
   case "$path" in
-    src/Coglatas.Application/*|src/Coglatas.Domain/*|src/Coglatas.Infrastructure/*|src/Coglatas.Web/*|scripts/security/*|scripts/ci/run-security-runtime-smoke.sh|scripts/ci/run-security-runtime-parallel.sh|scripts/ci/generate-security-openapi-contract.sh|Dockerfile.security.runtime|.dockerignore|.config/*)
+    src/Coglatas.Application/*|src/Coglatas.Domain/*|src/Coglatas.Infrastructure/*|src/Coglatas.Web/*|scripts/security/*|scripts/ci/run-security-runtime-smoke.sh|scripts/ci/run-security-runtime-parallel.sh|scripts/ci/generate-security-openapi-contract.sh|infra/docker/security-runtime.Dockerfile|.dockerignore|.config/*)
       security=true
       security_compose=true
       ;;
@@ -603,7 +603,7 @@ while IFS= read -r path; do
   esac
 
   case "$path" in
-    src/Coglatas.Infrastructure/Migrations/*|docker-compose.onprem.yml|docker-compose.onprem.ci.yml|global.json|NuGet.config|Directory.Build.*|Directory.Packages.*|.config/*|src/*.csproj)
+    src/Coglatas.Infrastructure/Migrations/*|deploy/onprem/compose.yml|deploy/onprem/compose.ci.yml|global.json|NuGet.config|Directory.Build.*|Directory.Packages.*|.config/*|src/*.csproj)
       security=true
       security_migration=true
       ;;
