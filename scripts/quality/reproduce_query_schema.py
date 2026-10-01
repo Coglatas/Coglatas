@@ -31,6 +31,9 @@ def case_for(doc, query):
 query = captured["query"]
 current = case_for(document, query)
 assert not has_only_additional_properties_in_non_body_parameters(current)
+native_query = copy.deepcopy(query)
+native_query["Archived"] = True
+assert has_only_additional_properties_in_non_body_parameters(case_for(document, native_query))
 known = {p["name"] for p in document["paths"]["/api/projects"]["get"]["parameters"]}
 extras = set(query) - known
 assert len(extras) == 1 and all(query[key] == [] for key in extras)

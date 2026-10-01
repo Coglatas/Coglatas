@@ -15,3 +15,16 @@ Effect: HTTP request handling remains unchanged. OpenAPI consumers and generated
 Validation before merge: fixed-image scanner reproduction using the immutable actual case; negative counterexamples for malformed boolean and integer query values; focused transformer tests; deterministic generated OpenAPI verification; normal PR checks; actual main security runtime after merge.
 
 This needs owner approval because the user's standing instruction requires confirmation before changes that can affect behavior, and generated-client typing is observable.
+
+The generated main contract contains 13 affected inline query boolean parameters:
+- GET /api/admin/audit/findings: openOnly, myReviews, overdue, unassigned.
+- POST /api/files/selection-snapshots: OnlyMyUploads.
+- GET /api/me/tasks and GET /api/me/tasks/counts: Blocked, OnlyOverdue.
+- GET /api/projects/{projectId}/kanban: IncludeOlderCompleted.
+- GET /api/projects: Archived.
+- GET /api/projects/{projectId}/task-labels: includeArchived.
+- GET /api/student-records/{studentRecordId}/restricted: includePublic.
+
+The exact proposed source and two focused C# regression tests are in [query-boolean-proposal.patch](query-boolean-proposal.patch). This patch is not applied by this PR or workflow. C# candidate tests have not been compiled or executed; that requires the approved source-change stage.
+
+Pinned-image reproduction succeeded at source eeed29d57299ed8b2b5de9bab060efc719b0b742, run 36884245115, job 110443373484: current guard rejects the captured wire value; the proposed schema correctly recognizes the additional-only case, seven valid values pass, and nine invalid boolean/integer counterexamples stay rejected. Artifact 11172957795 ZIP SHA-256 5175c8c11ced2f759699f85bd9ab9788db6f1c40de89ff733a4d931f1b1343e9. A follow-up reproduction also checks the native-boolean control. This is proposal validation, not evidence that main has been repaired.
