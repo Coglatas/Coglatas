@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import subprocess
 
 spec = importlib.util.spec_from_file_location("packet_verify", Path(__file__).with_name("verify.py"))
 verify = importlib.util.module_from_spec(spec)
@@ -102,6 +103,34 @@ class EvidenceTests(unittest.TestCase):
             with self.subTest(branch=branch):
                 with self.assertRaises(ValueError):
                     verify.read_selection(Path("unused"), branch)
+
+    def test_integrated_main_refreshes_baseline_without_accepting_unmerged_main(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def git(*args):
+                return subprocess.check_output(["git", *args], cwd=root, text=True).strip()
+            git("init", "-q")
+            git("config", "user.email", "ci@example.invalid")
+            git("config", "user.name", "CI")
+            def commit(value):
+                (root / "file").write_text(value)
+                git("add", "file")
+                git("commit", "-qm", value)
+                return git("rev-parse", "HEAD")
+            initial = commit("initial")
+            main = commit("main")
+            head = commit("packet")
+            self.assertEqual(verify.resolve_source_baseline(root, initial, head, main), main)
+            self.assertEqual(verify.resolve_source_baseline(root, main, head, initial), main)
+            git("checkout", "-q", "--detach", initial)
+            unrelated_main = commit("unintegrated main")
+            git("checkout", "-q", "--detach", head)
+            self.assertIsNone(verify.integrated_pr_base(root, head, unrelated_main))
+            self.assertEqual(verify.resolve_source_baseline(root, initial, head, unrelated_main), initial)
+            with self.assertRaises(ValueError):
+                verify.integrated_pr_base(root, main, initial)
+            with self.assertRaises(ValueError):
+                verify.integrated_pr_base(root, head, "main")
 
 if __name__ == "__main__":
     unittest.main()

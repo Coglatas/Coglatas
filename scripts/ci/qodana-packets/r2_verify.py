@@ -66,6 +66,14 @@ def require_test(repo: Path, packet_id: str) -> None:
     if target.is_symlink() or verify.sha256(target.read_bytes()) != digest:
         raise ValueError("Fixed tests missing or modified")
 
+def require_baseline_paths(changed: list[str], packet_id: str, integrated: bool) -> None:
+    allowed = {".github/workflows/qodana-packet-verification.yml", "docs/ci/qodana-packet-verification.md"}
+    if integrated:
+        allowed.add(FIXED_TESTS[packet_id][0])
+    for path in changed:
+        if path not in allowed and not path.startswith("scripts/ci/qodana-packets/"):
+            raise ValueError(f"R2 baseline has production/dependency/other-test changes: {path}")
+
 def main() -> None:
     source = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
     config = source / "scripts/ci/qodana-packets"
@@ -90,17 +98,21 @@ def main() -> None:
         raise ValueError("PostgreSQL version drift")
     payload, historical, namespace = load_payload(config)
     packet = next(p for p in payload["plan"]["packets"] if p["id"] == packet_id)
-    changed = verify.checked(["git", "diff", "--name-only", selection["baseline_sha"], head_sha],
+    event_base_sha = os.environ["PACKET_BASE_SHA"]
+    integrated = verify.integrated_pr_base(source, head_sha, event_base_sha)
+    # With main already integrated, head contains unchanged main production plus
+    # the exact fixed test. Verify the entire diff before using head as baseline.
+    comparison_sha = integrated or selection["baseline_sha"]
+    baseline_sha = head_sha if integrated else selection["baseline_sha"]
+    changed = verify.checked(["git", "diff", "--name-only", comparison_sha, head_sha],
                              source, capture=True).splitlines()
-    auxiliary = {".github/workflows/qodana-packet-verification.yml", "docs/ci/qodana-packet-verification.md"}
-    if any(path not in auxiliary and not path.startswith("scripts/ci/qodana-packets/") for path in changed):
-        raise ValueError("R2 baseline head has production/dependency/test changes after fixed-test baseline")
+    require_baseline_paths(changed, packet_id, bool(integrated))
     temp = Path(os.environ["RUNNER_TEMP"]).resolve() / "qodana-packet-proof"
     temp.mkdir(exist_ok=False)
     evidence = source / "artifacts/qodana-packet-proof"
-    evidence.mkdir(parents=True, exist_ok=False)
+    evidence.mkdir(parents=True, exist_ok=True)
     audit, baseline = temp / "audit", temp / "baseline"
-    for repo, sha in [(audit, selection["audit_test_sha"]), (baseline, selection["baseline_sha"])]:
+    for repo, sha in [(audit, selection["audit_test_sha"]), (baseline, baseline_sha)]:
         verify.checked(["git", "worktree", "add", "--detach", str(repo), sha], source)
         require_test(repo, packet_id)
     require_test(source, packet_id)
@@ -122,7 +134,9 @@ def main() -> None:
     proof = {
         "packet": packet_id, "stage": "baseline", "candidate_is_committed_head": False,
         "production_change_applied": False, "head_sha": head_sha,
-        "baseline_sha": selection["baseline_sha"], "audit_test_sha": selection["audit_test_sha"],
+        "baseline_sha": baseline_sha, "audit_test_sha": selection["audit_test_sha"],
+        "configured_baseline_sha": selection["baseline_sha"], "event_base_sha": event_base_sha,
+        "production_comparison_sha": comparison_sha,
         "sdk": "10.0.401", "postgresql": version, "fixed_test_sha256": FIXED_TESTS[packet_id][1],
         "canonical_helper_sha256": HELPER_SHA256, "historical_plan_sha256": PLAN_SHA256,
         "known_upstream_packets": upstream, "baseline_source_sha256": source_hashes,
