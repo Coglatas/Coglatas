@@ -23,7 +23,7 @@ PostgreSQL profile:
 ```powershell
 dotnet restore Coglatas.slnx
 dotnet tool restore
-docker compose -f docker-compose.db.yml up -d
+docker compose -f infra/compose/dev/db.yml up -d
 dotnet ef database update `
   --project src/Coglatas.Infrastructure `
   --startup-project src/Coglatas.Web
@@ -66,7 +66,7 @@ Before starting that stack:
 
 1. Confirm the current shell has a valid `SYNCFUSION_LICENSE` without printing
    its value.
-2. Confirm the selected source tree contains `docker-compose.u22-demo.yml` and
+2. Confirm the selected source tree contains `infra/compose/demo/u22.yml` and
    [demo-data.md](demo-data.md).
 3. Validate the composed files before running containers.
 4. Use only the loopback endpoint supplied by the overlay.

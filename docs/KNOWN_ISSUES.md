@@ -372,14 +372,14 @@ Status after the MVP-A P0 Angular migration: obsolete as active frontend defects
 ### KI-005: On-prem Compose fresh-stack startup requires runtime evidence
 
 - Status: migration path verified under Issue #465; full app startup verification pending.
-- Evidence: `docker-compose.onprem.yml` now uses a one-shot SDK `migrate` service and makes the app wait for successful completion. An isolated clean PostgreSQL volume applied all current migrations successfully; the app itself still does not auto-migrate.
+- Evidence: `deploy/onprem/compose.yml` now uses a one-shot SDK `migrate` service and makes the app wait for successful completion. An isolated clean PostgreSQL volume applied all current migrations successfully; the app itself still does not auto-migrate.
 - Remaining impact: the intended TLS/reverse-proxy topology, production build-secret availability, and a clean-volume startup still require recorded execution evidence.
 - Tracking issue: **#465 — Make on-prem Compose migrate a fresh database before app startup**.
 
 ### KI-006: Reverse-proxy HTTPS behavior still requires deployment-specific verification
 
 - Status: configuration boundary and repeatable deployment gate implemented; target-host execution pending.
-- Evidence: `Program.cs` enables forwarded headers only after an operator opts in and supplies explicit IP/CIDR trust boundaries; it retains loopback defaults rather than trusting all peers. `docker-compose.onprem.yml` binds the origin to loopback by default and fails startup when proxy mode lacks a boundary. Focused Kestrel coverage verifies secure CSRF-cookie issuance through a trusted forwarded HTTPS request. Issue #481 adds `tests/ui/public-https-golden-path.spec.ts` and a protected manual workflow that requires the real public HTTPS route, HTTP-to-HTTPS redirect, HSTS, Secure cookies, CSRF, authenticated Task execution, reload, logout, and re-login.
+- Evidence: `Program.cs` enables forwarded headers only after an operator opts in and supplies explicit IP/CIDR trust boundaries; it retains loopback defaults rather than trusting all peers. `deploy/onprem/compose.yml` binds the origin to loopback by default and fails startup when proxy mode lacks a boundary. Focused Kestrel coverage verifies secure CSRF-cookie issuance through a trusted forwarded HTTPS request. Issue #481 adds `tests/ui/public-https-golden-path.spec.ts` and a protected manual workflow that requires the real public HTTPS route, HTTP-to-HTTPS redirect, HSTS, Secure cookies, CSRF, authenticated Task execution, reload, logout, and re-login.
 - Remaining impact: an operator can still misstate the trusted proxy peer or public DNS/TLS route, and the gate cannot execute until its protected synthetic fixture is configured. The exact target topology remains unverified until a successful recorded public-gate run; `/health/ready` alone is not sufficient.
 - Tracking issues: **#467 — Decide and verify the on-prem TLS/reverse-proxy topology**; **#481 — Public HTTPS Production Golden Path**.
 
@@ -404,7 +404,7 @@ Status after the MVP-A P0 Angular migration: obsolete as active frontend defects
 
 - Status: partially resolved for MVP0 smoke coverage.
 - Evidence: `tests/ui/real-backend-smoke.spec.ts` runs through the isolated
-  `docker-compose.real-backend-smoke.yml` stack against ASP.NET Core, PostgreSQL,
+  `infra/compose/test/real-backend-smoke.yml` stack against ASP.NET Core, PostgreSQL,
   cookie auth, and CSRF using synthetic seeded data. The regular Angular suite
   remains static and mocked by design.
 - Remaining impact: the MVP0 smoke is intentionally narrow and does not replace

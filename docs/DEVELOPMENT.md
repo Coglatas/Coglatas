@@ -5,7 +5,7 @@ Last verified: 2026-06-18.
 ## Prerequisites
 
 - .NET 10 SDK.
-- PostgreSQL supported by the current Npgsql package, either host-native or through `docker-compose.db.yml`.
+- PostgreSQL supported by the current Npgsql package, either host-native or through `infra/compose/dev/db.yml`.
 - Node.js 24.15+ for the Angular workspace and CI-equivalent UI test workflow.
 - Docker/Compose for the recommended PostgreSQL-only mode, optional full-container development, and Linux Playwright parity.
 
@@ -30,7 +30,7 @@ dotnet build Coglatas.slnx --disable-build-servers -m:1
 Recommended default: start PostgreSQL only in Docker.
 
 ```bash
-docker compose -f docker-compose.db.yml up -d
+docker compose -f infra/compose/dev/db.yml up -d
 ```
 
 `src/Coglatas.Web/appsettings.Development.json` points to that container on
@@ -139,7 +139,7 @@ not fall back to Angular: `/api/*`, `/health`, `/health/live`,
 
 ```bash
 cp .env.example .env
-docker compose -f docker-compose.dev.yml up --build
+docker compose -f infra/compose/dev/full.yml up --build
 ```
 
 This optional profile:

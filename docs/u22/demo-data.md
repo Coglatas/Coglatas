@@ -55,8 +55,8 @@ dependencies from the isolated real-backend stack:
 ```powershell
 $env:SYNCFUSION_LICENSE = '<local license value>'
 docker compose -p coglatas-u22-demo `
-  -f docker-compose.real-backend-smoke.yml `
-  -f docker-compose.u22-demo.yml `
+  -f infra/compose/test/real-backend-smoke.yml `
+  -f infra/compose/demo/u22.yml `
   up --build --wait app
 ```
 
@@ -78,8 +78,8 @@ Tear the isolated stack and its test volumes down afterwards:
 
 ```powershell
 docker compose -p coglatas-u22-demo `
-  -f docker-compose.real-backend-smoke.yml `
-  -f docker-compose.u22-demo.yml `
+  -f infra/compose/test/real-backend-smoke.yml `
+  -f infra/compose/demo/u22.yml `
   down --volumes --remove-orphans
 ```
 
@@ -88,7 +88,7 @@ containers:
 
 ```powershell
 docker compose -p coglatas-u22-demo `
-  -f docker-compose.real-backend-smoke.yml `
-  -f docker-compose.u22-demo.yml `
+  -f infra/compose/test/real-backend-smoke.yml `
+  -f infra/compose/demo/u22.yml `
   config --quiet
 ```

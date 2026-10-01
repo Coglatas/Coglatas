@@ -9,9 +9,9 @@ This document describes what the repository currently supports. It is not a prod
 | Profile | Status | Current limitation |
 | --- | --- | --- |
 | Direct local development | Partially implemented | Requires external PostgreSQL and migrations; initial administrator seed is opt-in |
-| `docker-compose.local.yml` | Partially implemented | Migrates and can opt in to initial administrator seed |
+| `infra/compose/dev/local.yml` | Partially implemented | Migrates and can opt in to initial administrator seed |
 | `docker-compose.yml` | Partially implemented | Migrates and can opt in to initial administrator seed |
-| `docker-compose.onprem.yml` | Partially implemented | Runs controlled migrations and binds the app origin to loopback by default; an operator-provided TLS proxy with an explicit forwarded-header trust boundary is required for public use and still needs target-host evidence |
+| `deploy/onprem/compose.yml` | Partially implemented | Runs controlled migrations and binds the app origin to loopback by default; an operator-provided TLS proxy with an explicit forwarded-header trust boundary is required for public use and still needs target-host evidence |
 | `deploy/sakura/docker-compose.yml` | Implemented for the current Sakura VPS topology | Requires owner-only external environment and Syncfusion license files |
 | Broad public SaaS | Not ready | Object storage, bootstrap, API-token auth, recovery evidence, and deployment hardening are incomplete |
 
@@ -25,7 +25,7 @@ This document describes what the repository currently supports. It is not a prod
 - Listens on HTTP port 8080.
 - Does not apply migrations.
 
-### `docker-compose.local.yml`
+### `infra/compose/dev/local.yml`
 
 - PostgreSQL 18.
 - Separate SDK migration service.
@@ -45,7 +45,7 @@ This document describes what the repository currently supports. It is not a prod
 - Initial administrator seed is available through `COGLATAS_SEED_ADMIN_ENABLED`; it is disabled by default.
 - The development-only `LocalAdmin:*` compatibility seed is not enabled by default in this profile.
 
-### `docker-compose.onprem.yml`
+### `deploy/onprem/compose.yml`
 
 - PostgreSQL, a controlled one-shot SDK migration service, and the app.
 - The app waits for a successful migration service completion; the application process still does not auto-migrate.

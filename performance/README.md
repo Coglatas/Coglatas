@@ -60,7 +60,7 @@ PERF-01 owns only the test contract and validation. It does not absorb product-c
 
 ## PERF-02 deterministic environment
 
-`docker-compose.performance.yml` is the only benchmark application stack defined by PERF-02. It uses PostgreSQL 18, the repository `Dockerfile` (Release ASP.NET Core plus Angular production build), a dedicated `coglatas_performance` database, loopback-only host publication, isolated Compose volumes, and a Test-only SaaS/header tenant resolver. Functional, demo, browser-smoke, and Security CI fixtures are explicitly disabled.
+`infra/compose/performance/environment.yml` is the only benchmark application stack defined by PERF-02. It uses PostgreSQL 18, the repository `Dockerfile` (Release ASP.NET Core plus Angular production build), a dedicated `coglatas_performance` database, loopback-only host publication, isolated Compose volumes, and a Test-only SaaS/header tenant resolver. Functional, demo, browser-smoke, and Security CI fixtures are explicitly disabled.
 
 The performance fixture is registered through `PerformanceCiHostingStartup`; it is a no-op unless `COGLATAS_PERFORMANCE_CI_FIXTURE_ENABLED=true` **and** `ASPNETCORE_ENVIRONMENT=Test`. Before the HTTP server accepts traffic it:
 
