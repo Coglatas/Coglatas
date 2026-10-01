@@ -390,7 +390,7 @@ public sealed class TaskExecutionResultService(
         result.ProjectId == run.ProjectId &&
         result.TaskItemId == run.TaskItemId &&
         result.SchemaVersion == FirstPartyProjectFilesReportV1.SchemaVersion &&
-        string.Equals(result.Status, TaskExecutionRunStatus.Succeeded.ToString(), StringComparison.Ordinal) &&
+        string.Equals(result.Status, nameof(TaskExecutionRunStatus.Succeeded), StringComparison.Ordinal) &&
         string.Equals(result.Title, FirstPartyProjectFilesReportV1.Title, StringComparison.Ordinal) &&
         result.Title.Length is > 0 and <= FirstPartyProjectFilesReportV1.MaxTitleLength &&
         result.BodyMarkdown.Length is > 0 and <= FirstPartyProjectFilesReportV1.MaxBodyLength &&
