@@ -1,0 +1,594 @@
+{
+  "plan": {
+    "schema_version": 2,
+    "repository": "NYGsatoshi/Coglatas",
+    "audit_source_sha": "9ff983078f2ddf85f21e4e16e0c9b7d6b1a403f6",
+    "parent_issue": 976,
+    "inherited_plan": {
+      "comment_id": 5907818769,
+      "source_sha": "64db0f5aaf8b4283360f4c6d7934c8ed89256024",
+      "packet_ids": [
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06",
+        "P07",
+        "P08",
+        "P09",
+        "P10"
+      ]
+    },
+    "inventory": {
+      "workflow": "Qodana Cloud Full Analysis",
+      "run_number": 107,
+      "run_id": 36703159302,
+      "artifact_id": 11091906317,
+      "sarif_sha256": "95a0556a7cedce7b9d4d6a6a49af9af710ffd2c414289d946b84ae4f6ff0bb4c",
+      "raw_count": 2480,
+      "comparison": "All 2480 rule/path/fingerprint/message identities and their indices match run2004. Four retained test locations moved +35 lines (2444-2447), not new debt."
+    },
+    "source_packets_rule": "Use clean packet branches based on the audit SHA. Hash mismatch/already-modified source is STOP; never fuzzy-apply. Original P01-P10 payloads remain in #976.",
+    "overlap_map": {
+      "P11": [
+        "P04 (AuditPackageExportService)",
+        "P06 (StudentRecordService)"
+      ],
+      "P13": [
+        "P07 (TaskDeadlineDigestServices)"
+      ],
+      "P14": [
+        "P04 (AnnouncementEngagementStore)"
+      ]
+    },
+    "verification": {
+      "dotnet_sdk": "10.0.401",
+      "local_dotnet": "NOT RUN / SDK unavailable",
+      "candidate_qodana": "NOT RUN",
+      "current_base_qodana": "SUCCESS",
+      "normal_ci_on_audited_sha": {
+        "run_id": 36703159786,
+        "conclusion": "failure",
+        "cause": "not diagnosed by this refactor audit; merge is blocked until required checks pass"
+      },
+      "fixed_gates": [
+        "Baseline and candidate fixed tests",
+        "Executed PostgreSQL and full backend tests",
+        "All required checks/reviews",
+        "Exact-main full SARIF reconciliation"
+      ],
+      "p15_extra": "Existing Performance environment PR/fixture verification must succeed with its dedicated Test DB, original manifest cardinalities and fixture hash. Do not invoke production reset/seed as an ad-hoc validation."
+    },
+    "packets": [
+      {
+        "id": "P11",
+        "title": "Preserve three durable enum spellings at eleven constant sites",
+        "indices": [
+          2467,
+          2468,
+          2469,
+          2470,
+          2471,
+          2472,
+          2473,
+          2474,
+          2475,
+          2476,
+          2477
+        ],
+        "source_issues": [
+          940
+        ],
+        "files": [
+          {
+            "path": "src/Coglatas.Application/StudentRecords/StudentRecordService.cs",
+            "git_blob_sha": "a9290ed6236b84f5102f6252ff5182e3094c3e11",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "DataClassification.StudentRecordRestricted.ToString()",
+                "new": "nameof(DataClassification.StudentRecordRestricted)",
+                "count": 8
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Domain/Entities/IntegrationEntities.cs",
+            "git_blob_sha": "2ea4cbfbd261a25770269f38c19e216787b49fc0",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "DataClassification.StudentRecordRestricted.ToString()",
+                "new": "nameof(DataClassification.StudentRecordRestricted)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Application/Projects/TaskExecutionResults.cs",
+            "git_blob_sha": "7bcf4022d251dded631dff97096836c6ed54f9bd",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "TaskExecutionRunStatus.Succeeded.ToString()",
+                "new": "nameof(TaskExecutionRunStatus.Succeeded)",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/AuditPackageExportService.cs",
+            "git_blob_sha": "e0e2a18fe8cd233ccbea26029386324067026259",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "TenantExportType.AuditPackage.ToString()",
+                "new": "nameof(TenantExportType.AuditPackage)",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "test_filter": "FullyQualifiedName~QodanaFixedWireNameTests|FullyQualifiedName~StudentRecord|FullyQualifiedName~TaskExecution|FullyQualifiedName~AuditPackage|FullyQualifiedName~TenantExport",
+        "invariant": "Exactly StudentRecordRestricted (numeric 1), Succeeded (3), AuditPackage (1); no aliases or Flags in these enums. Change only the named constants, not enum declarations, variables, keys, DTO fields, comparers or stored values."
+      },
+      {
+        "id": "P12",
+        "title": "Two local Boolean and nullable-value expressions",
+        "indices": [
+          143,
+          2200
+        ],
+        "source_issues": [
+          943
+        ],
+        "files": [
+          {
+            "path": "src/Coglatas.Application/Announcements/AnnouncementDraftService.cs",
+            "git_blob_sha": "99ef9087b74751ee6db53a189af8d4bb713ce5e1",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "            : target.GroupId.HasValue\n                ? target.WorkspaceId.HasValue\n                : true;",
+                "new": "            : !target.GroupId.HasValue || target.WorkspaceId.HasValue;",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Application/Files/FileActivityService.cs",
+            "git_blob_sha": "e3e7050b939fecabed764ca8da5601c152040e12",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "currentUser.UserId is not Guid actorUserId",
+                "new": "currentUser.UserId is not { } actorUserId",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "test_filter": "FullyQualifiedName~AnnouncementDraft|FullyQualifiedName~FileActivity",
+        "invariant": "Keep the ChannelId arm and GroupId-before-WorkspaceId read order. Keep the single UserId read, Guid.Empty check, authentication, tenancy and all authorization short circuits. Empty nullable capture is the same underlying Guid; do not remove the guard."
+      },
+      {
+        "id": "P13",
+        "title": "Two unchanged public parameterless exception constructors",
+        "indices": [
+          137,
+          138
+        ],
+        "source_issues": [
+          941
+        ],
+        "files": [
+          {
+            "path": "src/Coglatas.Application/Notifications/TaskDeadlineDigestServices.cs",
+            "git_blob_sha": "df15bead4a691cc2edacc464fe256a14c360eb87",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "public sealed class TaskDeadlineDigestRetryablePersistenceConflictException : Exception\n{\n    public TaskDeadlineDigestRetryablePersistenceConflictException()\n        : base(\"Task deadline digest persistence conflicted with concurrent state.\")\n    {\n    }\n}",
+                "new": "public sealed class TaskDeadlineDigestRetryablePersistenceConflictException()\n    : Exception(\"Task deadline digest persistence conflicted with concurrent state.\");",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Application/Realtime/AuthorizationStateChangePublisher.cs",
+            "git_blob_sha": "42d1d89bdad4720cc160e46184974fa0ec89846a",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "public sealed class RequiredOutboxStagingException : Exception\n{\n    public RequiredOutboxStagingException()\n        : base(\"A required transactional Outbox event could not be staged.\")\n    {\n    }\n}",
+                "new": "public sealed class RequiredOutboxStagingException()\n    : Exception(\"A required transactional Outbox event could not be staged.\");",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "test_filter": "FullyQualifiedName~QodanaFixedExceptionContractTests|FullyQualifiedName~TaskDeadlineDigest|FullyQualifiedName~AuthorizationState|FullyQualifiedName~Outbox",
+        "invariant": "Both are non-record sealed classes with one empty public parameterless constructor and one literal Exception(string) base call. Preserve CLR type, public constructor signature, message, HResult and InnerException. No DTO/record/DI constructor rewrites."
+      },
+      {
+        "id": "P14",
+        "title": "Twenty-six private field names with fixed scope and shadow handling",
+        "indices": [
+          148,
+          151,
+          152,
+          154,
+          155,
+          156,
+          157,
+          162,
+          165,
+          166,
+          167,
+          168,
+          169,
+          170,
+          171,
+          174,
+          176,
+          177,
+          178,
+          179,
+          180,
+          181,
+          183,
+          184,
+          185,
+          187
+        ],
+        "source_issues": [
+          941,
+          942
+        ],
+        "files": [
+          {
+            "path": "src/Coglatas.Web/Realtime/HubSubscriptionRegistry.cs",
+            "git_blob_sha": "f31bfc2d47592c659c938101c73d46dd271d82e0",
+            "operations": [
+              {
+                "kind": "identifier",
+                "old": "subscriptions",
+                "new": "_subscriptions",
+                "count": 7
+              },
+              {
+                "kind": "identifier",
+                "old": "attempts",
+                "new": "_attempts",
+                "count": 3
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Web/Notifications/AnnouncementPublisherWorker.cs",
+            "git_blob_sha": "d4bafaf0c8a2e3b1571a247c018b9e40e15416f7",
+            "operations": [
+              {
+                "kind": "identifier",
+                "old": "claimOwner",
+                "new": "_claimOwner",
+                "count": 2
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Web/Notifications/TaskDeadlineDigestWorker.cs",
+            "git_blob_sha": "22b242f5f145346761bbddad4e1427a27d87cf77",
+            "operations": [
+              {
+                "kind": "identifier",
+                "old": "claimOwner",
+                "new": "_claimOwner",
+                "count": 2
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/GuardedArtifactReportRefinementService.cs",
+            "git_blob_sha": "9a20b8d44002e8221645d30a702c569102f16a91",
+            "operations": [
+              {
+                "kind": "identifier",
+                "old": "inner",
+                "new": "_inner",
+                "count": 5,
+                "scope_start": "public sealed class GuardedArtifactReportRefinementService",
+                "scope_end": "public sealed class ArtifactReportRefinementCommitGuardUnitOfWork"
+              },
+              {
+                "kind": "identifier",
+                "old": "commitGuard",
+                "new": "_commitGuard",
+                "count": 5,
+                "scope_start": "public sealed class GuardedArtifactReportRefinementService",
+                "scope_end": "public sealed class ArtifactReportRefinementCommitGuardUnitOfWork"
+              },
+              {
+                "kind": "replace",
+                "old": "private readonly ICurrentUser currentUser;",
+                "new": "private readonly ICurrentUser _currentUser;",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "this.currentUser = currentUser;",
+                "new": "_currentUser = currentUser;",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "currentUser.UserId",
+                "new": "_currentUser.UserId",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "currentUser.IsAuthenticated",
+                "new": "_currentUser.IsAuthenticated",
+                "count": 1
+              },
+              {
+                "kind": "identifier",
+                "old": "context",
+                "new": "_context",
+                "count": 4,
+                "scope_start": "public sealed class ArtifactReportRefinementCommitGuardUnitOfWork",
+                "scope_end": "public sealed class RefinementCommitAuthorizationChangedException"
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/AnnouncementDistributionStore.cs",
+            "git_blob_sha": "64cbf41286913d44a91dc0da4b13c66468a01eea",
+            "operations": [
+              {
+                "kind": "identifier",
+                "old": "inMemoryDraftTargets",
+                "new": "_inMemoryDraftTargets",
+                "count": 4
+              },
+              {
+                "kind": "identifier",
+                "old": "inMemoryAnnouncementTargets",
+                "new": "_inMemoryAnnouncementTargets",
+                "count": 3
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/AnnouncementEngagementStore.cs",
+            "git_blob_sha": "e46e52d61d1870ab1fa48d2b40be555d7c9057b1",
+            "operations": [
+              {
+                "kind": "identifier",
+                "old": "inMemoryEvents",
+                "new": "_inMemoryEvents",
+                "count": 3
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Web/Realtime/OutboxDispatcher.cs",
+            "git_blob_sha": "be32c0cebae4e852e30ebadd69187577a38b9cb2",
+            "operations": [
+              {
+                "kind": "identifier",
+                "old": "lockOwner",
+                "new": "_lockOwner",
+                "count": 2
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/TaskExecutionScopeRepository.cs",
+            "git_blob_sha": "1ea602c1ebdd08dc970abb364c06c9c88963c0b2",
+            "operations": [
+              {
+                "kind": "identifier",
+                "old": "pendingUpserts",
+                "new": "_pendingUpserts",
+                "count": 7
+              },
+              {
+                "kind": "identifier",
+                "old": "pendingDeletes",
+                "new": "_pendingDeletes",
+                "count": 7
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Web/Audit/AuditPackageExportWorker.cs",
+            "git_blob_sha": "b93fadee4a3bb7ed407d388d79156894fcba167e",
+            "operations": [
+              {
+                "kind": "identifier",
+                "old": "settings",
+                "new": "_settings",
+                "count": 5
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Web/Testing/BrowserSmokeResponseGate.cs",
+            "git_blob_sha": "ed8b44e809d0e37f044ffda3790836a13b6e9733",
+            "operations": [
+              {
+                "kind": "identifier",
+                "old": "gates",
+                "new": "_gates",
+                "count": 6
+              },
+              {
+                "kind": "identifier",
+                "old": "gateIdsByOwner",
+                "new": "_gateIdsByOwner",
+                "count": 4
+              },
+              {
+                "kind": "identifier",
+                "old": "release",
+                "new": "_release",
+                "count": 3,
+                "scope_start": "    internal sealed class Gate : IDisposable",
+                "scope_end": "public sealed class BrowserSmokeResponseGateLease"
+              },
+              {
+                "kind": "identifier",
+                "old": "expiry",
+                "new": "_expiry",
+                "count": 3,
+                "scope_start": "    internal sealed class Gate : IDisposable",
+                "scope_end": "public sealed class BrowserSmokeResponseGateLease"
+              },
+              {
+                "kind": "identifier",
+                "old": "claimed",
+                "new": "_claimed",
+                "count": 3,
+                "scope_start": "    internal sealed class Gate : IDisposable",
+                "scope_end": "public sealed class BrowserSmokeResponseGateLease"
+              },
+              {
+                "kind": "identifier",
+                "old": "ready",
+                "new": "_ready",
+                "count": 3,
+                "scope_start": "    internal sealed class Gate : IDisposable",
+                "scope_end": "public sealed class BrowserSmokeResponseGateLease"
+              },
+              {
+                "kind": "identifier",
+                "old": "released",
+                "new": "_released",
+                "count": 3,
+                "scope_start": "    internal sealed class Gate : IDisposable",
+                "scope_end": "public sealed class BrowserSmokeResponseGateLease"
+              },
+              {
+                "kind": "identifier",
+                "old": "statusCode",
+                "new": "_statusCode",
+                "count": 3,
+                "scope_start": "    internal sealed class Gate : IDisposable",
+                "scope_end": "public sealed class BrowserSmokeResponseGateLease"
+              },
+              {
+                "kind": "replace",
+                "old": "private readonly BrowserSmokeResponseGateRegistry registry;",
+                "new": "private readonly BrowserSmokeResponseGateRegistry _registry;",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "private readonly BrowserSmokeResponseGateRegistry.Gate gate;",
+                "new": "private readonly BrowserSmokeResponseGateRegistry.Gate _gate;",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "this.registry = registry;",
+                "new": "_registry = registry;",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "this.gate = gate;",
+                "new": "_gate = gate;",
+                "count": 1
+              },
+              {
+                "kind": "member",
+                "old": "gate",
+                "new": "_gate",
+                "count": 5,
+                "scope_start": "public sealed class BrowserSmokeResponseGateLease",
+                "scope_end": "public sealed class BrowserSmokeResponseGateMiddleware"
+              },
+              {
+                "kind": "member",
+                "old": "registry",
+                "new": "_registry",
+                "count": 1,
+                "scope_start": "public sealed class BrowserSmokeResponseGateLease",
+                "scope_end": "public sealed class BrowserSmokeResponseGateMiddleware"
+              }
+            ]
+          },
+          {
+            "path": "src/Coglatas.Web/Testing/PerformanceCiHostingStartup.cs",
+            "git_blob_sha": "6efe55bc4a1684a00846c5ba9a1af18d5ce5986b",
+            "operations": [
+              {
+                "kind": "identifier",
+                "old": "seeded",
+                "new": "_seeded",
+                "count": 3
+              }
+            ]
+          }
+        ],
+        "test_filter": "FullyQualifiedName~Realtime|FullyQualifiedName~HubSubscription|FullyQualifiedName~Outbox|FullyQualifiedName~Announcement|FullyQualifiedName~TaskDeadlineDigest|FullyQualifiedName~ArtifactReportRefinement|FullyQualifiedName~TaskExecution|FullyQualifiedName~AuditPackage|FullyQualifiedName~BrowserSmoke|FullyQualifiedName~Performance",
+        "invariant": "Only alpha-renames of private runtime fields. Constructor parameters named currentUser, registry, gate, and inner remain unchanged where they are parameters. Preserve strings/comments, allocation identity, worker owner values, captured options snapshot, all dictionaries/SQL/JSON, Interlocked/Volatile calls, gate timer and release behavior. No declaration visibility or public snapshot-name change."
+      },
+      {
+        "id": "P15",
+        "title": "Two private performance seed signatures without changing fixture data",
+        "indices": [
+          2398,
+          2423
+        ],
+        "source_issues": [
+          942
+        ],
+        "files": [
+          {
+            "path": "src/Coglatas.Infrastructure/Persistence/PerformanceCiFixtureSeed.cs",
+            "git_blob_sha": "f5675041cf3efda5b8c7eb001a9157f0db941fc9",
+            "operations": [
+              {
+                "kind": "replace",
+                "old": "await SeedMilestonesAsync(dbContext, profile, plan, cancellationToken);",
+                "new": "await SeedMilestonesAsync(dbContext, plan, cancellationToken);",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "    private static async Task SeedMilestonesAsync(\n        AppDbContext dbContext,\n        DatasetProfile profile,\n        FixturePlan plan,",
+                "new": "    private static async Task SeedMilestonesAsync(\n        AppDbContext dbContext,\n        FixturePlan plan,",
+                "count": 1
+              },
+              {
+                "kind": "replace",
+                "old": "    private static T AddWithId<T>(AppDbContext dbContext, T entity, Guid id)\n        where T : class\n    {\n        dbContext.Add(entity);\n        dbContext.Entry(entity).Property(\"Id\").CurrentValue = id;\n        return entity;\n    }",
+                "new": "    private static void AddWithId<T>(AppDbContext dbContext, T entity, Guid id)\n        where T : class\n    {\n        dbContext.Add(entity);\n        dbContext.Entry(entity).Property(\"Id\").CurrentValue = id;\n    }",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "test_filter": "FullyQualifiedName~PerformanceCi|FullyQualifiedName~PerformanceFixture",
+        "invariant": "SeedMilestones still uses the fully built FixturePlan and same IDs/loops/flushes. AddWithId still adds entity before setting tracked Id and has the same generic constraint and statement call sites. Retain profile loading/validation, stable seed algorithm, public constants, evidence/manifest shape, DB target guards and all reset behavior. Never run fixture seeding against a non-CI database."
+      }
+    ]
+  },
+  "helper": "#!/usr/bin/env python3\n\"\"\"Apply only hash-pinned Qodana R2 packets. Default: validate/diff, no writes.\"\"\"\nfrom __future__ import annotations\nimport argparse\nimport hashlib\nimport json\nimport os\nfrom pathlib import Path\nimport re\nimport subprocess\nimport sys\nimport tempfile\n\nclass PlanError(RuntimeError):\n    pass\n\ndef blob_sha(data: bytes) -> str:\n    return hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\\0' + data).hexdigest()\n\ndef code_tokens(text: str):\n    \"\"\"C# identifiers outside comments, chars and strings; interpolation is opaque.\n\n    This limited lexer is sufficient for the reviewed private-field packets.\n    None of their renamed fields occurs inside a string interpolation. It is\n    deliberately not a general-purpose C# refactoring engine.\n    \"\"\"\n    i, n = 0, len(text)\n    while i < n:\n        if text.startswith('//', i):\n            end = text.find('\\n', i + 2); i = n if end < 0 else end; continue\n        if text.startswith('/*', i):\n            end = text.find('*/', i + 2)\n            if end < 0: raise PlanError('Unterminated block comment')\n            i = end + 2; continue\n        m = re.match(r'\\$*\"{3,}', text[i:])\n        if m:\n            marker = '\"' * m.group().count('\"')\n            end = text.find(marker, i + len(m.group()))\n            if end < 0: raise PlanError('Unterminated raw string')\n            i = end + len(marker); continue\n        prefix = next((p for p in ('$@\"', '@$\"', '@\"', '$\"', '\"', \"'\") if text.startswith(p, i)), None)\n        if prefix:\n            quote = \"'\" if prefix == \"'\" else '\"'\n            verbatim = '@' in prefix\n            i += len(prefix)\n            while i < n:\n                if text[i] == quote:\n                    if verbatim and i + 1 < n and text[i + 1] == quote:\n                        i += 2; continue\n                    i += 1; break\n                if not verbatim and text[i] == '\\\\': i += 2\n                else: i += 1\n            else: raise PlanError('Unterminated string or character literal')\n            continue\n        if text[i].isalpha() or text[i] == '_':\n            end = i + 1\n            while end < n and (text[end].isalnum() or text[end] == '_'): end += 1\n            yield (i, end, text[i:end]); i = end\n        else: i += 1\n\ndef bounds(text: str, operation: dict) -> tuple[int, int]:\n    start_anchor = operation.get('scope_start')\n    end_anchor = operation.get('scope_end')\n    if start_anchor:\n        if text.count(start_anchor) != 1: raise PlanError('Scope start is not unique')\n        start = text.index(start_anchor)\n    else: start = 0\n    if end_anchor:\n        offset = start + (len(start_anchor) if start_anchor else 0)\n        tail = text[offset:]\n        if tail.count(end_anchor) != 1: raise PlanError('Scope end is not unique')\n        end = offset + tail.index(end_anchor)\n    else: end = len(text)\n    return start, end\n\ndef transform(text: str, operations: list[dict]) -> str:\n    for operation in operations:\n        start, end = bounds(text, operation)\n        region = text[start:end]\n        old, new = operation['old'], operation['new']\n        expected = operation['count']\n        if not isinstance(expected, int) or expected < 1: raise PlanError('Invalid count')\n        if operation['kind'] == 'replace':\n            count = region.count(old)\n            if count != expected: raise PlanError(f'Exact preimage count {count} != {expected}: {old!r}')\n            region = region.replace(old, new)\n        elif operation['kind'] in ('identifier', 'member'):\n            if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', old) or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', new):\n                raise PlanError('Invalid identifier')\n            matches = [(a, b) for a, b, value in code_tokens(region) if value == old and\n                (operation['kind'] == 'identifier' or region[b:].lstrip().startswith('.'))]\n            if len(matches) != expected: raise PlanError(f'Identifier count {len(matches)} != {expected}: {old}')\n            # No string-producing nameof change is approved for these alpha-renames.\n            if re.search(r'\\bnameof\\s*\\(\\s*' + re.escape(old) + r'\\s*\\)', region):\n                raise PlanError(f'Unexpected name-dependent expression: {old}')\n            for a, b in reversed(matches): region = region[:a] + new + region[b:]\n        else: raise PlanError('Unrecognized operation')\n        text = text[:start] + region + text[end:]\n    return text\n\ndef prepare_file(root: Path, spec: dict) -> tuple[Path, bytes, bytes]:\n    relative = Path(spec['path'])\n    if relative.is_absolute() or '..' in relative.parts or '.git' in relative.parts:\n        raise PlanError('Unsafe repository path')\n    path = root / relative\n    if any((root.joinpath(*relative.parts[:i])).is_symlink() for i in range(1, len(relative.parts)+1)):\n        raise PlanError('Symlink target is not approved')\n    original = path.read_bytes()\n    if blob_sha(original) != spec['git_blob_sha']:\n        raise PlanError(f'Changed/already-applied source: {relative}. Do not alter expected hashes or fuzzy-apply.')\n    bom = original.startswith(b'\\xef\\xbb\\xbf')\n    text = original.decode('utf-8-sig')\n    crlf = '\\r\\n' in text\n    if '\\r' in text.replace('\\r\\n', '') or (crlf and '\\n' in text.replace('\\r\\n', '')):\n        raise PlanError('Mixed/unsupported newline format')\n    canonical = text.replace('\\r\\n', '\\n')\n    updated = transform(canonical, spec['operations'])\n    if updated == canonical: raise PlanError('Empty transformation')\n    if crlf: updated = updated.replace('\\n', '\\r\\n')\n    result = (b'\\xef\\xbb\\xbf' if bom else b'') + updated.encode('utf-8')\n    return path, original, result\n\ndef atomic_write(path: Path, data: bytes) -> None:\n    mode = path.stat().st_mode & 0o777\n    fd, temp = tempfile.mkstemp(prefix='.qodana-r2-', dir=path.parent)\n    try:\n        with os.fdopen(fd, 'wb') as stream:\n            stream.write(data); stream.flush(); os.fsync(stream.fileno())\n        os.chmod(temp, mode)\n        os.replace(temp, path)\n    finally:\n        if os.path.exists(temp): os.unlink(temp)\n\ndef main() -> int:\n    parser = argparse.ArgumentParser(description=__doc__)\n    parser.add_argument('--repo', required=True, type=Path)\n    parser.add_argument('--plan', required=True, type=Path)\n    parser.add_argument('--packet', required=True)\n    parser.add_argument('--apply', action='store_true')\n    args = parser.parse_args()\n    root = args.repo.resolve()\n    def git(*items):\n        return subprocess.check_output(['git', '-C', str(root), *items], text=True).strip()\n    if Path(git('rev-parse', '--show-toplevel')).resolve() != root:\n        raise PlanError('Use the repository root')\n    if git('status', '--porcelain'):\n        raise PlanError('Worktree must be clean; keep audit files outside it. Commit fixed tests first.')\n    plan = json.loads(args.plan.read_text(encoding='utf-8'))\n    if plan.get('schema_version') != 2 or plan.get('repository') != 'NYGsatoshi/Coglatas':\n        raise PlanError('Unexpected plan/repository')\n    subprocess.run(['git', '-C', str(root), 'merge-base', '--is-ancestor', plan['audit_source_sha'], 'HEAD'], check=True)\n    candidates = [p for p in plan['packets'] if p['id'] == args.packet]\n    if len(candidates) != 1: raise PlanError('Unknown/duplicate packet')\n    packet = candidates[0]\n    paths = [p['path'] for p in packet['files']]\n    if len(paths) != len(set(paths)): raise PlanError('Duplicate file entry')\n    changes = [prepare_file(root, spec) for spec in packet['files']]  # all preflight before any write\n    if args.apply:\n        written = []\n        try:\n            for path, original, result in changes:\n                written.append((path, original)); atomic_write(path, result)\n        except BaseException:\n            for path, original in reversed(written): atomic_write(path, original)\n            raise\n    print(json.dumps({'packet': args.packet, 'applied': args.apply,\n       'files': [{'path': str(path.relative_to(root)), 'before': blob_sha(before), 'after': blob_sha(after)}\n                 for path, before, after in changes]}, indent=2))\n    return 0\n\nif __name__ == '__main__':\n    try: raise SystemExit(main())\n    except (PlanError, OSError, ValueError, KeyError, subprocess.CalledProcessError) as exc:\n        print(f'STOP: {exc}', file=sys.stderr); raise SystemExit(2)\n",
+  "tests": {
+    "P11": {
+      "path": "tests/Coglatas.Tests/Quality/QodanaFixedWireNameTests.cs",
+      "sha256": "c86474aad57b19211c96f9be18bc8621408d56527d062fa5a4d815d8c7ec4187",
+      "content": "using Coglatas.Domain.Enums;\n\nnamespace Coglatas.Tests.Quality;\n\npublic sealed class QodanaFixedWireNameTests\n{\n    [Theory]\n    [InlineData(DataClassification.StudentRecordRestricted, \"StudentRecordRestricted\", 1)]\n    [InlineData(TaskExecutionRunStatus.Succeeded, \"Succeeded\", 3)]\n    [InlineData(TenantExportType.AuditPackage, \"AuditPackage\", 1)]\n    public void ExistingWireNamesAndNumericValuesRemainUnambiguous(\n        object rawValue,\n        string expectedName,\n        int expectedNumber)\n    {\n        var value = Assert.IsAssignableFrom<Enum>(rawValue);\n        Assert.Equal(expectedName, value.ToString());\n        Assert.Equal(expectedNumber, Convert.ToInt32(value));\n        Assert.Single(\n            Enum.GetValues(value.GetType()).Cast<object>(),\n            candidate => Convert.ToInt32(candidate) == expectedNumber);\n    }\n}\n"
+    },
+    "P13": {
+      "path": "tests/Coglatas.Tests/Quality/QodanaFixedExceptionContractTests.cs",
+      "sha256": "5bc14e1255c56f4efe1d6380f2f8da658235b273771273e1ac8b9cae981aa577",
+      "content": "using Coglatas.Application.Notifications;\nusing Coglatas.Application.Realtime;\n\nnamespace Coglatas.Tests.Quality;\n\npublic sealed class QodanaFixedExceptionContractTests\n{\n    [Theory]\n    [InlineData(typeof(TaskDeadlineDigestRetryablePersistenceConflictException),\n        \"Task deadline digest persistence conflicted with concurrent state.\")]\n    [InlineData(typeof(RequiredOutboxStagingException),\n        \"A required transactional Outbox event could not be staged.\")]\n    public void PublicParameterlessConstructionPreservesExceptionContract(\n        Type exceptionType,\n        string expectedMessage)\n    {\n        var constructor = Assert.Single(exceptionType.GetConstructors());\n        Assert.Empty(constructor.GetParameters());\n        Assert.Equal(typeof(Exception), exceptionType.BaseType);\n        var exception = Assert.IsAssignableFrom<Exception>(Activator.CreateInstance(exceptionType));\n        Assert.Equal(exceptionType, exception.GetType());\n        Assert.Equal(expectedMessage, exception.Message);\n        Assert.Null(exception.InnerException);\n        Assert.Equal(new Exception(expectedMessage).HResult, exception.HResult);\n    }\n}\n"
+    }
+  }
+}
