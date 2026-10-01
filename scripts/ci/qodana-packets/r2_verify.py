@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run unchanged P11/P13/P14 baselines; never apply production edits."""
+"""Verify canonical P11/P13/P14 edits after unchanged real-PostgreSQL baselines."""
 from __future__ import annotations
 import hashlib
 import json
@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import subprocess
 import verify
 
 HELPER_SHA256 = "634ef30bd5c20490996650c819178bbd37212047c36d43092d3c44306ef4cf77"
@@ -82,6 +83,28 @@ def require_baseline_paths(changed: list[str], packet_id: str, integrated: bool)
         if path not in allowed and not path.startswith("scripts/ci/qodana-packets/"):
             raise ValueError(f"R2 baseline has production/dependency/other-test changes: {path}")
 
+def require_candidate_paths(changed: list[str], packet: dict) -> None:
+    targets = {entry["path"] for entry in packet["files"]}
+    auxiliary = [path for path in changed if path not in targets]
+    require_baseline_paths(auxiliary, packet["id"], True)
+
+
+def merge_candidate_source(current: bytes, audited: bytes, canonical: bytes, scratch: Path) -> bytes:
+    if canonical == audited:
+        raise ValueError("Canonical packet produced no source change")
+    scratch.mkdir(exist_ok=False)
+    paths = [scratch / name for name in ["integrated.cs", "audited.cs", "canonical.cs"]]
+    for path, data in zip(paths, [current, audited, canonical]):
+        path.write_bytes(data)
+    # Normal three-way integration only. The immutable helper applies exclusively
+    # to its clean audited worktree; neither preimages nor expected hashes change.
+    result = subprocess.run(["git", "merge-file", "-p", *map(str, paths)],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode != 0:
+        raise ValueError("STOP: canonical packet conflicts with known upstream source")
+    return result.stdout
+
+
 def main() -> None:
     source = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
     config = source / "scripts/ci/qodana-packets"
@@ -89,8 +112,9 @@ def main() -> None:
     if set(selection) != {"packet", "baseline_sha", "audit_test_sha", "stage"}:
         raise ValueError("Unexpected R2 selection fields")
     packet_id = selection["packet"]
-    if packet_id not in BASELINE_PACKETS or selection["stage"] != "baseline":
-        raise ValueError("Only unchanged-production R2 baselines are supported")
+    stage = selection["stage"]
+    if packet_id not in BASELINE_PACKETS or stage not in {"baseline", "prepare", "verify"}:
+        raise ValueError("Unsupported R2 packet/stage")
     head_sha = os.environ["PACKET_HEAD_SHA"]
     for sha in [head_sha, selection["baseline_sha"], selection["audit_test_sha"]]:
         if not re.fullmatch(r"[0-9a-f]{40}", sha):
@@ -111,10 +135,13 @@ def main() -> None:
     # With main already integrated, head contains unchanged main production plus
     # the exact fixed test. Verify the entire diff before using head as baseline.
     comparison_sha = integrated or selection["baseline_sha"]
-    baseline_sha = head_sha if integrated else selection["baseline_sha"]
+    baseline_sha = head_sha if integrated and stage == "baseline" else comparison_sha
     changed = verify.checked(["git", "diff", "--name-only", comparison_sha, head_sha],
                              source, capture=True).splitlines()
-    require_baseline_paths(changed, packet_id, bool(integrated))
+    if stage == "verify":
+        require_candidate_paths(changed, packet)
+    else:
+        require_baseline_paths(changed, packet_id, bool(integrated))
     temp = Path(os.environ["RUNNER_TEMP"]).resolve() / "qodana-packet-proof"
     temp.mkdir(exist_ok=False)
     evidence = source / "artifacts/qodana-packet-proof"
@@ -127,7 +154,7 @@ def main() -> None:
     helper, plan = temp / "apply_extension.py", temp / "extension-plan.json"
     helper.write_bytes(payload["helper"].encode())
     plan.write_text(json.dumps(payload["plan"], indent=2) + "\n", encoding="utf-8")
-    # Dry run only in the isolated audited tests-first branch. Never amend hashes.
+    # Dry run in the isolated audited tests-first branch. Never amend hashes.
     verify.checked([sys.executable, str(helper), "--repo", str(audit), "--plan", str(plan),
                     "--packet", packet_id], audit)
     upstream, source_hashes = {}, {}
@@ -136,12 +163,40 @@ def main() -> None:
         before, current = (audit / path).read_bytes(), (baseline / path).read_bytes()
         upstream[path] = upstream_variant(packet_id, path, before, current, historical, namespace)
         source_hashes[path] = verify.sha256(current)
-        if (source / path).read_bytes() != current:
+        if stage != "verify" and (source / path).read_bytes() != current:
             raise ValueError("Head differs from unchanged production baseline")
     inventory = verify.run_tests(baseline, evidence / "baseline", packet)
+    candidate_inventory, candidate_hashes = None, {}
+    if stage != "baseline":
+        # Baseline execution must pass before the canonical transformation.
+        before = {entry["path"]: (audit / entry["path"]).read_bytes() for entry in packet["files"]}
+        verify.checked([sys.executable, str(helper), "--repo", str(audit), "--plan", str(plan),
+                        "--packet", packet_id, "--apply"], audit)
+        patch = subprocess.run(["git", "diff", "--binary", "--", *before], cwd=audit,
+                               check=True, stdout=subprocess.PIPE).stdout
+        (evidence / "canonical.patch").write_bytes(patch)
+        expected = {}
+        for index, entry in enumerate(packet["files"]):
+            path = entry["path"]
+            expected[path] = merge_candidate_source(
+                (baseline / path).read_bytes(), before[path], (audit / path).read_bytes(),
+                temp / f"merge-{index}")
+            candidate_hashes[path] = verify.sha256(expected[path])
+            if stage == "verify" and (source / path).read_bytes() != expected[path]:
+                raise ValueError(f"Head differs from exact canonical integration: {path}")
+        if stage == "verify":
+            candidate = source
+        else:
+            candidate = temp / "candidate"
+            verify.checked(["git", "worktree", "add", "--detach", str(candidate), baseline_sha], source)
+            for path, data in expected.items():
+                (candidate / path).write_bytes(data)
+        require_test(candidate, packet_id)
+        candidate_inventory = verify.run_tests(candidate, evidence / "candidate", packet)
+        verify.require_same(inventory, candidate_inventory)
     proof = {
-        "packet": packet_id, "stage": "baseline", "candidate_is_committed_head": False,
-        "production_change_applied": False, "head_sha": head_sha,
+        "packet": packet_id, "stage": stage, "candidate_is_committed_head": stage == "verify",
+        "production_change_applied": stage != "baseline", "head_sha": head_sha,
         "baseline_sha": baseline_sha, "audit_test_sha": selection["audit_test_sha"],
         "configured_baseline_sha": selection["baseline_sha"], "event_base_sha": event_base_sha,
         "production_comparison_sha": comparison_sha,
@@ -153,13 +208,19 @@ def main() -> None:
         "evidence_sha256": {str(path.relative_to(evidence)): verify.sha256(path.read_bytes())
                             for path in evidence.rglob("*") if path.is_file()},
     }
-    (evidence / "baseline-proof.json").write_text(json.dumps(proof, indent=2, sort_keys=True) + "\n")
-    print("PACKET_BASELINE_PROOF " + json.dumps(proof, sort_keys=True), flush=True)
+    if candidate_inventory is not None:
+        proof["candidate_source_sha256"] = candidate_hashes
+        proof["candidate_test_counts"] = {key: sum(value.values()) for key, value in candidate_inventory.items()}
+    filename = "baseline-proof.json" if stage == "baseline" else "proof.json"
+    (evidence / filename).write_text(json.dumps(proof, indent=2, sort_keys=True) + "\n")
+    marker = "PACKET_BASELINE_PROOF " if stage == "baseline" else "PACKET_PROOF "
+    print(marker + json.dumps(proof, sort_keys=True), flush=True)
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a", encoding="utf-8") as output:
-            output.write(f"### Fixed packet baseline\n\n{packet_id}: unchanged production and fixed tests passed. "
-                         "No production transformation, candidate acceptance or packet completion is claimed.\n")
+            output.write(f"### Fixed packet verification\n\n{packet_id}: {stage} passed on {head_sha}. "
+                         f"Candidate is committed head: {stage == 'verify'}. "
+                         "Packet completion still requires normal checks and exact-main reconciliation.\n")
 
 if __name__ == "__main__":
     main()

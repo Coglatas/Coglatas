@@ -117,7 +117,7 @@ public sealed class StudentRecordService(
             StudentRecordId = record.Id,
             WorkspaceId = record.WorkspaceId,
             ExportType = "StudentRecordRestricted",
-            IncludedClassifications = DataClassification.StudentRecordRestricted.ToString(),
+            IncludedClassifications = nameof(DataClassification.StudentRecordRestricted),
             RequestedScopeType = "StudentRecord",
             RequestedScopeId = record.Id,
             ReasonRequired = true,
@@ -205,7 +205,7 @@ public sealed class StudentRecordService(
             "StudentRecordRestricted access denied.",
             new Dictionary<string, object?>
             {
-                ["classification"] = DataClassification.StudentRecordRestricted.ToString(),
+                ["classification"] = nameof(DataClassification.StudentRecordRestricted),
                 ["studentRecordId"] = record.Id,
                 ["workspaceId"] = record.WorkspaceId,
                 ["schoolRole"] = access.Role?.ToString(),
@@ -234,7 +234,7 @@ public sealed class StudentRecordService(
             WorkspaceId: record.WorkspaceId,
             Metadata: new Dictionary<string, object?>
             {
-                ["classification"] = DataClassification.StudentRecordRestricted.ToString(),
+                ["classification"] = nameof(DataClassification.StudentRecordRestricted),
                 ["studentRecordId"] = record.Id,
                 ["workspaceId"] = record.WorkspaceId,
                 ["accessedFields"] = string.Join(",", accessedFields.Order(StringComparer.OrdinalIgnoreCase)),
@@ -276,7 +276,7 @@ public sealed class StudentRecordService(
 
         if (grant.Classification != DataClassification.StudentRecordRestricted ||
             !string.Equals(grant.ExportType, "StudentRecordRestricted", StringComparison.Ordinal) ||
-            !string.Equals(grant.IncludedClassifications, DataClassification.StudentRecordRestricted.ToString(), StringComparison.Ordinal) ||
+            !string.Equals(grant.IncludedClassifications, nameof(DataClassification.StudentRecordRestricted), StringComparison.Ordinal) ||
             !string.Equals(grant.RequestedScopeType, "StudentRecord", StringComparison.Ordinal) ||
             grant.RequestedScopeId != grant.StudentRecordId ||
             !grant.ReasonRequired)
@@ -591,7 +591,7 @@ public sealed class StudentRecordService(
     {
         return new Dictionary<string, object?>
         {
-            ["classification"] = DataClassification.StudentRecordRestricted.ToString(),
+            ["classification"] = nameof(DataClassification.StudentRecordRestricted),
             ["actorUserId"] = actorUserId,
             ["tenantId"] = grant.TenantId,
             ["studentRecordId"] = record.Id,
@@ -628,7 +628,7 @@ public sealed class StudentRecordService(
             manifest = new
             {
                 exportVersion = 1,
-                classification = DataClassification.StudentRecordRestricted.ToString(),
+                classification = nameof(DataClassification.StudentRecordRestricted),
                 studentRecordId = record.Id,
                 workspaceId = record.WorkspaceId,
                 grantId = grant.Id,
@@ -776,7 +776,7 @@ public sealed class StudentRecordService(
     {
         return new Dictionary<string, object?>
         {
-            ["classification"] = DataClassification.StudentRecordRestricted.ToString(),
+            ["classification"] = nameof(DataClassification.StudentRecordRestricted),
             ["actorUserId"] = actorUserId,
             ["tenantId"] = record?.TenantId ?? grant?.TenantId,
             ["studentRecordId"] = record?.Id ?? grant?.StudentRecordId,
@@ -784,7 +784,7 @@ public sealed class StudentRecordService(
             ["exportPackageGrantId"] = grant?.Id,
             ["grantId"] = grant?.Id,
             ["exportType"] = grant?.ExportType ?? "StudentRecordRestricted",
-            ["includedClassifications"] = grant?.IncludedClassifications ?? DataClassification.StudentRecordRestricted.ToString(),
+            ["includedClassifications"] = grant?.IncludedClassifications ?? nameof(DataClassification.StudentRecordRestricted),
             ["requestedScopeType"] = grant?.RequestedScopeType ?? "StudentRecord",
             ["requestedScopeId"] = grant?.RequestedScopeId ?? record?.Id,
             ["operationType"] = stage,
