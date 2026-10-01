@@ -40,6 +40,7 @@ jobs:
       POSTGRES_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
       PGPASSWORD: coglatas_ci_password
       PACKET_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PACKET_BRANCH: ${{ github.head_ref }}
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
