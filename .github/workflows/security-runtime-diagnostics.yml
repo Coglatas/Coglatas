@@ -18,7 +18,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh api repos/NYGsatoshi/Coglatas/actions/jobs/110324952018/logs > "$RUNNER_TEMP/security-failure.log"
+          gh api --allow-escape-sequences repos/NYGsatoshi/Coglatas/actions/jobs/110324952018/logs > "$RUNNER_TEMP/security-failure.log"
           python3 - <<'PY'
           import os
           from pathlib import Path
@@ -34,7 +34,7 @@ jobs:
           selected.update(range(max(0, len(lines) - 45), len(lines)))
           print(f"Completed job: 110324952018; log lines: {len(lines)}; error matches: {len(markers)}")
           for i in sorted(selected)[:1600]:
-              line = lines[i]
+              line = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", lines[i])
               # Keep downloaded workflow commands inert in this diagnostic run.
               print(f"{i + 1}: " + line.replace("::", ": :"))
           PY
