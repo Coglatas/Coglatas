@@ -26,9 +26,9 @@ zap_network_owned=0
 compose=(
   docker compose
   -p "$project"
-  -f docker-compose.real-backend-smoke.yml
-  -f docker-compose.security.yml
-  -f docker-compose.security.runtime.yml
+  -f infra/compose/test/real-backend-smoke.yml
+  -f infra/compose/security/security.yml
+  -f infra/compose/security/runtime.yml
 )
 
 # shellcheck source=scripts/security/scanner-harness.sh

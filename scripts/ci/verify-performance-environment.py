@@ -27,9 +27,9 @@ def require_text(text: str, token: str, source: str) -> None:
 
 def main() -> int:
     environment_path = ROOT / "performance" / "environment.json"
-    compose_path = ROOT / "docker-compose.performance.yml"
+    compose_path = ROOT / "infra/compose/performance/environment.yml"
     harness_path = ROOT / "scripts" / "performance" / "with-environment.sh"
-    pr_compose_path = ROOT / "docker-compose.performance.pr.yml"
+    pr_compose_path = ROOT / "infra/compose/performance/pr.yml"
     warmup_path = ROOT / "scripts" / "performance" / "warmup.py"
     seed_path = ROOT / "src" / "Coglatas.Infrastructure" / "Persistence" / "PerformanceCiFixtureSeed.cs"
     hosting_path = ROOT / "src" / "Coglatas.Web" / "Testing" / "PerformanceCiHostingStartup.cs"
@@ -104,7 +104,7 @@ def main() -> int:
         "condition: service_completed_successfully",
         "/health/ready",
     ):
-        require_text(compose, token, "docker-compose.performance.yml")
+        require_text(compose, token, "infra/compose/performance/environment.yml")
     if re.search(r"https?://(?!0\.0\.0\.0|localhost|127\.0\.0\.1)", compose, re.IGNORECASE):
         fail("performance Compose must not contain a public benchmark target")
 
@@ -115,7 +115,7 @@ def main() -> int:
         "dotnet run --project src/Coglatas.Web/Coglatas.Web.csproj",
         "healthcheck: !reset null",
     ):
-        require_text(pr_compose, token, "docker-compose.performance.pr.yml")
+        require_text(pr_compose, token, "infra/compose/performance/pr.yml")
     if "SYNCFUSION_LICENSE" in pr_compose or "syncfusion_license" in pr_compose:
         fail("public PR performance runtime must not reference the Syncfusion credential")
 
@@ -127,7 +127,7 @@ def main() -> int:
         "warmup.py",
         "collect-environment.py",
         "COGLATAS_PERFORMANCE_RUNTIME_MODE",
-        "docker-compose.performance.pr.yml",
+        "infra/compose/performance/pr.yml",
         "verify-samples.py",
         'timeout "$COMMAND_TIMEOUT"',
     ):

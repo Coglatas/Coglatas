@@ -59,8 +59,8 @@ jobs:
         run: >-
           docker compose
           -p coglatas-sec04-deep-config
-          -f docker-compose.real-backend-smoke.yml
-          -f docker-compose.security.yml
+          -f infra/compose/test/real-backend-smoke.yml
+          -f infra/compose/security/security.yml
           config --format json
           | python3 scripts/ci/verify-security-compose.py
 

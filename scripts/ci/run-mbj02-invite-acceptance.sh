@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_COMPOSE="docker-compose.real-backend-smoke.yml"
-OVERLAY_COMPOSE="docker-compose.mbj02-invite.yml"
+BASE_COMPOSE="infra/compose/test/real-backend-smoke.yml"
+OVERLAY_COMPOSE="infra/compose/test/acceptance/mbj02-invite.yml"
 PROJECT_NAME="${COMPOSE_PROJECT_NAME:-coglatas-mbj02-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-0}-$$}"
 
 export COGLATAS_MBJ02_ADMIN_EMAIL="${COGLATAS_MBJ02_ADMIN_EMAIL:-mbj02-system-admin@example.test}"

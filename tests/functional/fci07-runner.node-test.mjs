@@ -7,7 +7,7 @@ import * as yaml from 'js-yaml';
 
 const composeRunnerPath = 'scripts/ci/run-fci07-functional-security.sh';
 const ownerRunnerPath = 'scripts/ci/run-fci07-playwright-owners.sh';
-const overlayPath = 'docker-compose.fci07-functional-security.yml';
+const overlayPath = 'infra/compose/security/fci07-functional-security.yml';
 const specPath = 'tests/functional/security-negative/cross-scope-negative-matrix.spec.ts';
 
 test('FCI-07 runners are syntactically valid and keep the security fixture boundary explicit', () => {
