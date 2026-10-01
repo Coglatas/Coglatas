@@ -50,6 +50,19 @@ def require_same(before: dict[str, collections.Counter], after: dict[str, collec
     if before != after:
         raise ValueError("Baseline/candidate test identities or multiplicities changed")
 
+def read_selection(config_dir: Path, head_ref: str) -> dict:
+    match = re.fullmatch(r"qodana/packet-(p[0-9]{2})-(?:proof|source)", head_ref)
+    if match is None or match[1].upper() not in ALLOWED_PACKETS:
+        raise ValueError("Unsupported packet branch")
+    packet_id = match[1].upper()
+    path = config_dir / "selections" / f"{packet_id}.json"
+    if not path.is_file():
+        path = config_dir / "selection.json"
+    selection = json.loads(path.read_text(encoding="utf-8"))
+    if selection.get("packet") != packet_id:
+        raise ValueError("Selection does not match the PR branch packet")
+    return selection
+
 def amended_plan(original: dict, packet_id: str) -> dict:
     plan = copy.deepcopy(original)
     if packet_id in {"P02", "P04"}:
@@ -108,7 +121,7 @@ def main() -> None:
     evidence = source / "artifacts/qodana-packet-proof"
     evidence.mkdir(parents=True, exist_ok=False)
     config_dir = source / "scripts/ci/qodana-packets"
-    selection = json.loads((config_dir / "selection.json").read_text())
+    selection = read_selection(config_dir, os.environ["PACKET_BRANCH"])
     if set(selection) != {"packet", "baseline_sha", "stage"}:
         raise ValueError("Unexpected selection fields")
     packet_id, baseline_sha, stage = (selection[k] for k in ("packet", "baseline_sha", "stage"))
