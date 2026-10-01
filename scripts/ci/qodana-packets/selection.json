@@ -1,1 +1,5 @@
-{"packet":"P01","baseline_sha":"a0ea034a4098def5e2a08c7f5460878869eeae96","stage":"prepare"}
+{
+  "packet": "P01",
+  "baseline_sha": "8a3692e1f95bb5851838a89e7b1f41e74ea104a1",
+  "stage": "verify"
+}
