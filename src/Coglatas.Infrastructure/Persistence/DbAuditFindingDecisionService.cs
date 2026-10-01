@@ -180,7 +180,7 @@ public sealed class DbAuditFindingDecisionService(
             return FindingNotFound();
         }
 
-        if (!claimsResult.Value.Claims.Any(claim => claim.ClaimId == finding.ArtifactClaimId))
+        if (claimsResult.Value.Claims.All(claim => claim.ClaimId != finding.ArtifactClaimId))
         {
             return FindingNotFound();
         }
