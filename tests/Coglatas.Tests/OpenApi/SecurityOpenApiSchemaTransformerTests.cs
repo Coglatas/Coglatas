@@ -3,6 +3,7 @@ using System.Text.Json.Serialization.Metadata;
 using Coglatas.Application.Announcements;
 using Coglatas.Application.Integrations;
 using Coglatas.Application.Messaging;
+using Coglatas.Application.Workspaces;
 using Coglatas.Web.Controllers;
 using Coglatas.Web.OpenApi;
 using Microsoft.AspNetCore.OpenApi;
@@ -53,6 +54,33 @@ public sealed class SecurityOpenApiSchemaTransformerTests
 
         var body = Assert.IsType<OpenApiSchema>(schema.Properties!["body"]);
         Assert.Equal(generatedMaximum, body.MaxLength);
+    }
+
+    [Fact]
+    public async Task Workspace_create_schema_allows_omitted_metadata_and_preserves_property_types()
+    {
+        var name = new OpenApiSchema { Type = JsonSchemaType.String };
+        var description = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null };
+        var icon = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null };
+        var schema = await Transform(
+            typeof(CreateWorkspaceRequest),
+            new Dictionary<string, OpenApiSchema>
+            {
+                ["name"] = name,
+                ["description"] = description,
+                ["icon"] = icon
+            },
+            required: ["name", "description", "icon"]);
+
+        Assert.NotNull(schema.Required);
+        Assert.Equal("name", Assert.Single(schema.Required));
+        Assert.NotNull(schema.Properties);
+        Assert.Same(name, schema.Properties["name"]);
+        Assert.Same(description, schema.Properties["description"]);
+        Assert.Same(icon, schema.Properties["icon"]);
+        Assert.Equal(JsonSchemaType.String, name.Type);
+        Assert.Equal(JsonSchemaType.String | JsonSchemaType.Null, description.Type);
+        Assert.Equal(JsonSchemaType.String | JsonSchemaType.Null, icon.Type);
     }
 
     [Fact]

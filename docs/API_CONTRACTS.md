@@ -91,6 +91,12 @@ printable ASCII characters and keeps the approved minimal body:
 }
 ```
 
+Only `name` is required in the JSON body. `description` and `icon` may be
+omitted or explicitly null; the service normalizes both as optional metadata.
+The generated OpenAPI contract preserves these nullable string types and marks
+only `name` required. This describes existing request processing; it does not
+change validation, authorization, idempotency, or persistence.
+
 The authenticated actor and current Tenant are server-owned scope. A successful
 command commits one relational transaction containing the idempotency claim,
 active Workspace, active creator Owner membership, canonical
