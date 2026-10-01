@@ -104,13 +104,13 @@ public sealed record TaskSubtaskPage(IReadOnlyList<TaskSubtaskResponse> Items, i
 public sealed record CreateTaskSubtaskRequest(
     string Title,
     string? Description,
-    Coglatas.Domain.Enums.TaskPriority Priority = Coglatas.Domain.Enums.TaskPriority.Medium,
+    Domain.Enums.TaskPriority Priority = Domain.Enums.TaskPriority.Medium,
     string? Goal = null,
     string? Deliverable = null,
     string? Constraints = null);
 public sealed record TaskActivityLogResponse(
     Guid Id,
-    [property: JsonConverter(typeof(JsonStringEnumConverter))] Coglatas.Domain.Enums.ActivityLogType ActivityType,
+    [property: JsonConverter(typeof(JsonStringEnumConverter))] Domain.Enums.ActivityLogType ActivityType,
     string Body,
     DateTimeOffset OccurredAt,
     TaskPersonSummary Author);
