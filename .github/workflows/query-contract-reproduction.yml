@@ -23,7 +23,7 @@ jobs:
         run: python3 scripts/quality/diagnose_security_contract.py
       - name: Reproduce with the exact SEC-04 image
         run: >-
-          docker run --rm --network none --entrypoint python
+          docker run --rm --network none --user "$(id -u):$(id -g)" --entrypoint python
           -v "$PWD:/work"
           schemathesis/schemathesis:4.25.2@sha256:72d6907a936f7b5f08f137c8f84c89eb3ab7834956d9af416e7b6510ebe4e065
           /work/scripts/quality/reproduce_query_schema.py
