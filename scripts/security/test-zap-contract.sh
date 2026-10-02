@@ -141,9 +141,18 @@ expected_pii_filters = [
     "urlRegex" => false,
     "methods" => ["POST"],
   },
+  {
+    "ruleId" => 10062,
+    "ruleName" => "PII Disclosure",
+    "newRisk" => "False Positive",
+    "context" => "sec06-api",
+    "url" => "${COGLATAS_SECURITY_ZAP_TARGET}/api/admin/invites",
+    "urlRegex" => false,
+    "methods" => ["GET"],
+  },
 ]
 unless pii_filters == expected_pii_filters
-  fail!("PII Disclosure filters must remain exactly scoped to POST /api/comments and POST /api/tenant/export")
+  fail!("PII Disclosure filters must remain exactly scoped to POST /api/comments, POST /api/tenant/export, and GET /api/admin/invites")
 end
 
 policy_job = only_job(jobs, "activeScan-policy")
@@ -345,11 +354,18 @@ expected_alert_filters = [
         "newRisk": "False Positive",
         "reason": "POST /api/tenant/export is the explicitly authorized metadata export contract and intentionally includes redacted tenant-user metadata such as email while excluding secrets, hashes, tokens, and file bodies. Export-job reads and all other endpoints remain unfiltered.",
     },
+    {
+        "ruleId": 10062,
+        "method": "GET",
+        "path": "/api/admin/invites",
+        "newRisk": "False Positive",
+        "reason": "GET /api/admin/invites is an explicitly privileged administration read whose response contract intentionally contains invitee email addresses. SEC-05 independently requires ordinary/restricted users to receive a safe 403, so authorization/non-disclosure remains fail-closed while this exact authorized PII-bearing contract is filtered from generic passive PII detection.",
+    },
 ]
 if policy.get("alertFilters") != expected_alert_filters:
     raise SystemExit(
         "SEC-06 PII false-positive filters must remain exactly scoped to "
-        "POST /api/comments and POST /api/tenant/export"
+        "POST /api/comments, POST /api/tenant/export, and GET /api/admin/invites"
     )
 blocking = policy["blockingPolicy"]
 if blocking["high"] != "block" or blocking["medium"] != "report":
@@ -399,8 +415,10 @@ for invariant in \
   'newRisk: False Positive' \
   'url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/comments"' \
   'url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/tenant/export"' \
+  'url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/admin/invites"' \
   'urlRegex: false' \
   '- POST' \
+  '- GET' \
   '- type: activeScan-policy' \
   'defaultThreshold: "Off"' \
   '- type: activeScan' \
