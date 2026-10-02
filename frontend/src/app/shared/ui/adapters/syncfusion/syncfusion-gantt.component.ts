@@ -149,6 +149,8 @@ export class SyncfusionGanttComponent {
   @Output() readonly vendorFailed = new EventEmitter<void>();
 
   private interactionActive = false;
+  private cachedDataSourceContract: CoglatasGanttContract<object> | null = null;
+  private cachedDataSource: readonly SyncfusionGanttRow[] = [];
 
   readonly taskFields = {
     id: 'taskId',
@@ -185,6 +187,13 @@ export class SyncfusionGanttComponent {
   }
 
   get dataSource(): readonly SyncfusionGanttRow[] {
+    // Syncfusion treats a new dataSource array reference as a data refresh.
+    // Keep the projection referentially stable for an immutable contract input
+    // so ordinary Angular change detection cannot restart the vendor spinner.
+    if (this.cachedDataSourceContract === this.contract) {
+      return this.cachedDataSource;
+    }
+
     const items = this.canonicalItems;
     const itemIds = new Set(items.map((item) => item.taskId));
     const taskIds = new Set(items.filter((item) => item.kind === 'task').map((item) => item.taskId));
@@ -198,7 +207,7 @@ export class SyncfusionGanttComponent {
       predecessors.set(dependency.successorTaskId, values);
     }
 
-    return items.map((item) => {
+    const dataSource = items.map((item) => {
       const milestoneDate = item.kind === 'milestone'
         ? parseGanttDateOnly(item.milestoneDate)
         : null;
@@ -212,10 +221,14 @@ export class SyncfusionGanttComponent {
         endDate: milestoneDate ?? parseGanttDateOnly(item.plannedEndDate),
         progress: item.progressPercent,
         isMilestone: item.kind === 'milestone',
-        isManual: true,
+        isManual: true as const,
         predecessor: (predecessors.get(item.taskId) ?? []).sort().join(',')
       };
     });
+
+    this.cachedDataSourceContract = this.contract;
+    this.cachedDataSource = dataSource;
+    return dataSource;
   }
 
   handleActionBegin(event: SyncfusionActionEvent): void {
