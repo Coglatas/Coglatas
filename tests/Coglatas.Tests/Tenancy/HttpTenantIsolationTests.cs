@@ -502,6 +502,8 @@ public sealed class HttpTenantIsolationTests
             ("/api/search?type=Message&authorUserId=invalid-author-secret-marker", "invalid-author-secret-marker"),
             ("/api/search?type=Message&messageRead=invalid-read-secret-marker", "invalid-read-secret-marker"),
             ("/api/search?type=Message&toDateExclusive=invalid-date-secret-marker", "invalid-date-secret-marker"),
+            ("/api/search?Q=search%00invalid-query-secret-marker", "invalid-query-secret-marker"),
+            ("/api/search/message-authors?Q=author%00invalid-query-secret-marker", "invalid-query-secret-marker"),
             ("/api/search/message-authors?selectedUserId=invalid-selected-secret-marker", "invalid-selected-secret-marker")
         };
 

@@ -62,6 +62,32 @@ public sealed class SecurityOpenApiOperationTransformerTests
         Assert.True(response.Content is null || response.Content.Count == 0);
     }
 
+    [Theory]
+    [InlineData("api/search")]
+    [InlineData("api/search/message-authors")]
+    public async Task Search_query_parameters_exclude_postgresql_unsafe_nul(string relativePath)
+    {
+        var qSchema = new OpenApiSchema { Type = JsonSchemaType.String };
+        var operation = new OpenApiOperation
+        {
+            Parameters =
+            [
+                new OpenApiParameter
+                {
+                    Name = "Q",
+                    In = ParameterLocation.Query,
+                    Schema = qSchema
+                }
+            ]
+        };
+        var context = CreateContext();
+        context.Description.RelativePath = relativePath;
+
+        await new SecurityOpenApiOperationTransformer().TransformAsync(operation, context, CancellationToken.None);
+
+        Assert.Equal("^[^\\u0000]*$", qSchema.Pattern);
+    }
+
     private static OpenApiOperationTransformerContext CreateContext(params object[] endpointMetadata) =>
         new()
         {
