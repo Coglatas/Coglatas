@@ -122,14 +122,28 @@ end
 alert_filter = only_job(jobs, "alertFilter")
 alert_filters = hash_array(alert_filter["alertFilters"], "alertFilter rules must be an array of mappings")
 pii_filters = alert_filters.select { |item| item["ruleId"].to_s == "10062" }
-fail!("Automation plan must contain exactly one scoped PII Disclosure false-positive filter") unless pii_filters.length == 1
-pii_filter = pii_filters.first
-unless pii_filter["newRisk"] == "False Positive" &&
-       pii_filter["context"] == "sec06-api" &&
-       pii_filter["url"] == "${COGLATAS_SECURITY_ZAP_TARGET}/api/comments" &&
-       pii_filter["urlRegex"] == false &&
-       pii_filter["methods"] == ["POST"]
-  fail!("PII Disclosure filter must remain scoped to POST /api/comments")
+expected_pii_filters = [
+  {
+    "ruleId" => 10062,
+    "ruleName" => "PII Disclosure",
+    "newRisk" => "False Positive",
+    "context" => "sec06-api",
+    "url" => "${COGLATAS_SECURITY_ZAP_TARGET}/api/comments",
+    "urlRegex" => false,
+    "methods" => ["POST"],
+  },
+  {
+    "ruleId" => 10062,
+    "ruleName" => "PII Disclosure",
+    "newRisk" => "False Positive",
+    "context" => "sec06-api",
+    "url" => "${COGLATAS_SECURITY_ZAP_TARGET}/api/tenant/export",
+    "urlRegex" => false,
+    "methods" => ["POST"],
+  },
+]
+unless pii_filters == expected_pii_filters
+  fail!("PII Disclosure filters must remain exactly scoped to POST /api/comments and POST /api/tenant/export")
 end
 
 policy_job = only_job(jobs, "activeScan-policy")
@@ -316,15 +330,27 @@ if (
     )
 if policy["roles"] != ["alpha-owner", "alpha-restricted", "beta-owner"]:
     raise SystemExit("SEC-06 role matrix drifted")
-expected_alert_filter = [{
-    "ruleId": 10062,
-    "method": "POST",
-    "path": "/api/comments",
-    "newRisk": "False Positive",
-    "reason": "POST /api/comments returns the caller-controlled comment body that was just submitted, so ZAP can passively rediscover its own Luhn-valid scan value. Read paths and all other endpoints remain unfiltered.",
-}]
-if policy.get("alertFilters") != expected_alert_filter:
-    raise SystemExit("SEC-06 PII false-positive filter must remain narrowly scoped to POST /api/comments")
+expected_alert_filters = [
+    {
+        "ruleId": 10062,
+        "method": "POST",
+        "path": "/api/comments",
+        "newRisk": "False Positive",
+        "reason": "POST /api/comments returns the caller-controlled comment body that was just submitted, so ZAP can passively rediscover its own Luhn-valid scan value. Read paths and all other endpoints remain unfiltered.",
+    },
+    {
+        "ruleId": 10062,
+        "method": "POST",
+        "path": "/api/tenant/export",
+        "newRisk": "False Positive",
+        "reason": "POST /api/tenant/export is the explicitly authorized metadata export contract and intentionally includes redacted tenant-user metadata such as email while excluding secrets, hashes, tokens, and file bodies. Export-job reads and all other endpoints remain unfiltered.",
+    },
+]
+if policy.get("alertFilters") != expected_alert_filters:
+    raise SystemExit(
+        "SEC-06 PII false-positive filters must remain exactly scoped to "
+        "POST /api/comments and POST /api/tenant/export"
+    )
 blocking = policy["blockingPolicy"]
 if blocking["high"] != "block" or blocking["medium"] != "report":
     raise SystemExit("High must block while Medium remains visible/report-only")
@@ -372,6 +398,7 @@ for invariant in \
   '- ruleId: 10062' \
   'newRisk: False Positive' \
   'url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/comments"' \
+  'url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/tenant/export"' \
   'urlRegex: false' \
   '- POST' \
   '- type: activeScan-policy' \
