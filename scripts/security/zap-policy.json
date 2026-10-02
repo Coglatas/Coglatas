@@ -120,6 +120,13 @@
       "path": "/api/tenant/export",
       "newRisk": "False Positive",
       "reason": "POST /api/tenant/export is the explicitly authorized metadata export contract and intentionally includes redacted tenant-user metadata such as email while excluding secrets, hashes, tokens, and file bodies. Export-job reads and all other endpoints remain unfiltered."
+    },
+    {
+      "ruleId": 10062,
+      "method": "GET",
+      "path": "/api/admin/invites",
+      "newRisk": "False Positive",
+      "reason": "GET /api/admin/invites is an explicitly privileged administration read whose response contract intentionally contains invitee email addresses. SEC-05 independently requires ordinary/restricted users to receive a safe 403, so authorization/non-disclosure remains fail-closed while this exact authorized PII-bearing contract is filtered from generic passive PII detection."
     }
   ]
 }
