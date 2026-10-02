@@ -225,6 +225,21 @@ output="$(route_repo "$repo" "$base" "$head")"
 assert_eq true "$(value_of "$output" avmig_contract)" "AV-MIG mutation target contract"
 assert_eq true "$(value_of "$output" avmig_selftests)" "AV-MIG mutation target self-tests"
 
+# CI infrastructure changes must exercise both the AV-MIG/OpenAPI contract and
+# its verifier self-tests. This prevents a CI-only edit from silently disabling
+# the contract producer while still claiming verifier coverage.
+repo="$tmp_root/ci-infrastructure"
+init_repo "$repo"
+mkdir -p "$repo/.github/workflows"
+printf 'name: CI\n' > "$repo/.github/workflows/ci.yml"
+base="$(commit_all "$repo" base)"
+printf 'name: CI\n# changed\n' > "$repo/.github/workflows/ci.yml"
+head="$(commit_all "$repo" head)"
+output="$(route_repo "$repo" "$base" "$head")"
+assert_eq true "$(value_of "$output" avmig_contract)" "CI infrastructure AV-MIG contract"
+assert_eq true "$(value_of "$output" avmig_selftests)" "CI infrastructure AV-MIG self-tests"
+assert_eq full "$(value_of "$output" backend_test_scope)" "CI infrastructure backend full suite"
+
 # Cross-cutting Common changes intentionally fail safe to the full backend suite.
 repo="$tmp_root/common"
 init_repo "$repo" Announcements

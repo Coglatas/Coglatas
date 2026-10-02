@@ -364,6 +364,7 @@ while IFS= read -r path; do
       frontend_license_guard=true
       frontend_storybook=true
       frontend_playwright=true
+      avmig_contract=true
       avmig_selftests=true
       security=true
       security_dotnet=true
