@@ -154,6 +154,8 @@ def require_security_contract(document: dict[str, object]) -> None:
     nul_safe_query_parameters = (
         ("/api/conversations/recipients", "query"),
         ("/api/ui/panels", "moduleKey"),
+        ("/api/search", "Q"),
+        ("/api/search/message-authors", "Q"),
     )
     for path_name, parameter_name in nul_safe_query_parameters:
         path_item = paths.get(path_name) if isinstance(paths, dict) else None

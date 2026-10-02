@@ -20,6 +20,11 @@ public sealed class DbSearchService(
             return Result<SearchResponse>.Failure("Authentication is required.");
         }
 
+        if (request.Q?.Contains('\0') == true)
+        {
+            return Result<SearchResponse>.Failure("Search query contains unsupported characters.");
+        }
+
         if (!Enum.IsDefined(request.Type))
         {
             return Result<SearchResponse>.Failure("Search type is invalid.");
@@ -189,6 +194,11 @@ public sealed class DbSearchService(
         if (!currentUser.IsAuthenticated || !currentUser.UserId.HasValue)
         {
             return Result<MessageAuthorOptionsResponse>.Failure("Authentication is required.");
+        }
+
+        if (request.Q?.Contains('\0') == true)
+        {
+            return Result<MessageAuthorOptionsResponse>.Failure("Author query contains unsupported characters.");
         }
 
         if (request.SelectedUserId == Guid.Empty)
