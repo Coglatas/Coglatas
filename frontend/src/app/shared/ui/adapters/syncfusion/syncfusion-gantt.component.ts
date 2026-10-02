@@ -167,9 +167,9 @@ export class SyncfusionGanttComponent {
   @Output() readonly interactionActiveChange = new EventEmitter<boolean>();
   @Output() readonly vendorFailed = new EventEmitter<void>();
 
-  private interactionActive = false,
-    cachedDataSourceKey = '',
-    cachedDataSource: readonly SyncfusionGanttRow[] = [];
+  private interactionActive = false;
+  private cachedDataSourceKey = '';
+  private cachedDataSource: readonly SyncfusionGanttRow[] = [];
 
   readonly taskFields = {
     id: 'taskId',
