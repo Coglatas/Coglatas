@@ -116,7 +116,8 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
         OpenApiOperationTransformerContext context)
     {
         var relativePath = context.Description.RelativePath?.TrimEnd('/');
-        if (!HttpMethods.IsGet(context.Description.HttpMethod) ||
+        if (context.Description.HttpMethod is not { } method ||
+            !HttpMethods.IsGet(method) ||
             (relativePath is not "api/search" and not "api/search/message-authors"))
         {
             return;
