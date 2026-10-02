@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      APPLY_DISMISSALS: "false"
-      MAX_DISMISSALS: "900"
+      APPLY_DISMISSALS: "true"
+      MAX_DISMISSALS: "1200"
     steps:
       - name: Inspect and optionally dismiss high-confidence Qodana false positives
         shell: bash
@@ -86,11 +86,11 @@ jobs:
                       return None
                   property_name = m.group(1)
                   owner_type = property_name.rsplit(".", 1)[0].rsplit(".", 1)[-1]
-                  if owner_type.endswith(("Response", "Request")):
+                  if owner_type.endswith("Response"):
                       return (
                           "public-wire-contract",
                           "Qodana cannot observe external ASP.NET Core/System.Text.Json/OpenAPI consumers of this "
-                          "public request/response positional property; it is intentionally part of the wire contract.",
+                          "public response positional property; it is intentionally part of the serialized wire contract.",
                       )
 
               if rule == "UnusedAutoPropertyAccessor.Global":
