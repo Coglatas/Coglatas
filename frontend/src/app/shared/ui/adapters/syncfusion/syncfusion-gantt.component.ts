@@ -196,10 +196,12 @@ export class SyncfusionGanttComponent {
   }
 
   get dataSource(): readonly SyncfusionGanttRow[] {
-    const items = this.canonicalItems,
+    const canonicalItems = this.canonicalItems,
       dependencies = this.contract.dependencies ?? [],
-      dataSourceKey = JSON.stringify([
-        items.map((item) => [
+      itemIds = new Set(canonicalItems.map((item) => item.taskId)),
+      predecessors = new Map<string, string[]>(),
+      projectionKey = JSON.stringify([
+        canonicalItems.map((item) => [
           item.taskId,
           item.title,
           item.kind,
@@ -215,11 +217,9 @@ export class SyncfusionGanttComponent {
           dependency.type
         ])
       ]),
-      itemIds = new Set(items.map((item) => item.taskId)),
-      taskIds = new Set(items.filter((item) => item.kind === 'task').map((item) => item.taskId)),
-      predecessors = new Map<string, string[]>();
+      taskIds = new Set(canonicalItems.filter((item) => item.kind === 'task').map((item) => item.taskId));
 
-    if (this.cachedDataSourceKey === dataSourceKey) {
+    if (this.cachedDataSourceKey === projectionKey) {
       return this.cachedDataSource;
     }
 
@@ -232,8 +232,8 @@ export class SyncfusionGanttComponent {
       predecessors.set(dependency.successorTaskId, values);
     }
 
-    this.cachedDataSourceKey = dataSourceKey;
-    this.cachedDataSource = items.map((item) => {
+    this.cachedDataSourceKey = projectionKey;
+    this.cachedDataSource = canonicalItems.map((item) => {
       const milestoneDate = item.kind === 'milestone'
         ? parseGanttDateOnly(item.milestoneDate)
         : null;
