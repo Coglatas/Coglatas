@@ -87,17 +87,25 @@ describe('SyncfusionGanttComponent adapter boundary', () => {
     expect(formatGanttDateOnly(milestone.endDate)).toBe('2026-07-15');
   });
 
-  it('keeps vendor-bound object references stable until the contract changes', () => {
+  it('changes vendor-bound references only when their effective inputs change', () => {
     const component = new SyncfusionGanttComponent();
     component.contract = ganttContract();
 
     const firstDataSource = component.dataSource;
-    const firstEditSettings = component.editSettings;
+    const enabledSettings = component.editSettings;
+    component.contract = {
+      ...component.contract,
+      busyItemId: 'task-leaf',
+      focusItemId: 'task-leaf',
+      feedback: 'Saving'
+    };
+
     expect(component.dataSource).toBe(firstDataSource);
-    expect(component.editSettings).toBe(firstEditSettings);
+    expect(component.editSettings).toBe(enabledSettings);
 
     component.contract = {
       ...component.contract,
+      busyItemId: null,
       scheduledItems: component.contract.scheduledItems.map((candidate) =>
         candidate.taskId === 'task-leaf'
           ? { ...candidate, progressPercent: 65, version: candidate.version + 1 }
@@ -105,12 +113,15 @@ describe('SyncfusionGanttComponent adapter boundary', () => {
     };
 
     const updatedDataSource = component.dataSource;
-    const updatedEditSettings = component.editSettings;
     expect(updatedDataSource).not.toBe(firstDataSource);
-    expect(updatedEditSettings).not.toBe(firstEditSettings);
     expect(component.dataSource).toBe(updatedDataSource);
-    expect(component.editSettings).toBe(updatedEditSettings);
+    expect(component.editSettings).toBe(enabledSettings);
     expect(updatedDataSource.find((candidate) => candidate.taskId === 'task-leaf')?.progress).toBe(65);
+
+    component.contract = { ...component.contract, readOnly: true };
+    expect(component.dataSource).toBe(updatedDataSource);
+    expect(component.editSettings).not.toBe(enabledSettings);
+    expect(component.editSettings.allowTaskbarEditing).toBe(false);
   });
 
   it('keeps unscheduled canonical Tasks in the vendor projection with null dates', () => {
