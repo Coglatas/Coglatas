@@ -92,7 +92,8 @@ jobs:
           retention-days: 14
 
   apply-reviewed:
-    if: ${{ github.event.head_commit.message == 'ops: apply full Qodana audit 20261002 (28 dismissals, 13 reopenings)' }}
+    if: >-
+      ${{ github.event.head_commit.message == 'ops: apply full Qodana audit 20261002 (28 dismissals, 13 reopenings)' }}
     needs: inventory
     runs-on: ubuntu-latest
     timeout-minutes: 10
