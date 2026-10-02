@@ -56,7 +56,19 @@ interface SyncfusionGanttEditSettings {
   readonly allowTaskbarEditing: boolean;
 }
 
-const dateOnlyPattern = /^(\d{4})-(\d{2})-(\d{2})$/u;
+const dateOnlyPattern = /^(\d{4})-(\d{2})-(\d{2})$/u,
+  disabledEditSettings: SyncfusionGanttEditSettings = {
+    allowEditing: false,
+    allowAdding: false,
+    allowDeleting: false,
+    allowTaskbarEditing: false
+  },
+  enabledEditSettings: SyncfusionGanttEditSettings = {
+    allowEditing: false,
+    allowAdding: false,
+    allowDeleting: false,
+    allowTaskbarEditing: true
+  };
 export const SYNCFUSION_GANTT_THEME_ASSETS = [
   'assets/vendor/syncfusion/base/material3.css',
   'assets/vendor/syncfusion/treegrid/material3.css',
@@ -156,15 +168,8 @@ export class SyncfusionGanttComponent {
   @Output() readonly vendorFailed = new EventEmitter<void>();
 
   private interactionActive = false,
-    cachedDataSourceContract: CoglatasGanttContract<object> | null = null,
-    cachedDataSource: readonly SyncfusionGanttRow[] = [],
-    cachedEditSettingsContract: CoglatasGanttContract<object> | null = null,
-    cachedEditSettings: SyncfusionGanttEditSettings = {
-      allowEditing: false,
-      allowAdding: false,
-      allowDeleting: false,
-      allowTaskbarEditing: false
-    };
+    cachedDataSourceKey = '',
+    cachedDataSource: readonly SyncfusionGanttRow[] = [];
 
   readonly taskFields = {
     id: 'taskId',
@@ -187,31 +192,38 @@ export class SyncfusionGanttComponent {
   ];
 
   get editSettings(): SyncfusionGanttEditSettings {
-    if (this.cachedEditSettingsContract === this.contract) {
-      return this.cachedEditSettings;
-    }
-
-    const editSettings: SyncfusionGanttEditSettings = {
-      allowEditing: false,
-      allowAdding: false,
-      allowDeleting: false,
-      allowTaskbarEditing: this.hasAnyPointerEdit
-    };
-    this.cachedEditSettingsContract = this.contract;
-    this.cachedEditSettings = editSettings;
-    return editSettings;
+    return this.hasAnyPointerEdit ? enabledEditSettings : disabledEditSettings;
   }
 
   get dataSource(): readonly SyncfusionGanttRow[] {
-    if (this.cachedDataSourceContract === this.contract) {
+    const items = this.canonicalItems,
+      dependencies = this.contract.dependencies ?? [],
+      dataSourceKey = JSON.stringify([
+        items.map((item) => [
+          item.taskId,
+          item.title,
+          item.kind,
+          item.parentTaskId,
+          item.plannedStartDate,
+          item.plannedEndDate,
+          item.milestoneDate,
+          item.progressPercent
+        ]),
+        dependencies.map((dependency) => [
+          dependency.predecessorTaskId,
+          dependency.successorTaskId,
+          dependency.type
+        ])
+      ]),
+      itemIds = new Set(items.map((item) => item.taskId)),
+      taskIds = new Set(items.filter((item) => item.kind === 'task').map((item) => item.taskId)),
+      predecessors = new Map<string, string[]>();
+
+    if (this.cachedDataSourceKey === dataSourceKey) {
       return this.cachedDataSource;
     }
 
-    const items = this.canonicalItems;
-    const itemIds = new Set(items.map((item) => item.taskId));
-    const taskIds = new Set(items.filter((item) => item.kind === 'task').map((item) => item.taskId));
-    const predecessors = new Map<string, string[]>();
-    for (const dependency of this.contract.dependencies ?? []) {
+    for (const dependency of dependencies) {
       if (dependency.type !== 'finishToStart'
         || !taskIds.has(dependency.predecessorTaskId)
         || !taskIds.has(dependency.successorTaskId)) {continue;}
@@ -220,7 +232,8 @@ export class SyncfusionGanttComponent {
       predecessors.set(dependency.successorTaskId, values);
     }
 
-    const dataSource = items.map((item) => {
+    this.cachedDataSourceKey = dataSourceKey;
+    this.cachedDataSource = items.map((item) => {
       const milestoneDate = item.kind === 'milestone'
         ? parseGanttDateOnly(item.milestoneDate)
         : null;
@@ -238,10 +251,7 @@ export class SyncfusionGanttComponent {
         predecessor: (predecessors.get(item.taskId) ?? []).sort().join(',')
       };
     });
-
-    this.cachedDataSourceContract = this.contract;
-    this.cachedDataSource = dataSource;
-    return dataSource;
+    return this.cachedDataSource;
   }
 
   handleActionBegin(event: SyncfusionActionEvent): void {
@@ -325,8 +335,8 @@ export class SyncfusionGanttComponent {
 
   private get hasAnyPointerEdit(): boolean {
     return this.canonicalItems.some((item) =>
-      this.canApplyPointerAction(item, 'schedule')
-      || this.canApplyPointerAction(item, 'progress'));
+      this.canOfferPointerAction(item, 'schedule')
+      || this.canOfferPointerAction(item, 'progress'));
   }
 
   private itemFor(event: SyncfusionTaskbarEvent): CoglatasGanttItem | undefined {
@@ -346,9 +356,12 @@ export class SyncfusionGanttComponent {
   }
 
   private canApplyPointerAction(item: CoglatasGanttItem, action: 'schedule' | 'progress'): boolean {
-    if (this.contract.readOnly
-      || this.contract.busyItemId === item.taskId
-      || this.isDerivedParent(item)) {return false;}
+    if (this.contract.busyItemId === item.taskId) {return false;}
+    return this.canOfferPointerAction(item, action);
+  }
+
+  private canOfferPointerAction(item: CoglatasGanttItem, action: 'schedule' | 'progress'): boolean {
+    if (this.contract.readOnly || this.isDerivedParent(item)) {return false;}
     if (action === 'progress') {
       return (this.contract.permissions?.canEditProgress ?? false)
         && item.kind === 'task'
