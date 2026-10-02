@@ -25,9 +25,8 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
     public async Task LegacyUnknownVisibilityCanBeExplicitlyClassifiedThenActivated()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedProjectGraphAsync(
                 database,
                 "classify-activate",
@@ -76,9 +75,8 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
     public async Task ProjectCreateGrantDoesNotAuthorizeVisibilityChange()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedProjectGraphAsync(database, "create-not-visibility", ProjectVisibility.MembersOnly);
             await AddCapabilityAsync(database, graph, graph.ReaderUserId, CapabilityKeys.ProjectCreate);
 
@@ -99,9 +97,8 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
     public async Task StaleVisibilityVersionProducesNoMutationAuditOrOutbox()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedProjectGraphAsync(database, "stale-visibility", ProjectVisibility.MembersOnly);
 
             await using var visibility = CreateVisibilityScope(database, graph, graph.OwnerUserId);
@@ -124,9 +121,8 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
     public async Task VisibilityChangeAuditOrOutboxFailureRollsBack()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedProjectGraphAsync(database, "visibility-outbox-fail", ProjectVisibility.MembersOnly);
 
             await using var visibility = CreateVisibilityScope(
@@ -153,9 +149,8 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
     public async Task ActivatedProjectMemberAddCreatesProjectGeneralParticipantAtomically()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedProjectGraphAsync(
                 database,
                 "member-add",
@@ -184,9 +179,8 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
     public async Task ProjectMemberViewerDowngradeRemovesProjectGeneralPostRights()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedProjectGraphAsync(database, "viewer-downgrade", ProjectVisibility.MembersOnly);
 
             await using var membership = CreateMembershipScope(database, graph, graph.OwnerUserId);
@@ -210,9 +204,8 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
     public async Task WorkspaceVisibleProjectMemberRemovalKeepsBroadReadButRevokesParticipantRights()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedProjectGraphAsync(database, "workspace-visible-remove", ProjectVisibility.WorkspaceVisible);
 
             await using (var membership = CreateMembershipScope(database, graph, graph.OwnerUserId))
@@ -238,9 +231,8 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
     public async Task MembersOnlyProjectMemberRemovalRevokesConversationAndTaskNotificationAccess()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedProjectGraphAsync(database, "members-only-remove", ProjectVisibility.MembersOnly);
 
             await using (var membership = CreateMembershipScope(database, graph, graph.OwnerUserId))
@@ -268,9 +260,8 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
     public async Task ActivatedProjectMissingProjectGeneralFailsMemberMutationClosed()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedProjectGraphAsync(
                 database,
                 "missing-general",
@@ -299,9 +290,8 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
     public async Task ArchivedProjectRejectsAddUpdateAndRemoveMemberWithoutSideEffects()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedProjectGraphAsync(
                 database,
                 "archived-member-mutations",
@@ -340,9 +330,8 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
     public async Task ProjectRealtimeResolverUsesCanonicalVisibilityScope()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedProjectGraphAsync(
                 database,
                 "group-bound-realtime",
@@ -365,9 +354,8 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
     public async Task ArchivedWorkspaceCurrentMemberUsesCanonicalHistoricalProjectReadScope()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedProjectGraphAsync(
                 database,
                 "archived-workspace-read",
@@ -395,9 +383,8 @@ public sealed class WpcFinal01CanonicalCompletionPostgreSqlTests
     public async Task FinalCreateActivateMembershipNotificationFlowCommitsOnlyAuthorizedOutcomes()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var authority = await SeedWorkspaceOnlyAsync(database, "final-flow");
             await using var scope = CreateFullFlowScope(database, authority);
 
