@@ -67,7 +67,8 @@
     "fsevents@2.3.3": true,
     "lmdb@3.5.6": true,
     "msgpackr-extract@3.0.4": true,
-    "@syncfusion/ej2-angular-base@34.2.8": true
+    "@syncfusion/ej2-angular-base@34.2.8": true,
+    "@syncfusion/ej2-angular-base@35.1.37": true
   },
   "overrides": {
     "undici": "7.29.1",
