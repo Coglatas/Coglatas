@@ -125,13 +125,20 @@ def require_ordered_identity_equivalence(original: list[dict], replay: list[dict
     return digest(json.dumps([identity(result) for result in original], separators=(",", ":")).encode())
 
 
-def reconcile(baseline: list[dict], head: list[dict], removed_indices: set[int]) -> dict:
+def reconcile(baseline: list[dict], head: list[dict], removed_indices: set[int],
+              correspondences: dict[str, str] | None = None) -> dict:
     if any(type(i) is not int or i < 0 or i >= len(baseline) for i in removed_indices):
         raise ValueError("Removal index outside audited inventory")
     before = collections.Counter(identity(r) for r in baseline)
     current = collections.Counter(identity(r) for r in head)
     removed = collections.Counter(identity(baseline[i]) for i in removed_indices)
     expected = before - removed
+    for old, new in (correspondences or {}).items():
+        if old == new or expected[old] != 1 or current[new] != 1 or current[old] != 0 or expected[new] != 0:
+            raise ValueError("Reviewed correspondence absent, colliding or applied to a removed finding")
+        expected.subtract({old: 1})
+        expected.update({new: 1})
+    expected += collections.Counter()
     added, missing = current - expected, expected - current
     if added or missing:
         details = {"unexpected_added": sum(added.values()), "unexpected_missing": sum(missing.values()),
@@ -143,6 +150,7 @@ def reconcile(baseline: list[dict], head: list[dict], removed_indices: set[int])
         "baseline_findings": len(baseline), "head_findings": len(head),
         "measured_removals": sum(removed.values()), "retained_identities": sum(expected.values()),
         "unexpected_added": 0, "unexpected_missing": 0,
+        "mapped_retained_findings": len(correspondences or {}),
         "removed_by_rule": dict(sorted(removed_rules.items())),
         "head_rule_counts": dict(sorted(current_rules.items())),
         "retained_identity_sha256": digest(json.dumps(sorted(expected.items()), separators=(",", ":")).encode()),
@@ -172,6 +180,10 @@ def diagnostic_identity_pairs(baseline: list[dict], head: list[dict], removed_in
     (evidence / "identity-drift.json").write_text(json.dumps(diagnostic, indent=2, sort_keys=True) + "\n")
     for pair in pairs[:30]:
         print("IDENTITY_DRIFT_PAIR " + json.dumps(pair, sort_keys=True), flush=True)
+    for label, counts, results_by_identity in [("MISSING", missing, old_by_identity), ("ADDED", added, new_by_identity)]:
+        for key, count in list(counts.items())[:30]:
+            print("RETAINED_" + label + " " + json.dumps({"identity": key, "count": count,
+                  "location": results_by_identity[key]["locations"][0]}, sort_keys=True), flush=True)
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -281,7 +293,16 @@ def main() -> None:
     head = sarif_results(head_raw, selection["head"]["sha"])
     removed = set().union(*(indices(packet) for packet in selection["completed_packets"]))
     diagnostic_identity_pairs(baseline, head, removed, evidence)
-    proof = {**reconcile(baseline, head, removed), "completed_packets": selection["completed_packets"],
+    from reviewed_qodana_correspondence import read_source, validate_correspondences
+    correspondence_raw = Path(sys.argv[3]).read_bytes()
+    correspondence_manifest = json.loads(correspondence_raw)
+    correspondence_map = validate_correspondences(
+        correspondence_manifest, baseline, head, removed, baseline_provenance, head_provenance,
+        selection["completed_packets"], lambda path, revision, blob: read_source(path, revision, blob, token))
+    (evidence / "reviewed-correspondences.json").write_bytes(correspondence_raw)
+    proof = {**reconcile(baseline, head, removed, correspondence_map),
+             "reviewed_correspondence_sha256": digest(correspondence_raw),
+             "reviewed_correspondences": correspondence_manifest["correspondences"], "completed_packets": selection["completed_packets"],
              "baseline": baseline_provenance, "head": head_provenance,
              "identity_anchor": anchor_provenance,
              "historical_cloud_sarif_sha256": AUDIT_SARIF_SHA256,

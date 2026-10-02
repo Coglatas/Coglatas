@@ -1,5 +1,8 @@
 """Fail closed on inventory drift, stale provenance and token forwarding."""
 import io
+import copy
+import base64
+import hashlib
 import json
 import zipfile
 import unittest
@@ -7,6 +10,7 @@ from unittest import mock
 import urllib.error
 
 import reconcile_qodana as q
+import reviewed_qodana_correspondence as reviewed
 
 
 def result(name="same", line=1):
@@ -161,6 +165,122 @@ class ReconciliationTests(unittest.TestCase):
             with self.subTest(replay=replay), self.assertRaises(ValueError):
                 q.require_ordered_identity_equivalence(original, replay)
 
+
+
+class ReviewedCorrespondenceTests(unittest.TestCase):
+    def fixture(self):
+        declaration = "public bool Flag { get; set; }"
+        region = {"startLine": 1, "endLine": 1, "startColumn": 13, "endColumn": 17,
+                  "snippet": {"text": "Flag"}}
+        old = result("retained")
+        old["partialFingerprints"] = {"equalIndicator/v1": "A" * 64}
+        old["locations"][0]["physicalLocation"]["region"] = region
+        new = copy.deepcopy(old)
+        new["partialFingerprints"] = {"equalIndicator/v1": "B" * 64}
+        entry = {"before_identity": json.loads(q.identity(old)), "after_identity": json.loads(q.identity(new)),
+                 "before_location": copy.deepcopy(old["locations"][0]["physicalLocation"]),
+                 "after_location": copy.deepcopy(new["locations"][0]["physicalLocation"]),
+                 "before_blob": "a" * 40, "after_blob": "b" * 40,
+                 "before_declaration": declaration, "after_declaration": declaration,
+                 "packet": "P01", "rationale": "Reviewed unchanged declaration and context relocation."}
+        baseline_provenance = {"sha": "c" * 40, "sarif_sha256": "d" * 64}
+        head_provenance = {"sha": "e" * 40, "sarif_sha256": "f" * 64}
+        manifest = {"version": 1, "baseline_sha": baseline_provenance["sha"], "head_sha": head_provenance["sha"],
+                    "baseline_sarif_sha256": baseline_provenance["sarif_sha256"],
+                    "head_sarif_sha256": head_provenance["sarif_sha256"], "correspondences": [entry]}
+        return old, new, manifest, baseline_provenance, head_provenance, declaration
+
+    def validate(self, fixture, removed=set()):
+        old, new, manifest, bp, hp, declaration = fixture
+        return reviewed.validate_correspondences(manifest, [old], [new], removed, bp, hp, ["P01"],
+                                                  lambda path, revision, blob: declaration)
+
+    def test_explicit_relocation_preserves_warning_and_is_not_counted_as_source_removal(self):
+        fixture = self.fixture()
+        mapping = self.validate(fixture)
+        old, new = fixture[:2]
+        proof = q.reconcile([old, result("fixed")], [new], {1}, mapping)
+        self.assertEqual(proof["measured_removals"], 1)
+        self.assertEqual(proof["mapped_retained_findings"], 1)
+        self.assertEqual(proof["retained_identities"], 1)
+
+    def test_correspondence_requires_actual_immutable_revision_and_raw_sarif_digest(self):
+        for key in ["baseline_sha", "head_sha", "baseline_sarif_sha256", "head_sarif_sha256"]:
+            fixture = self.fixture()
+            fixture[2][key] = "0" * len(fixture[2][key])
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                self.validate(fixture)
+
+    def test_unreviewed_fingerprint_rule_path_and_message_changes_stop(self):
+        for index, value in [(0, "NewRule"), (1, "src/Other.cs"), (2, {"equalIndicator/v1": "C" * 64}), (3, "new message")]:
+            fixture = self.fixture()
+            fixture[2]["correspondences"][0]["after_identity"][index] = value
+            with self.subTest(index=index), self.assertRaises(ValueError):
+                self.validate(fixture)
+
+    def test_removed_or_absent_old_finding_cannot_be_a_correspondence(self):
+        with self.assertRaises(ValueError):
+            self.validate(self.fixture(), {0})
+
+    def test_duplicate_correspondences_stop(self):
+        fixture = self.fixture()
+        fixture[2]["correspondences"].append(copy.deepcopy(fixture[2]["correspondences"][0]))
+        with self.assertRaises(ValueError):
+            self.validate(fixture)
+
+    def test_exact_source_location_and_declaration_are_required(self):
+        for change in ["line", "column", "snippet", "declaration", "actual_context"]:
+            fixture = self.fixture()
+            entry = fixture[2]["correspondences"][0]
+            if change == "declaration":
+                entry["after_declaration"] += " // changed"
+            elif change == "actual_context":
+                entry["after_location"]["unexpected"] = "drift"
+            else:
+                field = {"line": "startLine", "column": "startColumn", "snippet": "snippet"}[change]
+                entry["after_location"]["region"][field] = {"text": "Other"} if field == "snippet" else 2
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                self.validate(fixture)
+
+    def test_unlanded_packet_and_unknown_manifest_fields_stop(self):
+        for change in ["packet", "manifest", "entry"]:
+            fixture = self.fixture()
+            if change == "packet":
+                fixture[2]["correspondences"][0]["packet"] = "P09"
+            elif change == "manifest":
+                fixture[2]["ignore_new"] = True
+            else:
+                fixture[2]["correspondences"][0]["ignore"] = True
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                self.validate(fixture)
+
+    def test_mapping_does_not_hide_new_findings_or_other_fingerprint_drift(self):
+        fixture = self.fixture()
+        mapping = self.validate(fixture)
+        old, new = fixture[:2]
+        with self.assertRaises(ValueError):
+            q.reconcile([old], [new, result("unexpected")], set(), mapping)
+        unreviewed = copy.deepcopy(new)
+        unreviewed["partialFingerprints"] = {"equalIndicator/v1": "C" * 64}
+        with self.assertRaises(ValueError):
+            q.reconcile([old], [unreviewed], set(), mapping)
+
+    def test_downloaded_source_requires_matching_path_blob_and_actual_git_bytes(self):
+        data = b"public bool Flag { get; set; }\n"
+        blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+        response = {"type": "file", "path": "src/Test.cs", "sha": blob, "encoding": "base64",
+                    "content": base64.b64encode(data).decode()}
+        with mock.patch.object(q, "api", return_value=response):
+            self.assertEqual(reviewed.read_source("src/Test.cs", "a" * 40, blob, "not-printed"), data.decode())
+        response["content"] = base64.b64encode(b"different source").decode()
+        with mock.patch.object(q, "api", return_value=response), self.assertRaises(ValueError):
+            reviewed.read_source("src/Test.cs", "a" * 40, blob, "not-printed")
+
+    def test_unsafe_path_and_mutable_source_revision_stop_before_api_request(self):
+        for path, revision in [("src/../Other.cs", "a" * 40), ("src/Test.cs", "main")]:
+            with mock.patch.object(q, "api") as api_mock, self.assertRaises(ValueError):
+                reviewed.read_source(path, revision, "b" * 40, "not-printed")
+            api_mock.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()

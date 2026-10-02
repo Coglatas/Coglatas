@@ -1,0 +1,50 @@
+name: Qodana R2 Identity Reconciliation
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    name: Qodana frozen identity reconciliation
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.head.ref == 'ci/qodana-r2-proof')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout immutable proof revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Preserve proof revision
+        shell: bash
+        run: |
+          mkdir -p artifacts/qodana-reconciliation
+          git rev-parse HEAD > artifacts/qodana-reconciliation/proof-source-head.txt
+      - name: Test reconciliation rejection gates
+        run: python3 -m unittest discover -s scripts/quality -p test_qodana_reconciliation.py -v
+      - name: Reconcile immutable main SARIF identities
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python3 scripts/quality/reconcile_qodana.py
+          docs/ci/qodana-reconciliation.json
+          artifacts/qodana-reconciliation
+          docs/ci/qodana-retained-correspondences.json
+      - name: Preserve raw inventories and reconciliation evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: qodana-reconciliation-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/qodana-reconciliation
+          if-no-files-found: error
+          retention-days: 30
