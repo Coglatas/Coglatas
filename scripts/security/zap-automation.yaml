@@ -34,8 +34,13 @@ jobs:
   # POST /api/tenant/export is the explicit, reauthorized metadata-export
   # boundary. Its contract intentionally includes redacted tenant-user metadata
   # such as email while excluding secrets, hashes, tokens, and file bodies.
-  # Treat rule 10062 as a false positive only for that exact export response;
-  # all other endpoints remain unfiltered.
+  # Treat rule 10062 as a false positive only for that exact export response.
+  #
+  # GET /api/admin/invites is an explicitly privileged administration read whose
+  # response contract intentionally contains invitee email addresses. SEC-05
+  # independently requires ordinary/restricted users to receive a safe 403 on
+  # this route, so authorization/non-disclosure remains fail-closed while SEC-06
+  # avoids treating the authorized PII-bearing contract itself as a vulnerability.
   - type: alertFilter
     alertFilters:
       - ruleId: 10062
@@ -54,6 +59,14 @@ jobs:
         urlRegex: false
         methods:
           - POST
+      - ruleId: 10062
+        ruleName: PII Disclosure
+        newRisk: False Positive
+        context: sec06-api
+        url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/admin/invites"
+        urlRegex: false
+        methods:
+          - GET
 
   - type: replacer
     parameters:

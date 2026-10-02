@@ -118,7 +118,7 @@ jobs:
 
       - name: Run strict Qodana inspection inventory
         id: qodana_scan
-        uses: JetBrains/qodana-action@10be11607eb323a180e2b76b26c9c5cdceac3e77 # v2026.2.1
+        uses: JetBrains/qodana-action@3e8d76ff0e0241618abd808682f426afe84bab3f # v2026.2.2
         with:
           args: |
             --image jetbrains/qodana-cdnet:2026.2-privileged@sha256:21bbbfeac0e61fe8790cc27d5754b87d57b8032c0c32f84ddeb887027f83ec4f
