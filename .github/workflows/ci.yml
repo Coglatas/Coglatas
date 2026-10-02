@@ -147,14 +147,24 @@ jobs:
           mkdir -p artifacts/test-results/backend artifacts/test-results/architecture
 
           if [[ "$BACKEND_TEST_SCOPE" == "scoped" && -n "$BACKEND_TEST_FILTER" ]]; then
-            dotnet test tests/Coglatas.Tests/Coglatas.Tests.csproj               "${common_args[@]}"               --filter "$BACKEND_TEST_FILTER"               --logger "trx;LogFileName=backend-tests.trx"               --results-directory artifacts/test-results/backend
+            dotnet test tests/Coglatas.Tests/Coglatas.Tests.csproj \
+              "${common_args[@]}" \
+              --filter "$BACKEND_TEST_FILTER" \
+              --logger "trx;LogFileName=backend-tests.trx" \
+              --results-directory artifacts/test-results/backend
           else
             # Run the two test projects explicitly so each keeps its own TRX.
             # The previous solution-level logger wrote both projects to the same
             # backend-tests.trx and the second project overwrote the first.
-            dotnet test tests/Coglatas.Architecture.Tests/Coglatas.Architecture.Tests.csproj               "${common_args[@]}"               --logger "trx;LogFileName=architecture-tests.trx"               --results-directory artifacts/test-results/architecture
+            dotnet test tests/Coglatas.Architecture.Tests/Coglatas.Architecture.Tests.csproj \
+              "${common_args[@]}" \
+              --logger "trx;LogFileName=architecture-tests.trx" \
+              --results-directory artifacts/test-results/architecture
 
-            dotnet test tests/Coglatas.Tests/Coglatas.Tests.csproj               "${common_args[@]}"               --logger "trx;LogFileName=backend-tests.trx"               --results-directory artifacts/test-results/backend
+            dotnet test tests/Coglatas.Tests/Coglatas.Tests.csproj \
+              "${common_args[@]}" \
+              --logger "trx;LogFileName=backend-tests.trx" \
+              --results-directory artifacts/test-results/backend
           fi
 
       - name: Verify backend TRX evidence
@@ -164,10 +174,16 @@ jobs:
           BACKEND_TEST_SCOPE: ${{ steps.route.outputs.backend_test_scope }}
         run: |
           set -euo pipefail
-          bash scripts/ci/verify-trx-results.sh             artifacts/test-results/backend/backend-tests.trx             --minimum-total 1             --label "backend test suite"
+          bash scripts/ci/verify-trx-results.sh \
+            artifacts/test-results/backend/backend-tests.trx \
+            --minimum-total 1 \
+            --label "backend test suite"
 
           if [[ "$BACKEND_TEST_SCOPE" != "scoped" ]]; then
-            bash scripts/ci/verify-trx-results.sh               artifacts/test-results/architecture/architecture-tests.trx               --minimum-total 1               --label "architecture test suite"
+            bash scripts/ci/verify-trx-results.sh \
+              artifacts/test-results/architecture/architecture-tests.trx \
+              --minimum-total 1 \
+              --label "architecture test suite"
           fi
 
       - name: Generate .NET coverage report
