@@ -108,9 +108,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await SeedLedgerPlanRowsAsync(database, graph);
 
@@ -157,9 +156,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var expected = await SeedCandidateTasksAsync(database, graph);
             var job = await InsertJobAsync(
@@ -275,9 +273,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var write = NewScheduleWrite(graph, Now.AddHours(1));
             await using (var context = CreateTenantContext(database, graph.Tenant))
@@ -310,9 +307,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var write = NewScheduleWrite(graph, Now);
             await using (var context = CreateTenantContext(database, graph.Tenant))
@@ -349,9 +345,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var write = NewScheduleWrite(graph, Now.AddHours(1));
 
@@ -377,9 +372,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await using (var settingsContext = CreateTenantContext(database, graph.Tenant))
             {
@@ -450,9 +444,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await using (var settingsContext = CreateTenantContext(database, graph.Tenant))
             {
@@ -514,9 +507,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var firstJob = await InsertJobAsync(
                 database,
@@ -593,9 +585,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var job = await InsertJobAsync(
                 database,
@@ -674,9 +665,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var job = await InsertJobAsync(
                 database,
@@ -733,9 +723,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var job = await InsertJobAsync(
                 database,
@@ -875,9 +864,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var job = await InsertJobAsync(
                 database,
@@ -922,9 +910,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var job = await InsertJobAsync(
                 database,
@@ -971,9 +958,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var job = await InsertJobAsync(
                 database,
@@ -1012,9 +998,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var job = await InsertJobAsync(
                 database,
@@ -1073,9 +1058,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var job = await InsertJobAsync(
                 database,
@@ -1144,9 +1128,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             _ = await InsertJobAsync(
                 database,
@@ -1174,9 +1157,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
         ScheduleExercise? result = null;
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var write = NewScheduleWrite(graph, Now.AddHours(1));
             ScheduleSnapshot before;
@@ -1214,9 +1196,8 @@ public sealed class TaskV1Pr07CDeadlineDigestPostgreSqlTests(ITestOutputHelper o
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
         ScheduleExercise? result = null;
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var write = NewScheduleWrite(graph, initialDueAt);
             ScheduleSnapshot before;

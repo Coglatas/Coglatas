@@ -25,9 +25,8 @@ public sealed class InviteAcceptancePostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedInviteAsync(database);
 
             await using (var scope = CreateTenantScope(database, graph.Tenant))
@@ -75,9 +74,8 @@ public sealed class InviteAcceptancePostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedInviteAsync(database, seedExistingEligibleUser: true, role: WorkspaceRole.Admin);
             var originalPasswordHash = graph.ExistingUser!.PasswordHash;
 
@@ -124,9 +122,8 @@ public sealed class InviteAcceptancePostgreSqlTests
 
         foreach (var blockedStatus in blockedStatuses)
         {
-            await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+            await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
             {
-                await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
                 var graph = await SeedInviteAsync(
                     database,
                     seedExistingEligibleUser: true,
@@ -168,9 +165,8 @@ public sealed class InviteAcceptancePostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedInviteAsync(
                 database,
                 seedExistingEligibleUser: true,
@@ -211,9 +207,8 @@ public sealed class InviteAcceptancePostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedInviteAsync(
                 database,
                 seedExistingEligibleUser: true,
@@ -249,9 +244,8 @@ public sealed class InviteAcceptancePostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedInviteAsync(database, crossTenantWorkspace: true);
 
             await using (var scope = CreateTenantScope(database, graph.Tenant))
@@ -289,9 +283,8 @@ public sealed class InviteAcceptancePostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedInviteAsync(database);
             var overlongDisplayName = new string('x', 121);
 

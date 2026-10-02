@@ -19,9 +19,8 @@ public sealed class Wpc02CCanonicalProjectCreateAuditRegressionPostgreSqlTests
     public async Task DraftCreateDoesNotProvisionProjectGeneralOrTaskWorkflow()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database, "draft-defaults");
             Guid projectId;
 
@@ -57,9 +56,8 @@ public sealed class Wpc02CCanonicalProjectCreateAuditRegressionPostgreSqlTests
     public async Task SameIdempotencyKeyWithDifferentRequestConflictsWithoutSecondSideEffectSet()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database, "idempotency-mismatch");
             Guid projectId;
 
@@ -100,9 +98,8 @@ public sealed class Wpc02CCanonicalProjectCreateAuditRegressionPostgreSqlTests
     public async Task ForeignWorkspaceAndForeignTenantGroupsFailClosedWithoutCreateSideEffects()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database, "foreign-groups");
 
             await using var scope = CreateServiceScope(database, graph);
@@ -138,9 +135,8 @@ public sealed class Wpc02CCanonicalProjectCreateAuditRegressionPostgreSqlTests
     public async Task RequiredOutboxFailureRollsBackProjectMembershipAuditAndIdempotency()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database, "outbox-failure");
 
             await using (var scope = CreateServiceScope(
@@ -166,9 +162,8 @@ public sealed class Wpc02CCanonicalProjectCreateAuditRegressionPostgreSqlTests
     public async Task RequiredAuditFailureRollsBackProjectMembershipAndIdempotency()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database, "audit-failure");
 
             await using (var scope = CreateServiceScope(
@@ -191,9 +186,8 @@ public sealed class Wpc02CCanonicalProjectCreateAuditRegressionPostgreSqlTests
     public async Task OwnerCanCreateRestrictedVisibility()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database, "restricted");
             Guid projectId;
 

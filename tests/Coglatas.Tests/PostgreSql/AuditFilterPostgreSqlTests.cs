@@ -106,6 +106,46 @@ public sealed class AuditFilterPostgreSqlTests
         Assert.Equal(workspace.Name, result.Value.Items[0].WorkspaceLabel);
     }
 
+    [PostgreSqlFact]
+    [Trait("Category", "PostgreSQLIntegration")]
+    public async Task AuditFiltersRejectDatabaseUnsafeControlCharactersBeforePostgreSqlEvaluation()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(PostgreSqlTestEnvironment.RequireConnectionString())
+            .Options;
+        var currentTenant = new CurrentTenantService();
+        currentTenant.SetPlatformScope();
+        var user = new User
+        {
+            DisplayName = "Audit fuzz regression",
+            Email = "audit-fuzz-regression@example.test",
+            NormalizedEmail = "AUDIT-FUZZ-REGRESSION@EXAMPLE.TEST",
+            PasswordHash = "test-hash",
+            Status = UserStatus.Active,
+            SystemRole = SystemRole.PlatformAdmin,
+        };
+
+        await using var dbContext = new AppDbContext(options, currentTenant);
+        var service = new DbAuditQueryService(
+            dbContext,
+            new FixedCurrentUser(user),
+            currentTenant,
+            new TenantRepository(dbContext),
+            new FixedAuditAuthorization());
+
+        var fuzzedQuery = new AuditLogQuery(
+            EntityType: "Audit\0Log",
+            ToDate: new DateTimeOffset(1196, 10, 8, 21, 54, 2, TimeSpan.Zero));
+
+        var list = await service.ListAuditLogsAsync(fuzzedQuery);
+        var grid = await service.ListAuditGridAsync(fuzzedQuery);
+
+        Assert.False(list.IsSuccess);
+        Assert.Equal("AuditFilterInvalid", list.ErrorDetail?.Code);
+        Assert.False(grid.IsSuccess);
+        Assert.Equal("AuditFilterInvalid", grid.ErrorDetail?.Code);
+    }
+
     private sealed class FixedCurrentUser(User user) : ICurrentUser
     {
         public Guid? UserId => user.Id;
