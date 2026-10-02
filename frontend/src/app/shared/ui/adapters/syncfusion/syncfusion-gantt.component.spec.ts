@@ -91,8 +91,8 @@ describe('SyncfusionGanttComponent adapter boundary', () => {
     const component = new SyncfusionGanttComponent();
     component.contract = ganttContract();
 
-    const firstDataSource = component.dataSource,
-      enabledSettings = component.editSettings;
+    const enabledSettings = component.editSettings,
+      firstDataSource = component.dataSource;
     component.contract = {
       ...component.contract,
       busyItemId: 'task-leaf',
