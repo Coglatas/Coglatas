@@ -52,6 +52,16 @@ public sealed class DbAuditQueryService(
             return scopeError;
         }
 
+        var normalizedQuery = NormalizeAuditQuery(query, includeGridFilters: false);
+        if (!normalizedQuery.IsSuccess)
+        {
+            return Result<PagedResponse<AuditLogListItemResponse>>.Failure(
+                normalizedQuery.ErrorDetail ?? new ApplicationErrorDetail(
+                    "AuditFilterInvalid",
+                    "The audit filter is invalid."));
+        }
+        query = normalizedQuery.Value!;
+
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, 1, MaxPageSize);
         var source = ScopeToCurrentTenant(dbContext.AuditLogs.AsNoTracking());
@@ -152,7 +162,7 @@ public sealed class DbAuditQueryService(
             return scopeError;
         }
 
-        var normalizedQuery = NormalizeAuditGridQuery(query);
+        var normalizedQuery = NormalizeAuditQuery(query, includeGridFilters: true);
         if (!normalizedQuery.IsSuccess)
         {
             return Result<PagedResponse<AuditGridRowResponse>>.Failure(
@@ -500,20 +510,37 @@ public sealed class DbAuditQueryService(
             "AuditEventNotFound",
             "The requested audit event is not available."));
 
-    private static Result<AuditLogQuery> NormalizeAuditGridQuery(AuditLogQuery query)
+    private static Result<AuditLogQuery> NormalizeAuditQuery(
+        AuditLogQuery query,
+        bool includeGridFilters)
     {
-        var q = NormalizeFilterValue(query.Q);
         var action = NormalizeFilterValue(query.Action);
         var entityType = NormalizeFilterValue(query.EntityType);
-        var actor = NormalizeFilterValue(query.Actor);
-        var severity = NormalizeFilterValue(query.Severity)?.ToLowerInvariant();
-        var result = NormalizeFilterValue(query.Result)?.ToLowerInvariant();
+        var q = includeGridFilters ? NormalizeFilterValue(query.Q) : query.Q;
+        var actor = includeGridFilters ? NormalizeFilterValue(query.Actor) : query.Actor;
+        var severity = includeGridFilters
+            ? NormalizeFilterValue(query.Severity)?.ToLowerInvariant()
+            : query.Severity;
+        var result = includeGridFilters
+            ? NormalizeFilterValue(query.Result)?.ToLowerInvariant()
+            : query.Result;
 
-        if (q?.Length > MaxSearchLength || actor?.Length > MaxActorFilterLength ||
-            action?.Length > MaxActionLength || entityType?.Length > MaxEntityTypeLength ||
-            (severity is not null && severity is not ("info" or "warning" or "critical")) ||
-            (result is not null && result is not ("success" or "denied" or "failed")) ||
-            (query is { FromDate: { } fromDate, ToDate: { } toDate } && fromDate > toDate))
+        var commonInvalid =
+            action?.Length > MaxActionLength ||
+            entityType?.Length > MaxEntityTypeLength ||
+            ContainsDatabaseUnsafeControlCharacters(action) ||
+            ContainsDatabaseUnsafeControlCharacters(entityType) ||
+            (query is { FromDate: { } fromDate, ToDate: { } toDate } && fromDate > toDate);
+
+        var gridInvalid = includeGridFilters &&
+            (q?.Length > MaxSearchLength ||
+             actor?.Length > MaxActorFilterLength ||
+             ContainsDatabaseUnsafeControlCharacters(q) ||
+             ContainsDatabaseUnsafeControlCharacters(actor) ||
+             (severity is not null && severity is not ("info" or "warning" or "critical")) ||
+             (result is not null && result is not ("success" or "denied" or "failed")));
+
+        if (commonInvalid || gridInvalid)
         {
             return Result<AuditLogQuery>.Failure(new ApplicationErrorDetail(
                 "AuditFilterInvalid",
@@ -530,6 +557,9 @@ public sealed class DbAuditQueryService(
             Result = result,
         });
     }
+
+    private static bool ContainsDatabaseUnsafeControlCharacters(string? value) =>
+        value?.Any(char.IsControl) == true;
 
     private static string? NormalizeFilterValue(string? value)
     {
