@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/qodana-code-scanning-fp-triage.yml
       - scripts/quality/qodana-reviewed-alerts.json
+      - scripts/quality/apply-reviewed-qodana-alerts.py
 
 concurrency:
   group: qodana-fp-triage
@@ -14,13 +15,15 @@ concurrency:
 
 permissions:
   contents: read
-  actions: read
-  security-events: read
 
 jobs:
   triage:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
     steps:
       - name: Export current alerts without mutations
         id: inventory
@@ -54,7 +57,7 @@ jobs:
           summary = {'source_sha': source_sha, 'repository': repo,
                      'run_id': os.environ['GITHUB_RUN_ID'],
                      'captured_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                     'mode': 'READ_ONLY', 'states': {}}
+                     'mode': 'READ_ONLY_INVENTORY', 'states': {}}
           for state in ('open', 'dismissed'):
               alerts = []
               for page in range(1, 101):
@@ -69,17 +72,10 @@ jobs:
               (out / ('alerts-' + state + '.json')).write_text(json.dumps(alerts, ensure_ascii=False), encoding='utf-8')
               summary['states'][state] = {'count': len(alerts),
                   'tools': dict(collections.Counter(a['tool']['name'] for a in alerts)),
-                  'rules': dict(collections.Counter(a['rule']['id'] for a in alerts)),
-                  'previous_automated_triage': sum((a.get('dismissed_comment') or '').startswith(
-                      'Automated Qodana false-positive triage on 2026-10-02.') for a in alerts)}
-          previous_run = get('/actions/runs/36988308931')
-          summary['previous_run'] = {k: previous_run.get(k) for k in (
-              'id', 'status', 'conclusion', 'head_sha', 'html_url', 'run_attempt', 'updated_at')}
+                  'rules': dict(collections.Counter(a['rule']['id'] for a in alerts))}
           summary['main_unchanged_during_export'] = get('/git/ref/heads/main')['object']['sha'] == source_sha
           (out / 'summary.json').write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding='utf-8')
           print(json.dumps(summary, indent=2))
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
-              f.write('## Read-only Qodana evidence inventory\n\n```json\n' + json.dumps(summary, indent=2) + '\n```\n')
           PY
 
       - name: Checkout the exact source revision without persisted credentials
@@ -89,6 +85,24 @@ jobs:
           path: source
           persist-credentials: false
           fetch-depth: 1
+
+      - name: Checkout the immutable review revision without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: review
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Validate individual decisions and apply only on the explicit apply commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 review/scripts/quality/apply-reviewed-qodana-alerts.py \
+            review/scripts/quality/qodana-reviewed-alerts.json \
+            source \
+            "$RUNNER_TEMP/qodana-fp-evidence"
 
       - name: Package tracked first-party sources without running application code
         shell: bash
@@ -117,7 +131,7 @@ jobs:
           print('Packaged tracked first-party files:', len(selected))
           PY
 
-      - name: Upload review evidence
+      - name: Upload individual review and state verification evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
