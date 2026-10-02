@@ -18,13 +18,8 @@ public interface IAuthorizationStateChangePublisher
 /// Emits a metadata-only invalidation in the caller's business transaction.
 /// The dispatcher re-evaluates authorization before any later protected event.
 /// </summary>
-public sealed class RequiredOutboxStagingException : Exception
-{
-    public RequiredOutboxStagingException()
-        : base("A required transactional Outbox event could not be staged.")
-    {
-    }
-}
+public sealed class RequiredOutboxStagingException()
+    : Exception("A required transactional Outbox event could not be staged.");
 
 public sealed class AuthorizationStateChangePublisher(
     ITransactionalOutbox outbox,

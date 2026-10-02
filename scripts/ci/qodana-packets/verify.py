@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 
 HELPER_SHA256 = "305c7f54d04ea3b83ddcc807c7b462a5a194a4ecebdc2ffb5c814626d7415a15"
 PLAN_SHA256 = "c129f5f0e6a89fef4ef64cb1b52f2ab67b62dfd295244976a10bdb9256447424"
-ALLOWED_PACKETS = {"P01", "P02", "P04"}
+ALLOWED_PACKETS = {"P01", "P02", "P04", "P11", "P13", "P14"}
 NAMESPACE = {"t": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
 
 def sha256(data: bytes) -> str:
@@ -24,6 +24,26 @@ def checked(args: list[str], cwd: Path, capture: bool = False) -> str:
     result = subprocess.run(args, cwd=cwd, check=True, text=True,
                             stdout=subprocess.PIPE if capture else None)
     return result.stdout or ""
+
+def is_ancestor(repo: Path, before: str, after: str) -> bool:
+    result = subprocess.run(["git", "merge-base", "--is-ancestor", before, after], cwd=repo)
+    if result.returncode not in {0, 1}:
+        raise ValueError("Cannot establish revision ancestry")
+    return result.returncode == 0
+
+def integrated_pr_base(repo: Path, head: str, base: str) -> str | None:
+    for sha in [head, base]:
+        if not re.fullmatch(r"[0-9a-f]{40}", sha):
+            raise ValueError("Require immutable event head/base revisions")
+    if checked(["git", "rev-parse", "HEAD"], repo, capture=True).strip() != head:
+        raise ValueError("Checkout differs from event head")
+    return base if is_ancestor(repo, base, head) else None
+
+def resolve_source_baseline(repo: Path, configured: str, head: str, base: str) -> str:
+    integrated = integrated_pr_base(repo, head, base)
+    if integrated and is_ancestor(repo, configured, integrated):
+        return integrated
+    return configured
 
 def trx_inventory(path: Path) -> collections.Counter:
     root = ET.parse(path).getroot()
@@ -49,6 +69,19 @@ def trx_inventory(path: Path) -> collections.Counter:
 def require_same(before: dict[str, collections.Counter], after: dict[str, collections.Counter]) -> None:
     if before != after:
         raise ValueError("Baseline/candidate test identities or multiplicities changed")
+
+def read_selection(config_dir: Path, head_ref: str) -> dict:
+    match = re.fullmatch(r"qodana/packet-(p[0-9]{2})-(?:proof|source)", head_ref)
+    if match is None or match[1].upper() not in ALLOWED_PACKETS:
+        raise ValueError("Unsupported packet branch")
+    packet_id = match[1].upper()
+    path = config_dir / "selections" / f"{packet_id}.json"
+    if not path.is_file():
+        path = config_dir / "selection.json"
+    selection = json.loads(path.read_text(encoding="utf-8"))
+    if selection.get("packet") != packet_id:
+        raise ValueError("Selection does not match the PR branch packet")
+    return selection
 
 def amended_plan(original: dict, packet_id: str) -> dict:
     plan = copy.deepcopy(original)
@@ -106,9 +139,9 @@ def main() -> None:
     temp = Path(os.environ["RUNNER_TEMP"]).resolve() / "qodana-packet-proof"
     temp.mkdir(exist_ok=False)
     evidence = source / "artifacts/qodana-packet-proof"
-    evidence.mkdir(parents=True, exist_ok=False)
+    evidence.mkdir(parents=True, exist_ok=True)
     config_dir = source / "scripts/ci/qodana-packets"
-    selection = json.loads((config_dir / "selection.json").read_text())
+    selection = read_selection(config_dir, os.environ["PACKET_BRANCH"])
     if set(selection) != {"packet", "baseline_sha", "stage"}:
         raise ValueError("Unexpected selection fields")
     packet_id, baseline_sha, stage = (selection[k] for k in ("packet", "baseline_sha", "stage"))
@@ -120,6 +153,9 @@ def main() -> None:
     if not re.fullmatch(r"[0-9a-f]{40}", head_sha):
         raise ValueError("Head must be an immutable full commit SHA")
     checked(["git", "merge-base", "--is-ancestor", baseline_sha, head_sha], source)
+    configured_baseline_sha = baseline_sha
+    event_base_sha = os.environ["PACKET_BASE_SHA"]
+    baseline_sha = resolve_source_baseline(source, baseline_sha, head_sha, event_base_sha)
     if checked(["dotnet", "--version"], source, capture=True).strip() != "10.0.401":
         raise ValueError("SDK drift: require 10.0.401")
     if not os.environ.get("POSTGRES_TEST_CONNECTION_STRING", "").strip():
@@ -176,6 +212,7 @@ def main() -> None:
     require_same(baseline, candidate)
     proof = {
         "packet": packet_id, "baseline_sha": baseline_sha, "head_sha": head_sha,
+        "configured_baseline_sha": configured_baseline_sha, "event_base_sha": event_base_sha,
         "stage": stage, "candidate_is_committed_head": stage == "verify",
         "sdk": "10.0.401", "postgresql": postgres_version,
         "canonical_helper_sha256": HELPER_SHA256, "historical_plan_sha256": PLAN_SHA256,

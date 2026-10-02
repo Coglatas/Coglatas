@@ -1,0 +1,1155 @@
+{
+  "version": 1,
+  "baseline_sha": "9ff983078f2ddf85f21e4e16e0c9b7d6b1a403f6",
+  "head_sha": "2f1b9b711901a84bc425b1a4ce82eff76477e3d7",
+  "baseline_sarif_sha256": "293b9b535ca32e87c1737297414816b4c271bf7123d5070520193814ac8209d0",
+  "head_sarif_sha256": "01c83500c318d0276cc1bfe53836272d4f696057c2060ab6944bc01d36827cb3",
+  "correspondences": [
+    {
+      "before_identity": [
+        "AsyncMethodWithoutAwait",
+        "src/Coglatas.Application/Communication/CommunicationPollingService.cs",
+        {
+          "equalIndicator/v1": "E43442D4B173A59D321AB4056EBDFCC33322BB26CEE518CED01AE053FAB20860"
+        },
+        "This async method lacks 'await' operators and will run synchronously. Consider using 'await' for non-blocking API calls, or remove the 'async' modifier to avoid generating a state machine for this method."
+      ],
+      "after_identity": [
+        "AsyncMethodWithoutAwait",
+        "src/Coglatas.Application/Communication/CommunicationPollingService.cs",
+        {
+          "equalIndicator/v1": "FE8AEF538CF4232D09C84DCEC25E6AB38C034DB66D4C5438A87626F6A488C791"
+        },
+        "This async method lacks 'await' operators and will run synchronously. Consider using 'await' for non-blocking API calls, or remove the 'async' modifier to avoid generating a state machine for this method."
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "uri": "src/Coglatas.Application/Communication/CommunicationPollingService.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 140,
+          "charOffset": 15373,
+          "endColumn": 6,
+          "endLine": 352,
+          "snippet": {
+            "text": "\n    private async Task<bool> AllowPollingAsync(Guid userId, string operation, Guid? workspaceId, CancellationToken cancellationToken)\n    {"
+          },
+          "startColumn": 1,
+          "startLine": 350
+        },
+        "region": {
+          "charLength": 5,
+          "charOffset": 15386,
+          "endColumn": 18,
+          "endLine": 351,
+          "snippet": {
+            "text": "async"
+          },
+          "startColumn": 13,
+          "startLine": 351
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "uri": "src/Coglatas.Application/Communication/CommunicationPollingService.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 103,
+          "charOffset": 15316,
+          "endColumn": 6,
+          "endLine": 352,
+          "snippet": {
+            "text": "\n    private async Task<bool> AllowPollingAsync(Guid userId, string operation, Guid? workspaceId)\n    {"
+          },
+          "startColumn": 1,
+          "startLine": 350
+        },
+        "region": {
+          "charLength": 5,
+          "charOffset": 15329,
+          "endColumn": 18,
+          "endLine": 351,
+          "snippet": {
+            "text": "async"
+          },
+          "startColumn": 13,
+          "startLine": 351
+        }
+      },
+      "before_blob": "77b2a2b2cfa5991eacbb44c2bd72046067ecf143",
+      "after_blob": "8e0e9e1c702739afcd38ca8df68b1bcaf40dca4c",
+      "before_declaration": "    private async Task<bool> AllowPollingAsync(Guid userId, string operation, Guid? workspaceId, CancellationToken cancellationToken)",
+      "after_declaration": "    private async Task<bool> AllowPollingAsync(Guid userId, string operation, Guid? workspaceId)",
+      "packet": "P06",
+      "rationale": "The same async Task<bool> wrapper remains; its audited unused private CancellationToken parameter is removed. The retained no-await finding is not fixed."
+    },
+    {
+      "before_identity": [
+        "MergeIntoPattern",
+        "src/Coglatas.Application/Announcements/AnnouncementDraftService.cs",
+        {
+          "equalIndicator/v1": "CBE2144AF45B9ECF69F5261D1859729D933B2D4990DDA7E5CBCBA9E648C0C264"
+        },
+        "Merge into pattern"
+      ],
+      "after_identity": [
+        "MergeIntoPattern",
+        "src/Coglatas.Application/Announcements/AnnouncementDraftService.cs",
+        {
+          "equalIndicator/v1": "4CA16C39C054CD5E3ADC76A8103FF6D9A4D353D06CF132B6C02128721703BFBB"
+        },
+        "Merge into pattern"
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "index": 26,
+          "uri": "src/Coglatas.Application/Announcements/AnnouncementDraftService.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 140,
+          "charOffset": 38507,
+          "endColumn": 38,
+          "endLine": 945,
+          "snippet": {
+            "text": "        target.ChannelId.HasValue\n            ? target.GroupId.HasValue && target.WorkspaceId.HasValue\n            : target.GroupId.HasValue"
+          },
+          "startColumn": 1,
+          "startLine": 943
+        },
+        "region": {
+          "charLength": 2,
+          "charOffset": 38579,
+          "endColumn": 41,
+          "endLine": 944,
+          "snippet": {
+            "text": "&&"
+          },
+          "startColumn": 39,
+          "startLine": 944
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "index": 16,
+          "uri": "src/Coglatas.Application/Announcements/AnnouncementDraftService.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 173,
+          "charOffset": 38507,
+          "endColumn": 71,
+          "endLine": 945,
+          "snippet": {
+            "text": "        target.ChannelId.HasValue\n            ? target.GroupId.HasValue && target.WorkspaceId.HasValue\n            : !target.GroupId.HasValue || target.WorkspaceId.HasValue;"
+          },
+          "startColumn": 1,
+          "startLine": 943
+        },
+        "region": {
+          "charLength": 2,
+          "charOffset": 38579,
+          "endColumn": 41,
+          "endLine": 944,
+          "snippet": {
+            "text": "&&"
+          },
+          "startColumn": 39,
+          "startLine": 944
+        }
+      },
+      "before_blob": "99ef9087b74751ee6db53a189af8d4bb713ce5e1",
+      "after_blob": "4d55ceee500720ce16a65ca0e1e6c1045aa80c0e",
+      "before_declaration": "            ? target.GroupId.HasValue && target.WorkspaceId.HasValue",
+      "after_declaration": "            ? target.GroupId.HasValue && target.WorkspaceId.HasValue",
+      "packet": "P12",
+      "rationale": "The same positive-arm && operator remains; only the audited false-arm expression changes to its fixed equivalent."
+    },
+    {
+      "before_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "FD987B349BD65EDBCE1B92D7BA53CBD0B19403D6B860A09F57963CA7C19CBE04"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskActivityLogResponse.Body' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "after_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "EF9D1159B6AEA17DCBB384C83F5CBC705617707FD454137A684710FDBF528A1F"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskActivityLogResponse.Body' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "index": 152,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 162,
+          "charOffset": 6745,
+          "endColumn": 31,
+          "endLine": 115,
+          "snippet": {
+            "text": "    [property: JsonConverter(typeof(JsonStringEnumConverter))] Coglatas.Domain.Enums.ActivityLogType ActivityType,\n    string Body,\n    DateTimeOffset OccurredAt,"
+          },
+          "startColumn": 1,
+          "startLine": 113
+        },
+        "region": {
+          "charLength": 4,
+          "charOffset": 6871,
+          "endColumn": 16,
+          "endLine": 114,
+          "snippet": {
+            "text": "Body"
+          },
+          "startColumn": 12,
+          "startLine": 114
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "index": 137,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 153,
+          "charOffset": 6727,
+          "endColumn": 31,
+          "endLine": 115,
+          "snippet": {
+            "text": "    [property: JsonConverter(typeof(JsonStringEnumConverter))] Domain.Enums.ActivityLogType ActivityType,\n    string Body,\n    DateTimeOffset OccurredAt,"
+          },
+          "startColumn": 1,
+          "startLine": 113
+        },
+        "region": {
+          "charLength": 4,
+          "charOffset": 6844,
+          "endColumn": 16,
+          "endLine": 114,
+          "snippet": {
+            "text": "Body"
+          },
+          "startColumn": 12,
+          "startLine": 114
+        }
+      },
+      "before_blob": "4996cd887da4ce1a5881cc981877affabf6ad9b4",
+      "after_blob": "1398fa881c5371fc9ed75399d976afa3a22cd948",
+      "before_declaration": "    string Body,",
+      "after_declaration": "    string Body,",
+      "packet": "P01",
+      "rationale": "The same DTO positional property remains on the identical declaration line; only a nearby enum type qualification loses its redundant Coglatas prefix."
+    },
+    {
+      "before_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "57821B9D460224D0A4F762641168FEC2FCD846F5BA3544A3FFB4D7553BD5F730"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskActivityLogResponse.Id' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "after_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "D446D9420A1D78E2B431800F1C4996D5AC36C19D3006ABC2B573573C6D9AE7A6"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskActivityLogResponse.Id' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "index": 152,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 173,
+          "charOffset": 6686,
+          "endColumn": 115,
+          "endLine": 113,
+          "snippet": {
+            "text": "public sealed record TaskActivityLogResponse(\n    Guid Id,\n    [property: JsonConverter(typeof(JsonStringEnumConverter))] Coglatas.Domain.Enums.ActivityLogType ActivityType,"
+          },
+          "startColumn": 1,
+          "startLine": 111
+        },
+        "region": {
+          "charLength": 2,
+          "charOffset": 6741,
+          "endColumn": 12,
+          "endLine": 112,
+          "snippet": {
+            "text": "Id"
+          },
+          "startColumn": 10,
+          "startLine": 112
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "index": 137,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 164,
+          "charOffset": 6668,
+          "endColumn": 106,
+          "endLine": 113,
+          "snippet": {
+            "text": "public sealed record TaskActivityLogResponse(\n    Guid Id,\n    [property: JsonConverter(typeof(JsonStringEnumConverter))] Domain.Enums.ActivityLogType ActivityType,"
+          },
+          "startColumn": 1,
+          "startLine": 111
+        },
+        "region": {
+          "charLength": 2,
+          "charOffset": 6723,
+          "endColumn": 12,
+          "endLine": 112,
+          "snippet": {
+            "text": "Id"
+          },
+          "startColumn": 10,
+          "startLine": 112
+        }
+      },
+      "before_blob": "4996cd887da4ce1a5881cc981877affabf6ad9b4",
+      "after_blob": "1398fa881c5371fc9ed75399d976afa3a22cd948",
+      "before_declaration": "    Guid Id,",
+      "after_declaration": "    Guid Id,",
+      "packet": "P01",
+      "rationale": "The same DTO positional property remains on the identical declaration line; only a nearby enum type qualification loses its redundant Coglatas prefix."
+    },
+    {
+      "before_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "CCC0A6AF2D7794F8C83669AF3D2821F8403FC9610138033779F2F952A25572A5"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskSubtaskResponse.DeadlineAt' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "after_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "A94DB5E840139EAE5CB0673A2D6C962F11594E6E29BD4D4079EDFF1EA896A820"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskSubtaskResponse.DeadlineAt' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "index": 152,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 512,
+          "charOffset": 6108,
+          "endColumn": 25,
+          "endLine": 108,
+          "snippet": {
+            "text": "geCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);\npublic sealed record TaskSubtaskPage(IReadOnlyList<TaskSubtaskResponse> Items, int Page, int PageSize, int TotalCount, bool HasMore);\npublic sealed record CreateTaskSubtaskRequest(\n    string Title,\n    string? Description,\n    Coglatas.Domain.Enums.TaskPriority Priority = Coglatas.Domain.Enums.TaskPriority.Medium,\n    string? Goal = null,"
+          },
+          "startColumn": 143,
+          "startLine": 102
+        },
+        "region": {
+          "charLength": 10,
+          "charOffset": 6236,
+          "endColumn": 281,
+          "endLine": 102,
+          "snippet": {
+            "text": "DeadlineAt"
+          },
+          "startColumn": 271,
+          "startLine": 102
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "index": 137,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 512,
+          "charOffset": 6108,
+          "endColumn": 18,
+          "endLine": 109,
+          "snippet": {
+            "text": "geCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);\npublic sealed record TaskSubtaskPage(IReadOnlyList<TaskSubtaskResponse> Items, int Page, int PageSize, int TotalCount, bool HasMore);\npublic sealed record CreateTaskSubtaskRequest(\n    string Title,\n    string? Description,\n    Domain.Enums.TaskPriority Priority = Domain.Enums.TaskPriority.Medium,\n    string? Goal = null,\n    string? Deliv"
+          },
+          "startColumn": 143,
+          "startLine": 102
+        },
+        "region": {
+          "charLength": 10,
+          "charOffset": 6236,
+          "endColumn": 281,
+          "endLine": 102,
+          "snippet": {
+            "text": "DeadlineAt"
+          },
+          "startColumn": 271,
+          "startLine": 102
+        }
+      },
+      "before_blob": "4996cd887da4ce1a5881cc981877affabf6ad9b4",
+      "after_blob": "1398fa881c5371fc9ed75399d976afa3a22cd948",
+      "before_declaration": "public sealed record TaskSubtaskResponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);",
+      "after_declaration": "public sealed record TaskSubtaskResponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);",
+      "packet": "P01",
+      "rationale": "The same DTO positional property remains on the identical declaration line; only a nearby enum type qualification loses its redundant Coglatas prefix."
+    },
+    {
+      "before_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "24923B950E0AA6D6D7A27D81585CF7D8E79165032CD1F4DD17FDAFB702CC3C7B"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskSubtaskResponse.IsOverdue' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "after_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "58F07232E3956D93D7F35B550B420F5D761B4B5C1EF16413F3B72040F03441B1"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskSubtaskResponse.IsOverdue' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "index": 152,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 512,
+          "charOffset": 6125,
+          "endColumn": 17,
+          "endLine": 109,
+          "snippet": {
+            "text": "g Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);\npublic sealed record TaskSubtaskPage(IReadOnlyList<TaskSubtaskResponse> Items, int Page, int PageSize, int TotalCount, bool HasMore);\npublic sealed record CreateTaskSubtaskRequest(\n    string Title,\n    string? Description,\n    Coglatas.Domain.Enums.TaskPriority Priority = Coglatas.Domain.Enums.TaskPriority.Medium,\n    string? Goal = null,\n    string? Deli"
+          },
+          "startColumn": 160,
+          "startLine": 102
+        },
+        "region": {
+          "charLength": 9,
+          "charOffset": 6253,
+          "endColumn": 297,
+          "endLine": 102,
+          "snippet": {
+            "text": "IsOverdue"
+          },
+          "startColumn": 288,
+          "startLine": 102
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "index": 137,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 512,
+          "charOffset": 6125,
+          "endColumn": 3,
+          "endLine": 110,
+          "snippet": {
+            "text": "g Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);\npublic sealed record TaskSubtaskPage(IReadOnlyList<TaskSubtaskResponse> Items, int Page, int PageSize, int TotalCount, bool HasMore);\npublic sealed record CreateTaskSubtaskRequest(\n    string Title,\n    string? Description,\n    Domain.Enums.TaskPriority Priority = Domain.Enums.TaskPriority.Medium,\n    string? Goal = null,\n    string? Deliverable = null,\n  "
+          },
+          "startColumn": 160,
+          "startLine": 102
+        },
+        "region": {
+          "charLength": 9,
+          "charOffset": 6253,
+          "endColumn": 297,
+          "endLine": 102,
+          "snippet": {
+            "text": "IsOverdue"
+          },
+          "startColumn": 288,
+          "startLine": 102
+        }
+      },
+      "before_blob": "4996cd887da4ce1a5881cc981877affabf6ad9b4",
+      "after_blob": "1398fa881c5371fc9ed75399d976afa3a22cd948",
+      "before_declaration": "public sealed record TaskSubtaskResponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);",
+      "after_declaration": "public sealed record TaskSubtaskResponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);",
+      "packet": "P01",
+      "rationale": "The same DTO positional property remains on the identical declaration line; only a nearby enum type qualification loses its redundant Coglatas prefix."
+    },
+    {
+      "before_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "2B236B16FD0F5E6049248E7BF2F2CFA3F3BA384A9C48B1E8A0A17008C51337B1"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskSubtaskResponse.PlannedEndDate' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "after_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "E959F32576316E596576137E1670B7A1D5065859967CB37605BBE9B95F320D4E"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskSubtaskResponse.PlannedEndDate' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "index": 152,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 512,
+          "charOffset": 6076,
+          "endColumn": 86,
+          "endLine": 107,
+          "snippet": {
+            "text": "ng WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);\npublic sealed record TaskSubtaskPage(IReadOnlyList<TaskSubtaskResponse> Items, int Page, int PageSize, int TotalCount, bool HasMore);\npublic sealed record CreateTaskSubtaskRequest(\n    string Title,\n    string? Description,\n    Coglatas.Domain.Enums.TaskPriority Priority = Coglatas.Domain.Enums.TaskPriority."
+          },
+          "startColumn": 111,
+          "startLine": 102
+        },
+        "region": {
+          "charLength": 14,
+          "charOffset": 6204,
+          "endColumn": 253,
+          "endLine": 102,
+          "snippet": {
+            "text": "PlannedEndDate"
+          },
+          "startColumn": 239,
+          "startLine": 102
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "index": 137,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 512,
+          "charOffset": 6076,
+          "endColumn": 11,
+          "endLine": 108,
+          "snippet": {
+            "text": "ng WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);\npublic sealed record TaskSubtaskPage(IReadOnlyList<TaskSubtaskResponse> Items, int Page, int PageSize, int TotalCount, bool HasMore);\npublic sealed record CreateTaskSubtaskRequest(\n    string Title,\n    string? Description,\n    Domain.Enums.TaskPriority Priority = Domain.Enums.TaskPriority.Medium,\n    string"
+          },
+          "startColumn": 111,
+          "startLine": 102
+        },
+        "region": {
+          "charLength": 14,
+          "charOffset": 6204,
+          "endColumn": 253,
+          "endLine": 102,
+          "snippet": {
+            "text": "PlannedEndDate"
+          },
+          "startColumn": 239,
+          "startLine": 102
+        }
+      },
+      "before_blob": "4996cd887da4ce1a5881cc981877affabf6ad9b4",
+      "after_blob": "1398fa881c5371fc9ed75399d976afa3a22cd948",
+      "before_declaration": "public sealed record TaskSubtaskResponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);",
+      "after_declaration": "public sealed record TaskSubtaskResponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);",
+      "packet": "P01",
+      "rationale": "The same DTO positional property remains on the identical declaration line; only a nearby enum type qualification loses its redundant Coglatas prefix."
+    },
+    {
+      "before_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "A795B29DF445A3E323C5E985C7CF86CD24499B5DA067A4C7669EB0693EB7F055"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskSubtaskResponse.PrimaryAssignee' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "after_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "7B62C28C644C03531166DA0A05EFD083724138F5FFD01E9082EC83C12B632F65"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskSubtaskResponse.PrimaryAssignee' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "index": 152,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 512,
+          "charOffset": 6049,
+          "endColumn": 59,
+          "endLine": 107,
+          "snippet": {
+            "text": "Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);\npublic sealed record TaskSubtaskPage(IReadOnlyList<TaskSubtaskResponse> Items, int Page, int PageSize, int TotalCount, bool HasMore);\npublic sealed record CreateTaskSubtaskRequest(\n    string Title,\n    string? Description,\n    Coglatas.Domain.Enums.TaskPriority Priority = Coglatas"
+          },
+          "startColumn": 84,
+          "startLine": 102
+        },
+        "region": {
+          "charLength": 15,
+          "charOffset": 6177,
+          "endColumn": 227,
+          "endLine": 102,
+          "snippet": {
+            "text": "PrimaryAssignee"
+          },
+          "startColumn": 212,
+          "startLine": 102
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "index": 137,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 512,
+          "charOffset": 6049,
+          "endColumn": 59,
+          "endLine": 107,
+          "snippet": {
+            "text": "Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);\npublic sealed record TaskSubtaskPage(IReadOnlyList<TaskSubtaskResponse> Items, int Page, int PageSize, int TotalCount, bool HasMore);\npublic sealed record CreateTaskSubtaskRequest(\n    string Title,\n    string? Description,\n    Domain.Enums.TaskPriority Priority = Domain.Enums.Task"
+          },
+          "startColumn": 84,
+          "startLine": 102
+        },
+        "region": {
+          "charLength": 15,
+          "charOffset": 6177,
+          "endColumn": 227,
+          "endLine": 102,
+          "snippet": {
+            "text": "PrimaryAssignee"
+          },
+          "startColumn": 212,
+          "startLine": 102
+        }
+      },
+      "before_blob": "4996cd887da4ce1a5881cc981877affabf6ad9b4",
+      "after_blob": "1398fa881c5371fc9ed75399d976afa3a22cd948",
+      "before_declaration": "public sealed record TaskSubtaskResponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);",
+      "after_declaration": "public sealed record TaskSubtaskResponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);",
+      "packet": "P01",
+      "rationale": "The same DTO positional property remains on the identical declaration line; only a nearby enum type qualification loses its redundant Coglatas prefix."
+    },
+    {
+      "before_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "3A957BD146DEDF45D207F4D7904BAA04B46B5370F38D01787F2A05070B81077E"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskSubtaskResponse.Priority' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "after_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "ECCA1B7AA97664C8ED30E594CA808F977B3F50B18A01426117BFD340BFBEACDD"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskSubtaskResponse.Priority' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "index": 152,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 512,
+          "charOffset": 5999,
+          "endColumn": 9,
+          "endLine": 107,
+          "snippet": {
+            "text": "esponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);\npublic sealed record TaskSubtaskPage(IReadOnlyList<TaskSubtaskResponse> Items, int Page, int PageSize, int TotalCount, bool HasMore);\npublic sealed record CreateTaskSubtaskRequest(\n    string Title,\n    string? Description,\n    Cogl"
+          },
+          "startColumn": 34,
+          "startLine": 102
+        },
+        "region": {
+          "charLength": 8,
+          "charOffset": 6127,
+          "endColumn": 170,
+          "endLine": 102,
+          "snippet": {
+            "text": "Priority"
+          },
+          "startColumn": 162,
+          "startLine": 102
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "index": 137,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 512,
+          "charOffset": 5999,
+          "endColumn": 9,
+          "endLine": 107,
+          "snippet": {
+            "text": "esponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);\npublic sealed record TaskSubtaskPage(IReadOnlyList<TaskSubtaskResponse> Items, int Page, int PageSize, int TotalCount, bool HasMore);\npublic sealed record CreateTaskSubtaskRequest(\n    string Title,\n    string? Description,\n    Doma"
+          },
+          "startColumn": 34,
+          "startLine": 102
+        },
+        "region": {
+          "charLength": 8,
+          "charOffset": 6127,
+          "endColumn": 170,
+          "endLine": 102,
+          "snippet": {
+            "text": "Priority"
+          },
+          "startColumn": 162,
+          "startLine": 102
+        }
+      },
+      "before_blob": "4996cd887da4ce1a5881cc981877affabf6ad9b4",
+      "after_blob": "1398fa881c5371fc9ed75399d976afa3a22cd948",
+      "before_declaration": "public sealed record TaskSubtaskResponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);",
+      "after_declaration": "public sealed record TaskSubtaskResponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);",
+      "packet": "P01",
+      "rationale": "The same DTO positional property remains on the identical declaration line; only a nearby enum type qualification loses its redundant Coglatas prefix."
+    },
+    {
+      "before_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "5AB63A4FE13505704B8995D50D9281C7992B758F1C836568EBB553A9598EC906"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskSubtaskResponse.ProgressPercent' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "after_identity": [
+        "NotAccessedPositionalProperty.Global",
+        "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+        {
+          "equalIndicator/v1": "88DE07FC4918917B6C7DD69902540039F4D679A3E87686239EA2E27C308A636E"
+        },
+        "Positional property 'Coglatas.Application.Projects.TaskSubtaskResponse.ProgressPercent' is never accessed (except in implicit Equals/ToString implementations)"
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "index": 152,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 512,
+          "charOffset": 6013,
+          "endColumn": 23,
+          "endLine": 107,
+          "snippet": {
+            "text": "d, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);\npublic sealed record TaskSubtaskPage(IReadOnlyList<TaskSubtaskResponse> Items, int Page, int PageSize, int TotalCount, bool HasMore);\npublic sealed record CreateTaskSubtaskRequest(\n    string Title,\n    string? Description,\n    Coglatas.Domain.En"
+          },
+          "startColumn": 48,
+          "startLine": 102
+        },
+        "region": {
+          "charLength": 15,
+          "charOffset": 6141,
+          "endColumn": 191,
+          "endLine": 102,
+          "snippet": {
+            "text": "ProgressPercent"
+          },
+          "startColumn": 176,
+          "startLine": 102
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "index": 137,
+          "uri": "src/Coglatas.Application/Projects/TaskSubresourceDtos.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 512,
+          "charOffset": 6013,
+          "endColumn": 23,
+          "endLine": 107,
+          "snippet": {
+            "text": "d, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);\npublic sealed record TaskSubtaskPage(IReadOnlyList<TaskSubtaskResponse> Items, int Page, int PageSize, int TotalCount, bool HasMore);\npublic sealed record CreateTaskSubtaskRequest(\n    string Title,\n    string? Description,\n    Domain.Enums.TaskP"
+          },
+          "startColumn": 48,
+          "startLine": 102
+        },
+        "region": {
+          "charLength": 15,
+          "charOffset": 6141,
+          "endColumn": 191,
+          "endLine": 102,
+          "snippet": {
+            "text": "ProgressPercent"
+          },
+          "startColumn": 176,
+          "startLine": 102
+        }
+      },
+      "before_blob": "4996cd887da4ce1a5881cc981877affabf6ad9b4",
+      "after_blob": "1398fa881c5371fc9ed75399d976afa3a22cd948",
+      "before_declaration": "public sealed record TaskSubtaskResponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);",
+      "after_declaration": "public sealed record TaskSubtaskResponse(Guid Id, Guid ParentTaskId, string Title, Guid? WorkflowStageId, string WorkflowStageName, string StageCategory, string Priority, int ProgressPercent, TaskPersonSummary? PrimaryAssignee, DateOnly? PlannedEndDate, DateTimeOffset? DeadlineAt, bool IsOverdue, long Version);",
+      "packet": "P01",
+      "rationale": "The same DTO positional property remains on the identical declaration line; only a nearby enum type qualification loses its redundant Coglatas prefix."
+    },
+    {
+      "before_identity": [
+        "PropertyCanBeMadeInitOnly.Global",
+        "src/Coglatas.Domain/Entities/IntegrationEntities.cs",
+        {
+          "equalIndicator/v1": "48548199268DA1C71C3D31D755128DC4835F6008E7286D61553E348C7D85BCA8"
+        },
+        "Property can be made init-only"
+      ],
+      "after_identity": [
+        "PropertyCanBeMadeInitOnly.Global",
+        "src/Coglatas.Domain/Entities/IntegrationEntities.cs",
+        {
+          "equalIndicator/v1": "37558A62EFD610BD7E707797B7D4003D9BD587C9E5F294712007DEF86B824109"
+        },
+        "Property can be made init-only"
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "index": 194,
+          "uri": "src/Coglatas.Domain/Entities/IntegrationEntities.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 226,
+          "charOffset": 854,
+          "endColumn": 113,
+          "endLine": 27,
+          "snippet": {
+            "text": "    public Guid WorkspaceId { get; set; }\n    public string ExportType { get; set; } = \"StudentRecordRestricted\";\n    public string IncludedClassifications { get; set; } = DataClassification.StudentRecordRestricted.ToString();"
+          },
+          "startColumn": 1,
+          "startLine": 25
+        },
+        "region": {
+          "charLength": 3,
+          "charOffset": 932,
+          "endColumn": 40,
+          "endLine": 26,
+          "snippet": {
+            "text": "set"
+          },
+          "startColumn": 37,
+          "startLine": 26
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "index": 180,
+          "uri": "src/Coglatas.Domain/Entities/IntegrationEntities.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 223,
+          "charOffset": 854,
+          "endColumn": 110,
+          "endLine": 27,
+          "snippet": {
+            "text": "    public Guid WorkspaceId { get; set; }\n    public string ExportType { get; set; } = \"StudentRecordRestricted\";\n    public string IncludedClassifications { get; set; } = nameof(DataClassification.StudentRecordRestricted);"
+          },
+          "startColumn": 1,
+          "startLine": 25
+        },
+        "region": {
+          "charLength": 3,
+          "charOffset": 932,
+          "endColumn": 40,
+          "endLine": 26,
+          "snippet": {
+            "text": "set"
+          },
+          "startColumn": 37,
+          "startLine": 26
+        }
+      },
+      "before_blob": "2ea4cbfbd261a25770269f38c19e216787b49fc0",
+      "after_blob": "383fb33fc8539d122bb25a68288e5cb2fa1c3d77",
+      "before_declaration": "    public string ExportType { get; set; } = \"StudentRecordRestricted\";",
+      "after_declaration": "    public string ExportType { get; set; } = \"StudentRecordRestricted\";",
+      "packet": "P11",
+      "rationale": "The same mutable public EF property/accessor remains. The adjacent IncludedClassifications initializer changes from the unique constant enum ToString to its equal nameof string."
+    },
+    {
+      "before_identity": [
+        "PropertyCanBeMadeInitOnly.Global",
+        "src/Coglatas.Domain/Entities/IntegrationEntities.cs",
+        {
+          "equalIndicator/v1": "8209D9FD521D5416D9CB6F0BE31CC4FB1B3A467D4C85F4DD68C136DC3A54D91B"
+        },
+        "Property can be made init-only"
+      ],
+      "after_identity": [
+        "PropertyCanBeMadeInitOnly.Global",
+        "src/Coglatas.Domain/Entities/IntegrationEntities.cs",
+        {
+          "equalIndicator/v1": "9E65635A41BDD39D89055C551B392A80D723753FF296C072AB85D1D265B562E9"
+        },
+        "Property can be made init-only"
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "index": 194,
+          "uri": "src/Coglatas.Domain/Entities/IntegrationEntities.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 254,
+          "charOffset": 896,
+          "endColumn": 70,
+          "endLine": 28,
+          "snippet": {
+            "text": "    public string ExportType { get; set; } = \"StudentRecordRestricted\";\n    public string IncludedClassifications { get; set; } = DataClassification.StudentRecordRestricted.ToString();\n    public string RequestedScopeType { get; set; } = \"StudentRecord\";"
+          },
+          "startColumn": 1,
+          "startLine": 26
+        },
+        "region": {
+          "charLength": 3,
+          "charOffset": 1017,
+          "endColumn": 53,
+          "endLine": 27,
+          "snippet": {
+            "text": "set"
+          },
+          "startColumn": 50,
+          "startLine": 27
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "index": 180,
+          "uri": "src/Coglatas.Domain/Entities/IntegrationEntities.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 251,
+          "charOffset": 896,
+          "endColumn": 70,
+          "endLine": 28,
+          "snippet": {
+            "text": "    public string ExportType { get; set; } = \"StudentRecordRestricted\";\n    public string IncludedClassifications { get; set; } = nameof(DataClassification.StudentRecordRestricted);\n    public string RequestedScopeType { get; set; } = \"StudentRecord\";"
+          },
+          "startColumn": 1,
+          "startLine": 26
+        },
+        "region": {
+          "charLength": 3,
+          "charOffset": 1017,
+          "endColumn": 53,
+          "endLine": 27,
+          "snippet": {
+            "text": "set"
+          },
+          "startColumn": 50,
+          "startLine": 27
+        }
+      },
+      "before_blob": "2ea4cbfbd261a25770269f38c19e216787b49fc0",
+      "after_blob": "383fb33fc8539d122bb25a68288e5cb2fa1c3d77",
+      "before_declaration": "    public string IncludedClassifications { get; set; } = DataClassification.StudentRecordRestricted.ToString();",
+      "after_declaration": "    public string IncludedClassifications { get; set; } = nameof(DataClassification.StudentRecordRestricted);",
+      "packet": "P11",
+      "rationale": "The same mutable public EF property/accessor remains. The adjacent IncludedClassifications initializer changes from the unique constant enum ToString to its equal nameof string."
+    },
+    {
+      "before_identity": [
+        "PropertyCanBeMadeInitOnly.Global",
+        "src/Coglatas.Domain/Entities/IntegrationEntities.cs",
+        {
+          "equalIndicator/v1": "145C02501DD716AA92405F735731ACCBBFF8D8D819DA6DD9551D3E355F9BCF52"
+        },
+        "Property can be made init-only"
+      ],
+      "after_identity": [
+        "PropertyCanBeMadeInitOnly.Global",
+        "src/Coglatas.Domain/Entities/IntegrationEntities.cs",
+        {
+          "equalIndicator/v1": "93F443F10A922D22C95F6F2EEE500430AA12ADE1A91D12FDD361A4B0BBCEFD2D"
+        },
+        "Property can be made init-only"
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "index": 194,
+          "uri": "src/Coglatas.Domain/Entities/IntegrationEntities.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 229,
+          "charOffset": 968,
+          "endColumn": 47,
+          "endLine": 29,
+          "snippet": {
+            "text": "    public string IncludedClassifications { get; set; } = DataClassification.StudentRecordRestricted.ToString();\n    public string RequestedScopeType { get; set; } = \"StudentRecord\";\n    public Guid RequestedScopeId { get; set; }"
+          },
+          "startColumn": 1,
+          "startLine": 27
+        },
+        "region": {
+          "charLength": 3,
+          "charOffset": 1125,
+          "endColumn": 48,
+          "endLine": 28,
+          "snippet": {
+            "text": "set"
+          },
+          "startColumn": 45,
+          "startLine": 28
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "index": 180,
+          "uri": "src/Coglatas.Domain/Entities/IntegrationEntities.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 226,
+          "charOffset": 968,
+          "endColumn": 47,
+          "endLine": 29,
+          "snippet": {
+            "text": "    public string IncludedClassifications { get; set; } = nameof(DataClassification.StudentRecordRestricted);\n    public string RequestedScopeType { get; set; } = \"StudentRecord\";\n    public Guid RequestedScopeId { get; set; }"
+          },
+          "startColumn": 1,
+          "startLine": 27
+        },
+        "region": {
+          "charLength": 3,
+          "charOffset": 1122,
+          "endColumn": 48,
+          "endLine": 28,
+          "snippet": {
+            "text": "set"
+          },
+          "startColumn": 45,
+          "startLine": 28
+        }
+      },
+      "before_blob": "2ea4cbfbd261a25770269f38c19e216787b49fc0",
+      "after_blob": "383fb33fc8539d122bb25a68288e5cb2fa1c3d77",
+      "before_declaration": "    public string RequestedScopeType { get; set; } = \"StudentRecord\";",
+      "after_declaration": "    public string RequestedScopeType { get; set; } = \"StudentRecord\";",
+      "packet": "P11",
+      "rationale": "The same mutable public EF property/accessor remains. The adjacent IncludedClassifications initializer changes from the unique constant enum ToString to its equal nameof string."
+    },
+    {
+      "before_identity": [
+        "UnusedMember.Global",
+        "src/Coglatas.Web/Testing/BrowserSmokeResponseGate.cs",
+        {
+          "equalIndicator/v1": "AF2676DBAC32946884ADCFBE56B079264AD7AAAD2DDC81F8D767958891FAE438"
+        },
+        "Property 'Id' is never used"
+      ],
+      "after_identity": [
+        "UnusedMember.Global",
+        "src/Coglatas.Web/Testing/BrowserSmokeResponseGate.cs",
+        {
+          "equalIndicator/v1": "8319A3608659244E72415DDF8FF0355664CF3D12E540FEBA1DC460643AD7967F"
+        },
+        "Property 'Id' is never used"
+      ],
+      "before_location": {
+        "artifactLocation": {
+          "index": 23,
+          "uri": "src/Coglatas.Web/Testing/BrowserSmokeResponseGate.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 32,
+          "charOffset": 6305,
+          "endColumn": 1,
+          "endLine": 208,
+          "snippet": {
+            "text": "\n    public Guid Id => gate.Id;\n"
+          },
+          "startColumn": 1,
+          "startLine": 206
+        },
+        "region": {
+          "charLength": 2,
+          "charOffset": 6322,
+          "endColumn": 19,
+          "endLine": 207,
+          "snippet": {
+            "text": "Id"
+          },
+          "startColumn": 17,
+          "startLine": 207
+        }
+      },
+      "after_location": {
+        "artifactLocation": {
+          "index": 13,
+          "uri": "src/Coglatas.Web/Testing/BrowserSmokeResponseGate.cs",
+          "uriBaseId": "solutionDir"
+        },
+        "contextRegion": {
+          "charLength": 33,
+          "charOffset": 6327,
+          "endColumn": 1,
+          "endLine": 208,
+          "snippet": {
+            "text": "\n    public Guid Id => _gate.Id;\n"
+          },
+          "startColumn": 1,
+          "startLine": 206
+        },
+        "region": {
+          "charLength": 2,
+          "charOffset": 6344,
+          "endColumn": 19,
+          "endLine": 207,
+          "snippet": {
+            "text": "Id"
+          },
+          "startColumn": 17,
+          "startLine": 207
+        }
+      },
+      "before_blob": "ed8b44e809d0e37f044ffda3790836a13b6e9733",
+      "after_blob": "9750fa1faab8c7f05cbbf377e97080004e0874e0",
+      "before_declaration": "    public Guid Id => gate.Id;",
+      "after_declaration": "    public Guid Id => _gate.Id;",
+      "packet": "P14",
+      "rationale": "The same public Id property remains; its private field reference changes from gate.Id to _gate.Id."
+    }
+  ]
+}

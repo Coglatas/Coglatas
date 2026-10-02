@@ -24,7 +24,7 @@ public sealed class ExportPackageGrant : AuditableEntity, ITenantEntity
     public Guid StudentRecordId { get; set; }
     public Guid WorkspaceId { get; set; }
     public string ExportType { get; set; } = "StudentRecordRestricted";
-    public string IncludedClassifications { get; set; } = DataClassification.StudentRecordRestricted.ToString();
+    public string IncludedClassifications { get; set; } = nameof(DataClassification.StudentRecordRestricted);
     public string RequestedScopeType { get; set; } = "StudentRecord";
     public Guid RequestedScopeId { get; set; }
     public bool ReasonRequired { get; set; } = true;

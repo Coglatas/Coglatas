@@ -81,7 +81,7 @@ public sealed class DbAuditFindingsService(
             .Include(finding => finding.History)
             .Include(finding => finding.WorkflowHistory)
             .Where(finding =>
-                claimIds.Contains(finding.ArtifactClaimId) &&
+                Enumerable.Contains(claimIds, finding.ArtifactClaimId) &&
                 dbContext.Set<ArtifactClaim>().Any(claim =>
                     claim.Id == finding.ArtifactClaimId &&
                     claim.TenantId == finding.TenantId));
@@ -551,7 +551,7 @@ public sealed class DbAuditFindingsService(
             .Where(link =>
                 link.TenantId == tenantId &&
                 link.Status == TenantUserStatus.Active &&
-                ownerIds.Contains(link.UserId))
+                Enumerable.Contains(ownerIds, link.UserId))
             .Select(link => link.UserId)
             .Distinct()
             .ToListAsync(cancellationToken);

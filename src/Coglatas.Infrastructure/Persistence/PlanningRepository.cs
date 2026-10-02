@@ -106,8 +106,8 @@ public sealed class PlanningRepository(AppDbContext dbContext) : IPlanningReposi
             .AsNoTracking()
             .Where(dependency =>
                 dependency.ProjectId == projectId &&
-                taskIds.Contains(dependency.PredecessorTaskItemId) &&
-                taskIds.Contains(dependency.SuccessorTaskItemId))
+                Enumerable.Contains(taskIds, dependency.PredecessorTaskItemId) &&
+                Enumerable.Contains(taskIds, dependency.SuccessorTaskItemId))
             .OrderBy(dependency => dependency.PredecessorTaskItemId)
             .ThenBy(dependency => dependency.SuccessorTaskItemId)
             .ThenBy(dependency => dependency.Id)
@@ -536,7 +536,7 @@ public sealed class PlanningRepository(AppDbContext dbContext) : IPlanningReposi
         var taskIds = rows.Select(row => row.TaskId).ToArray();
         var labels = await dbContext.WorkItemLabels
             .AsNoTracking()
-            .Where(item => taskIds.Contains(item.TaskItemId))
+            .Where(item => Enumerable.Contains(taskIds, item.TaskItemId))
             .OrderBy(item => item.Label!.SortKey)
             .Select(item => new { item.TaskItemId, Label = new MyTaskLabelSummary(item.LabelId, item.Label!.Name) })
             .ToListAsync(cancellationToken);

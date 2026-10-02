@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import subprocess
 
 spec = importlib.util.spec_from_file_location("packet_verify", Path(__file__).with_name("verify.py"))
 verify = importlib.util.module_from_spec(spec)
@@ -70,6 +71,66 @@ class EvidenceTests(unittest.TestCase):
             self.assertEqual(sum(op["count"] for op in ops), expected)
             self.assertTrue(all("<Guid>" not in op["new"] for op in ops))
         self.assertEqual(json.dumps(payload["plan"], sort_keys=True), historical)
+
+    def test_packet_selection_routes_independent_files(self):
+        with tempfile.TemporaryDirectory() as root:
+            config = Path(root)
+            (config / "selections").mkdir()
+            for packet_id in ["P02", "P04"]:
+                selection = {"packet": packet_id, "baseline_sha": "a" * 40, "stage": "verify"}
+                (config / "selections" / f"{packet_id}.json").write_text(json.dumps(selection))
+                self.assertEqual(verify.read_selection(config, f"qodana/packet-{packet_id.lower()}-proof"), selection)
+
+    def test_packet_selection_preserves_legacy_matching_packet(self):
+        with tempfile.TemporaryDirectory() as root:
+            config = Path(root)
+            selection = {"packet": "P01", "baseline_sha": "a" * 40, "stage": "verify"}
+            (config / "selection.json").write_text(json.dumps(selection))
+            self.assertEqual(verify.read_selection(config, "qodana/packet-p01-source"), selection)
+            with self.assertRaises(ValueError):
+                verify.read_selection(config, "qodana/packet-p02-proof")
+
+    def test_packet_selection_rejects_cross_packet_file(self):
+        with tempfile.TemporaryDirectory() as root:
+            config = Path(root)
+            (config / "selections").mkdir()
+            (config / "selections/P02.json").write_text(json.dumps({"packet": "P04"}))
+            with self.assertRaises(ValueError):
+                verify.read_selection(config, "qodana/packet-p02-proof")
+
+    def test_packet_selection_rejects_unsupported_or_unsafe_branch(self):
+        for branch in ["main", "qodana/packet-p03-proof", "qodana/packet-../../P02", "qodana/packet-p02-proof/extra"]:
+            with self.subTest(branch=branch):
+                with self.assertRaises(ValueError):
+                    verify.read_selection(Path("unused"), branch)
+
+    def test_integrated_main_refreshes_baseline_without_accepting_unmerged_main(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def git(*args):
+                return subprocess.check_output(["git", *args], cwd=root, text=True).strip()
+            git("init", "-q")
+            git("config", "user.email", "ci@example.invalid")
+            git("config", "user.name", "CI")
+            def commit(value):
+                (root / "file").write_text(value)
+                git("add", "file")
+                git("commit", "-qm", value)
+                return git("rev-parse", "HEAD")
+            initial = commit("initial")
+            main = commit("main")
+            head = commit("packet")
+            self.assertEqual(verify.resolve_source_baseline(root, initial, head, main), main)
+            self.assertEqual(verify.resolve_source_baseline(root, main, head, initial), main)
+            git("checkout", "-q", "--detach", initial)
+            unrelated_main = commit("unintegrated main")
+            git("checkout", "-q", "--detach", head)
+            self.assertIsNone(verify.integrated_pr_base(root, head, unrelated_main))
+            self.assertEqual(verify.resolve_source_baseline(root, initial, head, unrelated_main), initial)
+            with self.assertRaises(ValueError):
+                verify.integrated_pr_base(root, main, initial)
+            with self.assertRaises(ValueError):
+                verify.integrated_pr_base(root, head, "main")
 
 if __name__ == "__main__":
     unittest.main()

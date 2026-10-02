@@ -1,0 +1,108 @@
+--- a/src/Coglatas.Web/OpenApi/SecurityOpenApiOperationTransformer.cs
++++ b/src/Coglatas.Web/OpenApi/SecurityOpenApiOperationTransformer.cs
+@@ -28,6 +28,7 @@
+         EnsureCookieSecurityScheme(document);
+         ConfigureAuthorizationResponses(operation, context, document);
+         ConfigureValidationResponses(operation, context);
++        ConfigureQueryBooleanWireSchemas(operation);
+         ConfigureRequestBody(operation, context);
+         ConfigureKnownErrorContent(operation);
+         return Task.CompletedTask;
+@@ -107,6 +108,25 @@
+         if (IsLegacyProjectCreate(context))
+         {
+             AddResponse(operation, "503", "Project creation is temporarily unavailable.");
++        }
++    }
++
++
++    private static void ConfigureQueryBooleanWireSchemas(OpenApiOperation operation)
++    {
++        foreach (var parameter in operation.Parameters ?? [])
++        {
++            if (parameter.In != ParameterLocation.Query ||
++                parameter.Schema is not OpenApiSchema schema ||
++                schema.Type != JsonSchemaType.Boolean)
++            {
++                continue;
++            }
++
++            // Query scalars travel as text. Preserve native boolean generation
++            // while describing only the existing true/false wire spellings.
++            schema.Type = JsonSchemaType.Boolean | JsonSchemaType.String;
++            schema.Pattern = "^(?:[tT][rR][uU][eE]|[fF][aA][lL][sS][eE])$";
+         }
+     }
+ 
+--- a/tests/Coglatas.Tests/OpenApi/SecurityOpenApiOperationTransformerTests.cs
++++ b/tests/Coglatas.Tests/OpenApi/SecurityOpenApiOperationTransformerTests.cs
+@@ -62,6 +62,68 @@
+         Assert.True(response.Content is null || response.Content.Count == 0);
+     }
+ 
++
++    [Fact]
++    public async Task Query_boolean_preserves_requiredness_and_advertises_true_false_wire_strings()
++    {
++        var schema = new OpenApiSchema { Type = JsonSchemaType.Boolean };
++        var parameter = new OpenApiParameter
++        {
++            Name = "Archived",
++            In = ParameterLocation.Query,
++            Required = true,
++            Schema = schema
++        };
++        var operation = new OpenApiOperation { Parameters = [parameter] };
++
++        await new SecurityOpenApiOperationTransformer().TransformAsync(
++            operation, CreateContext(), CancellationToken.None);
++
++        Assert.Equal(JsonSchemaType.Boolean | JsonSchemaType.String, schema.Type);
++        Assert.Equal("^(?:[tT][rR][uU][eE]|[fF][aA][lL][sS][eE])$", schema.Pattern);
++        Assert.True(parameter.Required);
++        Assert.Equal("Archived", parameter.Name);
++        Assert.Equal(ParameterLocation.Query, parameter.In);
++    }
++
++    [Fact]
++    public async Task Boolean_wire_metadata_preserves_body_headers_paths_and_other_query_types()
++    {
++        var header = new OpenApiSchema { Type = JsonSchemaType.Boolean };
++        var path = new OpenApiSchema { Type = JsonSchemaType.Boolean };
++        var number = new OpenApiSchema { Type = JsonSchemaType.Integer, Format = "int32" };
++        var body = new OpenApiSchema { Type = JsonSchemaType.Boolean };
++        var operation = new OpenApiOperation
++        {
++            Parameters =
++            [
++                new OpenApiParameter { Name = "Header", In = ParameterLocation.Header, Schema = header },
++                new OpenApiParameter { Name = "Path", In = ParameterLocation.Path, Schema = path },
++                new OpenApiParameter { Name = "Page", In = ParameterLocation.Query, Schema = number }
++            ],
++            RequestBody = new OpenApiRequestBody
++            {
++                Content = new Dictionary<string, OpenApiMediaType>
++                {
++                    ["application/json"] = new OpenApiMediaType { Schema = body }
++                }
++            }
++        };
++
++        await new SecurityOpenApiOperationTransformer().TransformAsync(
++            operation, CreateContext(), CancellationToken.None);
++
++        Assert.Equal(JsonSchemaType.Boolean, header.Type);
++        Assert.Equal(JsonSchemaType.Boolean, path.Type);
++        Assert.Equal(JsonSchemaType.Boolean, body.Type);
++        Assert.Null(header.Pattern);
++        Assert.Null(path.Pattern);
++        Assert.Null(body.Pattern);
++        Assert.Equal(JsonSchemaType.Integer, number.Type);
++        Assert.Equal("int32", number.Format);
++        Assert.Null(number.Pattern);
++    }
++
+     private static OpenApiOperationTransformerContext CreateContext(params object[] endpointMetadata) =>
+         new()
+         {
+
