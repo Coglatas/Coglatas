@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Coglatas.Application.Search;
 
 public enum SearchResultType
@@ -43,6 +45,8 @@ public enum MessageAttachmentFilter
 }
 
 public sealed record SearchRequest(
+    [param: RegularExpression(@"^[^\u0000]*$", ErrorMessage = "Query contains unsupported characters.")]
+    [property: RegularExpression(@"^[^\u0000]*$", ErrorMessage = "Query contains unsupported characters.")]
     string? Q = null,
     SearchResultType Type = SearchResultType.All,
     Guid? WorkspaceId = null,
@@ -59,6 +63,8 @@ public sealed record SearchRequest(
     MessageAttachmentFilter MessageAttachment = MessageAttachmentFilter.All);
 
 public sealed record MessageAuthorOptionsRequest(
+    [param: RegularExpression(@"^[^\u0000]*$", ErrorMessage = "Query contains unsupported characters.")]
+    [property: RegularExpression(@"^[^\u0000]*$", ErrorMessage = "Query contains unsupported characters.")]
     string? Q = null,
     Guid? SelectedUserId = null,
     int Limit = 20);
