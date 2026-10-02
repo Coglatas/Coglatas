@@ -229,6 +229,17 @@ jobs:
         errors = self.errors(text)
         self.assertTrue(any("pull_request_target" in error for error in errors))
 
+    def test_gitleaks_history_scans_are_bound_to_checked_out_ref(self) -> None:
+        for workflow_name in ("ci.yml", "publication-readiness.yml"):
+            workflow = (guard.WORKFLOW_DIR / workflow_name).read_text(encoding="utf-8")
+            with self.subTest(workflow=workflow_name):
+                self.assertIn('scan_log_opts="$GITHUB_SHA"', workflow)
+                self.assertIn(
+                    'scan_log_opts="${merge_base}..${PR_HEAD_SHA}"',
+                    workflow,
+                )
+                self.assertIn('--log-opts="$scan_log_opts"', workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
