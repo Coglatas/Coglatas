@@ -29,7 +29,13 @@ jobs:
   # POST /api/comments returns the caller's newly submitted comment body.
   # ZAP can therefore rediscover its own Luhn-valid active-scan payload as
   # passive PII rule 10062. Scope the false-positive override to this write
-  # response only; read paths and every other endpoint remain unfiltered.
+  # response only.
+  #
+  # POST /api/tenant/export is the explicit, reauthorized metadata-export
+  # boundary. Its contract intentionally includes redacted tenant-user metadata
+  # such as email while excluding secrets, hashes, tokens, and file bodies.
+  # Treat rule 10062 as a false positive only for that exact export response;
+  # all other endpoints remain unfiltered.
   - type: alertFilter
     alertFilters:
       - ruleId: 10062
@@ -37,6 +43,14 @@ jobs:
         newRisk: False Positive
         context: sec06-api
         url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/comments"
+        urlRegex: false
+        methods:
+          - POST
+      - ruleId: 10062
+        ruleName: PII Disclosure
+        newRisk: False Positive
+        context: sec06-api
+        url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/tenant/export"
         urlRegex: false
         methods:
           - POST

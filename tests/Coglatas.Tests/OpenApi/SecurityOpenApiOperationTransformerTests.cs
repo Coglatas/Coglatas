@@ -88,6 +88,31 @@ public sealed class SecurityOpenApiOperationTransformerTests
         Assert.Equal("^[^\\u0000]*$", qSchema.Pattern);
     }
 
+    [Fact]
+    public async Task Missing_http_method_does_not_apply_search_query_pattern()
+    {
+        var qSchema = new OpenApiSchema { Type = JsonSchemaType.String };
+        var operation = new OpenApiOperation
+        {
+            Parameters =
+            [
+                new OpenApiParameter
+                {
+                    Name = "Q",
+                    In = ParameterLocation.Query,
+                    Schema = qSchema
+                }
+            ]
+        };
+        var context = CreateContext();
+        context.Description.HttpMethod = null;
+        context.Description.RelativePath = "api/search";
+
+        await new SecurityOpenApiOperationTransformer().TransformAsync(operation, context, CancellationToken.None);
+
+        Assert.Null(qSchema.Pattern);
+    }
+
     private static OpenApiOperationTransformerContext CreateContext(params object[] endpointMetadata) =>
         new()
         {
