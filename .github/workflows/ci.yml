@@ -495,28 +495,30 @@ jobs:
           cat trivy-filesystem-report.txt
           exit "$status"
 
-      - name: Scan PR diff or full main history with Gitleaks
+      - name: Scan PR diff or current ref history with Gitleaks
         shell: bash
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          extra_args=()
+          # With no --log-opts, Gitleaks scans --all local refs. Full-history
+          # checkout fetches topic branches too, so bind non-PR scans to this ref.
+          scan_log_opts="$GITHUB_SHA"
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
             merge_base="$(git merge-base "$PR_BASE_SHA" "$PR_HEAD_SHA")"
             [[ -n "$merge_base" ]] || {
               echo "::error::Unable to resolve the PR merge base for Gitleaks."
               exit 1
             }
-            extra_args+=(--log-opts="${merge_base}..${PR_HEAD_SHA}")
+            scan_log_opts="${merge_base}..${PR_HEAD_SHA}"
           fi
           set +e
           docker run --rm \
             -v "$PWD:/repo" \
             zricethezav/gitleaks:v8.24.3 \
             detect --source /repo --redact --verbose \
-            "${extra_args[@]}" \
+            --log-opts="$scan_log_opts" \
             --report-format json \
             --report-path /repo/gitleaks-report.json
           status=$?
