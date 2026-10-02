@@ -22,7 +22,7 @@ const angularJson = JSON.parse(await readFile(new URL('../angular.json', import.
     '@storybook/angular': '10.6.0',
     jsdom: '30.1.1',
     storybook: '10.6.0',
-    vitest: '4.1.11',
+    vitest: '5.0.2',
   },
   packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 
