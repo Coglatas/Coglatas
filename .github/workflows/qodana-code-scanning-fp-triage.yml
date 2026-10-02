@@ -4,194 +4,136 @@ on:
   push:
     branches:
       - ops/qodana-code-scanning-triage-20261002
+    paths:
+      - .github/workflows/qodana-code-scanning-fp-triage.yml
+      - scripts/quality/qodana-reviewed-alerts.json
+
+concurrency:
+  group: qodana-fp-triage
+  cancel-in-progress: false
 
 permissions:
   contents: read
-  security-events: write
+  actions: read
+  security-events: read
 
 jobs:
   triage:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      APPLY_DISMISSALS: "false"
-      MAX_DISMISSALS: "1200"
+    timeout-minutes: 15
     steps:
-      - name: Inspect and optionally dismiss high-confidence Qodana false positives
+      - name: Export current alerts and previous execution evidence without mutations
+        id: inventory
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           python3 - <<'PY'
+          import collections
+          import datetime
           import json
           import os
+          import pathlib
           import re
-          import sys
-          import time
           import urllib.parse
           import urllib.request
-          import urllib.error
 
-          api = os.environ.get("GITHUB_API_URL", "https://api.github.com")
-          repo = os.environ["GITHUB_REPOSITORY"]
-          token = os.environ["GH_TOKEN"]
-          apply = os.environ.get("APPLY_DISMISSALS", "false").lower() == "true"
-          max_dismissals = int(os.environ.get("MAX_DISMISSALS", "900"))
+          repo = os.environ['GITHUB_REPOSITORY']
+          api = os.environ['GITHUB_API_URL']
+          out = pathlib.Path(os.environ['RUNNER_TEMP']) / 'qodana-fp-evidence'
+          out.mkdir()
+          headers = {'Accept': 'application/vnd.github+json',
+                     'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                     'X-GitHub-Api-Version': '2022-11-28',
+                     'User-Agent': 'Coglatas-Qodana-Evidence-Review'}
 
-          headers = {
-              "Accept": "application/vnd.github+json",
-              "Authorization": f"Bearer {token}",
-              "X-GitHub-Api-Version": "2022-11-28",
-              "User-Agent": "Coglatas-Qodana-FP-Triage",
-          }
+          def get(path):
+              req = urllib.request.Request(api + '/repos/' + repo + path, headers=headers)
+              with urllib.request.urlopen(req, timeout=90) as response:
+                  return json.load(response)
 
-          def request_json(url, method="GET", body=None):
-              data = None if body is None else json.dumps(body).encode("utf-8")
-              req = urllib.request.Request(url, data=data, headers=headers, method=method)
-              with urllib.request.urlopen(req, timeout=60) as response:
-                  raw = response.read()
-                  remaining = response.headers.get("x-ratelimit-remaining")
-                  return json.loads(raw) if raw else None, remaining
+          source_sha = get('/git/ref/heads/main')['object']['sha']
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('source_sha=' + source_sha + '\n')
+          summary = {'source_sha': source_sha, 'repository': repo,
+                     'run_id': os.environ['GITHUB_RUN_ID'],
+                     'captured_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                     'mode': 'READ_ONLY', 'states': {}}
+          for state in ('open', 'dismissed'):
+              alerts = []
+              for page in range(1, 101):
+                  query = urllib.parse.urlencode({'state': state, 'ref': 'refs/heads/main',
+                                                  'per_page': 100, 'page': page})
+                  batch = get('/code-scanning/alerts?' + query)
+                  alerts.extend(batch)
+                  if len(batch) < 100:
+                      break
+              else:
+                  raise RuntimeError('Alert pagination limit exceeded')
+              (out / ('alerts-' + state + '.json')).write_text(json.dumps(alerts, ensure_ascii=False), encoding='utf-8')
+              summary['states'][state] = {'count': len(alerts),
+                  'tools': dict(collections.Counter(a['tool']['name'] for a in alerts)),
+                  'rules': dict(collections.Counter(a['rule']['id'] for a in alerts)),
+                  'previous_automated_triage': sum((a.get('dismissed_comment') or '').startswith(
+                      'Automated Qodana false-positive triage on 2026-10-02.') for a in alerts)}
 
-          alerts = []
-          page = 1
-          while True:
-              params = urllib.parse.urlencode({
-                  "state": "open",
-                  "ref": "refs/heads/main",
-                  "per_page": 100,
-                  "page": page,
-              })
-              batch, remaining = request_json(f"{api}/repos/{repo}/code-scanning/alerts?{params}")
-              if not batch:
-                  break
-              alerts.extend(batch)
-              print(f"Loaded page {page}: {len(batch)} alerts; rate-limit remaining={remaining}")
-              if len(batch) < 100:
-                  break
-              page += 1
-              if page > 100:
-                  raise RuntimeError("Unexpectedly large code-scanning alert set.")
-
-          def classify(alert):
-              rule = (alert.get("rule") or {}).get("id", "")
-              instance = alert.get("most_recent_instance") or {}
-              location = instance.get("location") or {}
-              path = location.get("path", "")
-              message = (instance.get("message") or {}).get("text", "")
-
-              if rule == "NotAccessedPositionalProperty.Global":
-                  m = re.search(r"Positional property '([^']+)' is never accessed", message)
-                  if not m:
-                      return None
-                  property_name = m.group(1)
-                  owner_type = property_name.rsplit(".", 1)[0].rsplit(".", 1)[-1]
-                  if owner_type.endswith("Response"):
-                      return (
-                          "public-wire-contract",
-                          "Qodana cannot observe external ASP.NET Core/System.Text.Json/OpenAPI consumers of this "
-                          "public response positional property; it is intentionally part of the serialized wire contract.",
-                      )
-
-              if rule == "UnusedAutoPropertyAccessor.Global":
-                  if path in {
-                      "src/Coglatas.Application/Announcements/AnnouncementDtos.cs",
-                      "src/Coglatas.Application/Announcements/AnnouncementDraftDtos.cs",
-                  } and ".get" in message:
-                      return (
-                          "serialized-dto-accessor",
-                          "The getter is consumed through ASP.NET Core/System.Text.Json/OpenAPI contract reflection "
-                          "rather than a statically visible C# call.",
-                      )
-                  if path == "src/Coglatas.Application/Common/Tenancy/TenancyOptions.cs" and ".set" in message:
-                      return (
-                          "configuration-binder-setter",
-                          "The setter is invoked by Microsoft.Extensions.Configuration options binding through "
-                          "reflection, which Qodana does not model as a direct C# call.",
-                      )
-                  if path == "src/Coglatas.Web/Configuration/PlatformOptions.cs" and ".set" in message:
-                      return (
-                          "configuration-binder-setter",
-                          "The setter is invoked by Microsoft.Extensions.Configuration options binding through "
-                          "reflection, which Qodana does not model as a direct C# call.",
-                      )
-                  if (
-                      path == "src/Coglatas.Web/Controllers/ArtifactsController.cs"
-                      and "ChangeNote.set" in message
-                  ):
-                      return (
-                          "aspnet-model-binding-setter",
-                          "ASP.NET Core form model binding sets ChangeNote through framework binding/reflection; "
-                          "there is no direct C# setter call for Qodana to observe.",
-                      )
-              return None
-
-          candidates = []
-          counts = {}
-          for alert in alerts:
-              classification = classify(alert)
-              if classification is None:
-                  continue
-              kind, reason = classification
-              counts[kind] = counts.get(kind, 0) + 1
-              inst = alert.get("most_recent_instance") or {}
-              loc = inst.get("location") or {}
-              candidates.append({
-                  "number": alert["number"],
-                  "rule": (alert.get("rule") or {}).get("id"),
-                  "tool": (alert.get("tool") or {}).get("name"),
-                  "path": loc.get("path"),
-                  "line": loc.get("start_line"),
-                  "message": (inst.get("message") or {}).get("text"),
-                  "kind": kind,
-                  "reason": reason,
-              })
-
-          candidates.sort(key=lambda x: x["number"])
-          print(f"Open code-scanning alerts: {len(alerts)}")
-          print(f"High-confidence false-positive candidates: {len(candidates)}")
-          print("Candidate breakdown: " + json.dumps(counts, sort_keys=True))
-          for c in candidates:
-              print(
-                  f"CANDIDATE #{c['number']} [{c['kind']}] {c['rule']} "
-                  f"{c['path']}:{c['line']} :: {c['message']}"
-              )
-
-          if not apply:
-              print("DRY RUN ONLY: no alerts were dismissed.")
-              sys.exit(0)
-
-          dismissed = 0
-          failures = []
-          for c in candidates[:max_dismissals]:
-              body = {
-                  "state": "dismissed",
-                  "dismissed_reason": "false positive",
-                  "dismissed_comment": (
-                      "Automated Qodana false-positive triage on 2026-10-02. "
-                      + c["reason"]
-                  ),
-              }
-              try:
-                  _, remaining = request_json(
-                      f"{api}/repos/{repo}/code-scanning/alerts/{c['number']}",
-                      method="PATCH",
-                      body=body,
-                  )
-                  dismissed += 1
-                  print(
-                      f"DISMISSED #{c['number']} {c['rule']} {c['path']}:{c['line']} "
-                      f"rate-limit remaining={remaining}"
-                  )
-                  time.sleep(0.08)
-              except Exception as exc:
-                  failures.append((c["number"], repr(exc)))
-                  print(f"FAILED #{c['number']}: {exc}", file=sys.stderr)
-
-          print(f"Dismissed: {dismissed}; failures: {len(failures)}; candidate total: {len(candidates)}")
-          if len(candidates) > max_dismissals:
-              print(f"Remaining high-confidence candidates after this batch: at least {len(candidates) - max_dismissals}")
-          if failures:
-              print(json.dumps(failures))
-              sys.exit(1)
+          previous_run = get('/actions/runs/36988308931')
+          summary['previous_run'] = {k: previous_run.get(k) for k in (
+              'id', 'status', 'conclusion', 'head_sha', 'html_url', 'run_attempt', 'updated_at')}
+          req = urllib.request.Request(api + '/repos/' + repo + '/actions/jobs/110778325917/logs', headers=headers)
+          with urllib.request.urlopen(req, timeout=90) as response:
+              log = response.read().decode('utf-8', errors='replace')
+          lines = [line for line in log.splitlines() if '\x1b' not in line and re.search(
+              r'(?:Z )(?:Dismissed:|High-confidence false-positive candidates:|Open code-scanning alerts:|Candidate breakdown:|FAILED #)', line)]
+          (out / 'previous-run-summary.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+          summary['main_unchanged_during_export'] = get('/git/ref/heads/main')['object']['sha'] == source_sha
+          (out / 'summary.json').write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding='utf-8')
+          print(json.dumps(summary, indent=2))
+          print('\n'.join(lines[-10:]))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('## Read-only Qodana evidence inventory\n\n```json\n' + json.dumps(summary, indent=2) + '\n```\n')
           PY
+
+      - name: Checkout the exact reviewed source revision without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ steps.inventory.outputs.source_sha }}
+          path: source
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Package tracked first-party review sources without running application code
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import subprocess
+          import tarfile
+          root = pathlib.Path('source')
+          out = pathlib.Path(os.environ['RUNNER_TEMP']) / 'qodana-fp-evidence'
+          names = subprocess.check_output(['git', '-C', str(root), 'ls-files', '-z']).decode().split('\0')
+          selected = []
+          for name in names:
+              if not name or '/Migrations/' in name or '/wwwroot/' in name or '/node_modules/' in name:
+                  continue
+              path = pathlib.PurePosixPath(name)
+              if (name.startswith(('src/', 'tests/Coglatas.Tests/', 'tests/Coglatas.ArchitectureTests/', 'frontend/src/'))
+                      and path.suffix in {'.cs', '.csproj', '.json', '.ts', '.html', '.props', '.targets'}):
+                  selected.append(name)
+          with tarfile.open(out / 'review-sources.tar.gz', 'w:gz') as archive:
+              for name in selected:
+                  p = root / name
+                  if p.is_file() and not p.is_symlink():
+                      archive.add(p, arcname=name, recursive=False)
+          print('Packaged tracked first-party files:', len(selected))
+          PY
+
+      - name: Upload review evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: qodana-fp-evidence-${{ github.run_id }}
+          path: ${{ runner.temp }}/qodana-fp-evidence/
+          if-no-files-found: error
+          retention-days: 14
