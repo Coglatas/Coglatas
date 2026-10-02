@@ -87,6 +87,27 @@ describe('SyncfusionGanttComponent adapter boundary', () => {
     expect(formatGanttDateOnly(milestone.endDate)).toBe('2026-07-15');
   });
 
+  it('keeps the vendor dataSource reference stable until the contract changes', () => {
+    const component = new SyncfusionGanttComponent();
+    component.contract = ganttContract();
+
+    const first = component.dataSource;
+    expect(component.dataSource).toBe(first);
+
+    component.contract = {
+      ...component.contract,
+      scheduledItems: component.contract.scheduledItems.map((candidate) =>
+        candidate.taskId === 'task-leaf'
+          ? { ...candidate, progressPercent: 65, version: candidate.version + 1 }
+          : candidate)
+    };
+
+    const updated = component.dataSource;
+    expect(updated).not.toBe(first);
+    expect(component.dataSource).toBe(updated);
+    expect(updated.find((candidate) => candidate.taskId === 'task-leaf')?.progress).toBe(65);
+  });
+
   it('keeps unscheduled canonical Tasks in the vendor projection with null dates', () => {
     const component = new SyncfusionGanttComponent();
     const contract = ganttContract();
