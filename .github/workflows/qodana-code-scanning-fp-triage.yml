@@ -8,6 +8,7 @@ on:
       - .github/workflows/qodana-code-scanning-fp-triage.yml
       - scripts/quality/qodana-reviewed-alerts.json
       - scripts/quality/apply-reviewed-qodana-alerts.py
+      - scripts/quality/QodanaAuditIndexer.cs
 
 concurrency:
   group: qodana-fp-triage
@@ -88,7 +89,45 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
+      - name: Checkout the immutable review tooling without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          path: review
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Index source with SDK Roslyn without building or executing the application
+        shell: bash
+        run: |
+          work="$(mktemp -d "$RUNNER_TEMP/qodana-roslyn.XXXXXX")"
+          cp review/scripts/quality/QodanaAuditIndexer.cs "$work/Program.cs"
+          cp review/scripts/quality/QodanaAuditIndexer.cs "$RUNNER_TEMP/qodana-fp-evidence/Indexer.cs.txt"
+          cd "$work"
+          major="$(dotnet --version | cut -d. -f1)"
+          cat > NuGet.Config <<'XML'
+          <configuration><packageSources><clear /></packageSources></configuration>
+          XML
+          cat > AuditIndexer.csproj <<'XML'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>FRAMEWORK</TargetFramework>
+              <ImplicitUsings>enable</ImplicitUsings>
+              <Nullable>enable</Nullable>
+            </PropertyGroup>
+            <ItemGroup>
+              <FrameworkReference Include="Microsoft.AspNetCore.App" />
+              <Reference Include="Microsoft.CodeAnalysis"><HintPath>$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.dll</HintPath></Reference>
+              <Reference Include="Microsoft.CodeAnalysis.CSharp"><HintPath>$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll</HintPath></Reference>
+            </ItemGroup>
+          </Project>
+          XML
+          sed -i "s/FRAMEWORK/net${major}.0/" AuditIndexer.csproj
+          dotnet run --project AuditIndexer.csproj -- "$GITHUB_WORKSPACE/source" "$RUNNER_TEMP/qodana-fp-evidence"
+
       - name: Package tracked first-party sources without running application code
+        if: ${{ !cancelled() && steps.inventory.outcome == 'success' }}
         shell: bash
         run: |
           python3 - <<'PY'
