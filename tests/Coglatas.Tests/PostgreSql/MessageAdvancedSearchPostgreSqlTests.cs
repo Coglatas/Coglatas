@@ -48,6 +48,10 @@ public sealed class MessageAdvancedSearchPostgreSqlTests
             Type: SearchResultType.Message,
             ToDate: DateTimeOffset.UtcNow,
             ToDateExclusive: DateTimeOffset.UtcNow.AddDays(1)))).IsSuccess);
+        Assert.False((await service.SearchAsync(
+            new SearchRequest(Q: "invalid\0query"))).IsSuccess);
+        Assert.False((await service.SearchMessageAuthorsAsync(
+            new MessageAuthorOptionsRequest(Q: "invalid\0author"))).IsSuccess);
         Assert.False((await service.SearchMessageAuthorsAsync(
             new MessageAuthorOptionsRequest(Q: "x"))).IsSuccess);
         Assert.False((await service.SearchMessageAuthorsAsync(
