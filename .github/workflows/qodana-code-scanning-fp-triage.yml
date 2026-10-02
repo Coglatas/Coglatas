@@ -1,0 +1,197 @@
+name: Qodana Code Scanning false-positive triage
+
+on:
+  push:
+    branches:
+      - ops/qodana-code-scanning-triage-20261002
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      APPLY_DISMISSALS: "false"
+      MAX_DISMISSALS: "900"
+    steps:
+      - name: Inspect and optionally dismiss high-confidence Qodana false positives
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import sys
+          import time
+          import urllib.parse
+          import urllib.request
+          import urllib.error
+
+          api = os.environ.get("GITHUB_API_URL", "https://api.github.com")
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          apply = os.environ.get("APPLY_DISMISSALS", "false").lower() == "true"
+          max_dismissals = int(os.environ.get("MAX_DISMISSALS", "900"))
+
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "Coglatas-Qodana-FP-Triage",
+          }
+
+          def request_json(url, method="GET", body=None):
+              data = None if body is None else json.dumps(body).encode("utf-8")
+              req = urllib.request.Request(url, data=data, headers=headers, method=method)
+              with urllib.request.urlopen(req, timeout=60) as response:
+                  raw = response.read()
+                  remaining = response.headers.get("x-ratelimit-remaining")
+                  return json.loads(raw) if raw else None, remaining
+
+          alerts = []
+          page = 1
+          while True:
+              params = urllib.parse.urlencode({
+                  "state": "open",
+                  "ref": "refs/heads/main",
+                  "per_page": 100,
+                  "page": page,
+              })
+              batch, remaining = request_json(f"{api}/repos/{repo}/code-scanning/alerts?{params}")
+              if not batch:
+                  break
+              alerts.extend(batch)
+              print(f"Loaded page {page}: {len(batch)} alerts; rate-limit remaining={remaining}")
+              if len(batch) < 100:
+                  break
+              page += 1
+              if page > 100:
+                  raise RuntimeError("Unexpectedly large code-scanning alert set.")
+
+          def classify(alert):
+              rule = (alert.get("rule") or {}).get("id", "")
+              instance = alert.get("most_recent_instance") or {}
+              location = instance.get("location") or {}
+              path = location.get("path", "")
+              message = (instance.get("message") or {}).get("text", "")
+
+              if rule == "NotAccessedPositionalProperty.Global":
+                  m = re.search(r"Positional property '([^']+)' is never accessed", message)
+                  if not m:
+                      return None
+                  property_name = m.group(1)
+                  owner_type = property_name.rsplit(".", 1)[0].rsplit(".", 1)[-1]
+                  if owner_type.endswith(("Response", "Request")):
+                      return (
+                          "public-wire-contract",
+                          "Qodana cannot observe external ASP.NET Core/System.Text.Json/OpenAPI consumers of this "
+                          "public request/response positional property; it is intentionally part of the wire contract.",
+                      )
+
+              if rule == "UnusedAutoPropertyAccessor.Global":
+                  if path in {
+                      "src/Coglatas.Application/Announcements/AnnouncementDtos.cs",
+                      "src/Coglatas.Application/Announcements/AnnouncementDraftDtos.cs",
+                  } and ".get" in message:
+                      return (
+                          "serialized-dto-accessor",
+                          "The getter is consumed through ASP.NET Core/System.Text.Json/OpenAPI contract reflection "
+                          "rather than a statically visible C# call.",
+                      )
+                  if path == "src/Coglatas.Application/Common/Tenancy/TenancyOptions.cs" and ".set" in message:
+                      return (
+                          "configuration-binder-setter",
+                          "The setter is invoked by Microsoft.Extensions.Configuration options binding through "
+                          "reflection, which Qodana does not model as a direct C# call.",
+                      )
+                  if path == "src/Coglatas.Web/Configuration/PlatformOptions.cs" and ".set" in message:
+                      return (
+                          "configuration-binder-setter",
+                          "The setter is invoked by Microsoft.Extensions.Configuration options binding through "
+                          "reflection, which Qodana does not model as a direct C# call.",
+                      )
+                  if (
+                      path == "src/Coglatas.Web/Controllers/ArtifactsController.cs"
+                      and "ChangeNote.set" in message
+                  ):
+                      return (
+                          "aspnet-model-binding-setter",
+                          "ASP.NET Core form model binding sets ChangeNote through framework binding/reflection; "
+                          "there is no direct C# setter call for Qodana to observe.",
+                      )
+              return None
+
+          candidates = []
+          counts = {}
+          for alert in alerts:
+              classification = classify(alert)
+              if classification is None:
+                  continue
+              kind, reason = classification
+              counts[kind] = counts.get(kind, 0) + 1
+              inst = alert.get("most_recent_instance") or {}
+              loc = inst.get("location") or {}
+              candidates.append({
+                  "number": alert["number"],
+                  "rule": (alert.get("rule") or {}).get("id"),
+                  "tool": (alert.get("tool") or {}).get("name"),
+                  "path": loc.get("path"),
+                  "line": loc.get("start_line"),
+                  "message": (inst.get("message") or {}).get("text"),
+                  "kind": kind,
+                  "reason": reason,
+              })
+
+          candidates.sort(key=lambda x: x["number"])
+          print(f"Open code-scanning alerts: {len(alerts)}")
+          print(f"High-confidence false-positive candidates: {len(candidates)}")
+          print("Candidate breakdown: " + json.dumps(counts, sort_keys=True))
+          for c in candidates:
+              print(
+                  f"CANDIDATE #{c['number']} [{c['kind']}] {c['rule']} "
+                  f"{c['path']}:{c['line']} :: {c['message']}"
+              )
+
+          if not apply:
+              print("DRY RUN ONLY: no alerts were dismissed.")
+              sys.exit(0)
+
+          dismissed = 0
+          failures = []
+          for c in candidates[:max_dismissals]:
+              body = {
+                  "state": "dismissed",
+                  "dismissed_reason": "false positive",
+                  "dismissed_comment": (
+                      "Automated Qodana false-positive triage on 2026-10-02. "
+                      + c["reason"]
+                  ),
+              }
+              try:
+                  _, remaining = request_json(
+                      f"{api}/repos/{repo}/code-scanning/alerts/{c['number']}",
+                      method="PATCH",
+                      body=body,
+                  )
+                  dismissed += 1
+                  print(
+                      f"DISMISSED #{c['number']} {c['rule']} {c['path']}:{c['line']} "
+                      f"rate-limit remaining={remaining}"
+                  )
+                  time.sleep(0.08)
+              except Exception as exc:
+                  failures.append((c["number"], repr(exc)))
+                  print(f"FAILED #{c['number']}: {exc}", file=sys.stderr)
+
+          print(f"Dismissed: {dismissed}; failures: {len(failures)}; candidate total: {len(candidates)}")
+          if len(candidates) > max_dismissals:
+              print(f"Remaining high-confidence candidates after this batch: at least {len(candidates) - max_dismissals}")
+          if failures:
+              print(json.dumps(failures))
+              sys.exit(1)
+          PY
