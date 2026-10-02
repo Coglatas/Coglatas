@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Export current alerts and previous execution evidence without mutations
+      - name: Export current alerts without mutations
         id: inventory
         shell: bash
         env:
@@ -34,10 +34,8 @@ jobs:
           import json
           import os
           import pathlib
-          import re
           import urllib.parse
           import urllib.request
-
           repo = os.environ['GITHUB_REPOSITORY']
           api = os.environ['GITHUB_API_URL']
           out = pathlib.Path(os.environ['RUNNER_TEMP']) / 'qodana-fp-evidence'
@@ -46,12 +44,10 @@ jobs:
                      'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
                      'X-GitHub-Api-Version': '2022-11-28',
                      'User-Agent': 'Coglatas-Qodana-Evidence-Review'}
-
           def get(path):
               req = urllib.request.Request(api + '/repos/' + repo + path, headers=headers)
               with urllib.request.urlopen(req, timeout=90) as response:
                   return json.load(response)
-
           source_sha = get('/git/ref/heads/main')['object']['sha']
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write('source_sha=' + source_sha + '\n')
@@ -76,25 +72,17 @@ jobs:
                   'rules': dict(collections.Counter(a['rule']['id'] for a in alerts)),
                   'previous_automated_triage': sum((a.get('dismissed_comment') or '').startswith(
                       'Automated Qodana false-positive triage on 2026-10-02.') for a in alerts)}
-
           previous_run = get('/actions/runs/36988308931')
           summary['previous_run'] = {k: previous_run.get(k) for k in (
               'id', 'status', 'conclusion', 'head_sha', 'html_url', 'run_attempt', 'updated_at')}
-          req = urllib.request.Request(api + '/repos/' + repo + '/actions/jobs/110778325917/logs', headers=headers)
-          with urllib.request.urlopen(req, timeout=90) as response:
-              log = response.read().decode('utf-8', errors='replace')
-          lines = [line for line in log.splitlines() if '\x1b' not in line and re.search(
-              r'(?:Z )(?:Dismissed:|High-confidence false-positive candidates:|Open code-scanning alerts:|Candidate breakdown:|FAILED #)', line)]
-          (out / 'previous-run-summary.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
           summary['main_unchanged_during_export'] = get('/git/ref/heads/main')['object']['sha'] == source_sha
           (out / 'summary.json').write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding='utf-8')
           print(json.dumps(summary, indent=2))
-          print('\n'.join(lines[-10:]))
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
               f.write('## Read-only Qodana evidence inventory\n\n```json\n' + json.dumps(summary, indent=2) + '\n```\n')
           PY
 
-      - name: Checkout the exact reviewed source revision without persisted credentials
+      - name: Checkout the exact source revision without persisted credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ steps.inventory.outputs.source_sha }}
@@ -102,7 +90,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Package tracked first-party review sources without running application code
+      - name: Package tracked first-party sources without running application code
         shell: bash
         run: |
           python3 - <<'PY'
