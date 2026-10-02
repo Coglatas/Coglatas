@@ -28,6 +28,7 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
         EnsureCookieSecurityScheme(document);
         ConfigureAuthorizationResponses(operation, context, document);
         ConfigureValidationResponses(operation, context);
+        ConfigureDatabaseSafeQueryParameters(operation, context);
         ConfigureRequestBody(operation, context);
         ConfigureKnownErrorContent(operation);
         return Task.CompletedTask;
@@ -107,6 +108,28 @@ public sealed class SecurityOpenApiOperationTransformer : IOpenApiOperationTrans
         if (IsLegacyProjectCreate(context))
         {
             AddResponse(operation, "503", "Project creation is temporarily unavailable.");
+        }
+    }
+
+    private static void ConfigureDatabaseSafeQueryParameters(
+        OpenApiOperation operation,
+        OpenApiOperationTransformerContext context)
+    {
+        var relativePath = context.Description.RelativePath?.TrimEnd('/');
+        if (!HttpMethods.IsGet(context.Description.HttpMethod) ||
+            (relativePath is not "api/search" and not "api/search/message-authors"))
+        {
+            return;
+        }
+
+        foreach (var parameter in operation.Parameters ?? [])
+        {
+            if (parameter.In == ParameterLocation.Query &&
+                string.Equals(parameter.Name, "Q", StringComparison.OrdinalIgnoreCase) &&
+                parameter.Schema is OpenApiSchema schema)
+            {
+                schema.Pattern = "^[^\\u0000]*$";
+            }
         }
     }
 
