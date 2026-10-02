@@ -404,16 +404,16 @@ jobs:
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
         run: |
           set -euo pipefail
-          docker compose -f docker-compose.db.yml config --quiet
-          docker compose -f docker-compose.dev.yml config --quiet
-          docker compose -f docker-compose.playwright.yml config --quiet
-          docker compose -p coglatas-real-backend-smoke-ci-config -f docker-compose.real-backend-smoke.yml config --quiet
-          docker compose -p coglatas-security-ci-config -f docker-compose.real-backend-smoke.yml -f docker-compose.security.yml config --quiet
-          docker compose -p coglatas-u22-demo-ci-config -f docker-compose.real-backend-smoke.yml -f docker-compose.u22-demo.yml config --quiet
+          docker compose -f infra/compose/dev/db.yml config --quiet
+          docker compose -f infra/compose/dev/full.yml config --quiet
+          docker compose -f infra/compose/dev/playwright.yml config --quiet
+          docker compose -p coglatas-real-backend-smoke-ci-config -f infra/compose/test/real-backend-smoke.yml config --quiet
+          docker compose -p coglatas-security-ci-config -f infra/compose/test/real-backend-smoke.yml -f infra/compose/security/security.yml config --quiet
+          docker compose -p coglatas-u22-demo-ci-config -f infra/compose/test/real-backend-smoke.yml -f infra/compose/demo/u22.yml config --quiet
           docker compose config --quiet
-          docker compose -f docker-compose.local.yml config --quiet
-          docker compose -f docker-compose.onprem.yml config --quiet
-          docker compose -f docker-compose.onprem.yml -f docker-compose.onprem.ci.yml config --quiet
+          docker compose -f infra/compose/dev/local.yml config --quiet
+          docker compose -f deploy/onprem/compose.yml config --quiet
+          docker compose -f deploy/onprem/compose.yml -f deploy/onprem/compose.ci.yml config --quiet
           docker compose -p deploy -f deploy/sakura/docker-compose.yml config --quiet
           bash scripts/ci/verify-onprem-proxy-topology.sh
 
@@ -426,8 +426,8 @@ jobs:
           set -euo pipefail
           docker compose \
             -p coglatas-security-ci-config \
-            -f docker-compose.real-backend-smoke.yml \
-            -f docker-compose.security.yml \
+            -f infra/compose/test/real-backend-smoke.yml \
+            -f infra/compose/security/security.yml \
             config --format json |
             python3 scripts/ci/verify-security-compose.py
 
@@ -471,7 +471,7 @@ jobs:
         run: |
           set -euo pipefail
           image="coglatas-security-runtime:${GITHUB_SHA}"
-          docker build --file Dockerfile.security.runtime --tag "$image" .
+          docker build --file infra/docker/security-runtime.Dockerfile --tag "$image" .
           printf 'COGLATAS_SECURITY_RUNTIME_IMAGE=%s\n' "$image" >> "$GITHUB_ENV"
 
       - name: Run isolated security runtime lanes in parallel

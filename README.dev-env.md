@@ -28,7 +28,7 @@ cd ..
 Day-to-day commands:
 
 ```bash
-docker compose -f docker-compose.db.yml up -d
+docker compose -f infra/compose/dev/db.yml up -d
 dotnet run --project src/Coglatas.Web
 cd frontend && npm run start
 ```
@@ -45,14 +45,14 @@ Notes:
 This mode runs PostgreSQL, the backend, and the frontend in containers. It is optional and is not the default contributor path.
 
 ```bash
-docker compose -f docker-compose.dev.yml up --build
+docker compose -f infra/compose/dev/full.yml up --build
 ```
 
 Notes:
 
 - This mode can be slower on Windows Docker Desktop because backend and frontend file watching use bind mounts plus polling.
 - Use it when you want a more containerized local stack, not because the repository requires it.
-- Stop it with `docker compose -f docker-compose.dev.yml down`.
+- Stop it with `docker compose -f infra/compose/dev/full.yml down`.
 
 ## Mode C: CI parity for Playwright screenshots
 
@@ -64,7 +64,7 @@ npm run test:ui:angular:docker
 
 Notes:
 
-- `Dockerfile.playwright` is pinned to the exact `@playwright/test` version resolved in the repository `package-lock.json`.
+- `infra/docker/playwright.Dockerfile` is pinned to the exact `@playwright/test` version resolved in the repository `package-lock.json`.
 - This runner builds the Angular app and executes the strict screenshot regression suite in Linux.
 - Windows and macOS local screenshots are diagnostic only and are not authoritative for baseline approval.
 - A GitHub Actions screenshot failure remains Conditional Go until the regression passes again in the Linux Playwright environment.
@@ -72,7 +72,7 @@ Notes:
 
 ## Related files
 
-- `docker-compose.db.yml`: recommended PostgreSQL-only Docker usage
-- `docker-compose.dev.yml`: optional full-container development stack
-- `docker-compose.playwright.yml`: optional Linux Playwright parity runner
-- `Dockerfile.playwright`: pinned Playwright Linux image definition
+- `infra/compose/dev/db.yml`: recommended PostgreSQL-only Docker usage
+- `infra/compose/dev/full.yml`: optional full-container development stack
+- `infra/compose/dev/playwright.yml`: optional Linux Playwright parity runner
+- `infra/docker/playwright.Dockerfile`: pinned Playwright Linux image definition

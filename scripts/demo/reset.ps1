@@ -14,8 +14,8 @@ $observerEmail = 'demo-observer@example.test'
 $executionTaskTitle = 'Issue 483 Demo: execute synthetic report'
 $executionIdempotencyKey = 'issue-483-demo-execution-v1'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$baseCompose = Join-Path $repoRoot 'docker-compose.real-backend-smoke.yml'
-$demoCompose = Join-Path $repoRoot 'docker-compose.demo-dataset.yml'
+$baseCompose = Join-Path $repoRoot 'infra/compose/test/real-backend-smoke.yml'
+$demoCompose = Join-Path $repoRoot 'infra/compose/demo/dataset.yml'
 $port = if ($env:COGLATAS_DEMO_PORT) { $env:COGLATAS_DEMO_PORT } else { '8088' }
 $baseUrl = "http://127.0.0.1:$port"
 

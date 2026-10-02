@@ -6,7 +6,7 @@ import {
   selectComposeInvocation
 } from './real-backend-smoke-compose-helpers.mjs';
 
-const composeFile = 'docker-compose.real-backend-smoke.yml';
+const composeFile = 'infra/compose/test/real-backend-smoke.yml';
 const projectName = getComposeProjectName(process.env, process.pid);
 const composeEnv = { ...process.env, COMPOSE_PROJECT_NAME: projectName };
 

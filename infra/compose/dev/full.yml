@@ -1,6 +1,8 @@
 # Optional full-container development stack.
-# Recommended default for contributors is docker-compose.db.yml plus host .NET and Node.js.
+# Recommended default for contributors is infra/compose/dev/db.yml plus host .NET and Node.js.
 # This stack can be noticeably slower on Windows Docker Desktop because bind-mounted file watching uses polling.
+name: coglatas
+
 services:
   postgres:
     image: postgres:18-alpine
@@ -20,8 +22,8 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: backend.Dockerfile
+      context: ../../..
+      dockerfile: infra/docker/backend-dev.Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://0.0.0.0:8080
@@ -56,7 +58,7 @@ services:
     ports:
       - "${COGLATAS_PORT:-8080}:8080"
     volumes:
-      - ./:/workspace
+      - ../../../:/workspace
       - coglatas_dev_nuget:/root/.nuget/packages
       - coglatas_dev_backend_data:/workspace/src/Coglatas.Web/data
     depends_on:
@@ -71,8 +73,8 @@ services:
 
   frontend:
     build:
-      context: .
-      dockerfile: frontend.Dockerfile
+      context: ../../..
+      dockerfile: infra/docker/frontend-dev.Dockerfile
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
@@ -80,7 +82,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-4200}:4200"
     volumes:
-      - ./frontend:/workspace/frontend
+      - ../../../frontend:/workspace/frontend
       - coglatas_dev_frontend_node_modules:/workspace/frontend/node_modules
       - coglatas_dev_frontend_npm_cache:/home/node/.npm
     depends_on:

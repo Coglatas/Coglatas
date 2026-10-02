@@ -1,5 +1,5 @@
 # Test-only U-22 demo overlay. Always compose this with
-# docker-compose.real-backend-smoke.yml; it does not define an independent
+# infra/compose/test/real-backend-smoke.yml; it does not define an independent
 # deployment stack. The base file supplies the Test environment, isolated
 # PostgreSQL volume, migrations, hosted Angular build, and explicit synthetic
 # browser-smoke seed.

@@ -1,7 +1,7 @@
 # SEC-02 CI runtime override.
 #
 # Public PR security CI must not receive the private Syncfusion build credential.
-# The parent security-scan job builds Dockerfile.security.runtime once, then the
+# The parent security-scan job builds infra/docker/security-runtime.Dockerfile once, then the
 # isolated Core/Schemathesis/ZAP stacks reuse that immutable local image.
 #
 # This file is CI-only. It does not publish a host port and is not a deployment

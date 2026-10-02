@@ -7,7 +7,7 @@ still requires the licensed frontend build secret and the intended TLS proxy.
 
 ## Scope
 
-`docker-compose.onprem.yml` now defines a one-shot SDK `migrate` service. It
+`deploy/onprem/compose.yml` now defines a one-shot SDK `migrate` service. It
 waits for PostgreSQL health, restores the existing toolchain, and runs the
 normal EF Core update command. The app uses Compose
 `service_completed_successfully` dependency gating, so it is not started after
@@ -20,9 +20,9 @@ project with a new PostgreSQL 18 named volume:
 
 ```powershell
 $env:DB_PASSWORD = '<disposable local validation password>'
-docker compose -p aipsite-onprem-verify -f docker-compose.onprem.yml `
+docker compose -p aipsite-onprem-verify -f deploy/onprem/compose.yml `
   up --abort-on-container-exit --exit-code-from migrate postgres migrate
-docker compose -p aipsite-onprem-verify -f docker-compose.onprem.yml `
+docker compose -p aipsite-onprem-verify -f deploy/onprem/compose.yml `
   down --volumes --remove-orphans
 ```
 

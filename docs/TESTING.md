@@ -793,14 +793,14 @@ Windows/macOS host-native screenshots as authoritative baselines.
 Compose syntax:
 
 ```bash
-docker compose -f docker-compose.db.yml config --quiet
-docker compose -f docker-compose.dev.yml config --quiet
-docker compose -f docker-compose.playwright.yml config --quiet
-docker compose -p coglatas-real-backend-smoke-config -f docker-compose.real-backend-smoke.yml config --quiet
+docker compose -f infra/compose/dev/db.yml config --quiet
+docker compose -f infra/compose/dev/full.yml config --quiet
+docker compose -f infra/compose/dev/playwright.yml config --quiet
+docker compose -p coglatas-real-backend-smoke-config -f infra/compose/test/real-backend-smoke.yml config --quiet
 DB_PASSWORD=validation_only docker compose config --quiet
-docker compose -f docker-compose.local.yml config --quiet
-DB_PASSWORD=validation_only docker compose -f docker-compose.onprem.yml config --quiet
-DB_PASSWORD=validation_only docker compose -f docker-compose.onprem.yml -f docker-compose.onprem.ci.yml config --quiet
+docker compose -f infra/compose/dev/local.yml config --quiet
+DB_PASSWORD=validation_only docker compose -f deploy/onprem/compose.yml config --quiet
+DB_PASSWORD=validation_only docker compose -f deploy/onprem/compose.yml -f deploy/onprem/compose.ci.yml config --quiet
 ```
 
 CI also starts the on-prem PostgreSQL and one-shot `migrate` services under an

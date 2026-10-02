@@ -40,7 +40,7 @@ No repo-owned A-01 definition was found before this evidence file was added. The
 | Source projects | `src/AipPortal.Domain`, `src/AipPortal.Application`, `src/AipPortal.Infrastructure`, `src/AipPortal.Web` |
 | Backend test project | `tests/AipPortal.Tests/AipPortal.Tests.csproj` |
 | UI tests | `tests/ui`, root `package.json`, `playwright.config.ts` |
-| Docker | `Dockerfile`, `docker-compose.yml`, `docker-compose.local.yml`, `docker-compose.onprem.yml`, `.dockerignore` |
+| Docker | `Dockerfile`, `docker-compose.yml`, `infra/compose/dev/local.yml`, `deploy/onprem/compose.yml`, `.dockerignore` |
 | Configuration | `src/AipPortal.Web/appsettings*.json`, `src/AipPortal.Web/Properties/launchSettings.json`, `.env.example` |
 | CI | `.github/workflows/ci.yml` |
 | Migrations | `src/AipPortal.Infrastructure/Persistence/Migrations` |

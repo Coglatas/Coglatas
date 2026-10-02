@@ -2,7 +2,9 @@
 # It runs PostgreSQL, applies EF migrations, starts the ASP.NET Core image that
 # serves the built Angular app, then executes Playwright against that real host.
 # Invoke with an explicit project name, for example:
-# docker compose -p coglatas-real-backend-smoke -f docker-compose.real-backend-smoke.yml config
+# docker compose -p coglatas-real-backend-smoke -f infra/compose/test/real-backend-smoke.yml config
+
+name: coglatas
 
 services:
   postgres:
@@ -25,7 +27,7 @@ services:
     working_dir: /src
     restart: "no"
     volumes:
-      - ./:/src
+      - ../../../:/src
       - real_backend_smoke_nuget:/root/.nuget/packages
     environment:
       ASPNETCORE_ENVIRONMENT: Test
@@ -43,7 +45,7 @@ services:
 
   app:
     build:
-      context: .
+      context: ../../..
       dockerfile: Dockerfile
       secrets:
         - syncfusion_license
@@ -99,8 +101,8 @@ services:
 
   real-backend-playwright:
     build:
-      context: .
-      dockerfile: Dockerfile.playwright
+      context: ../../..
+      dockerfile: infra/docker/playwright.Dockerfile
     working_dir: /work
     environment:
       CI: "true"
@@ -112,7 +114,7 @@ services:
       COGLATAS_BROWSER_SMOKE_EMAIL: ${COGLATAS_BROWSER_SMOKE_EMAIL:-e2e-user@example.test}
       COGLATAS_BROWSER_SMOKE_PASSWORD: ${COGLATAS_BROWSER_SMOKE_PASSWORD:-E2eSmoke!23456}
     volumes:
-      - .:/work
+      - ../../../:/work
       - real_backend_smoke_node_modules:/work/node_modules
     depends_on:
       app:

@@ -47,7 +47,7 @@ jobs:
           docker volume create "$PLAYWRIGHT_ANGULAR_CACHE_VOLUME" >/dev/null
 
           set +e
-          docker compose -p "$project" -f docker-compose.playwright.yml run --build --rm angular-playwright \
+          docker compose -p "$project" -f infra/compose/dev/playwright.yml run --build --rm angular-playwright \
             bash -lc 'bash scripts/ci/npm-ci-retry.sh . && \
               bash scripts/ci/npm-ci-retry.sh frontend && \
               npm --prefix frontend run build && \
@@ -58,7 +58,7 @@ jobs:
           status=$?
           set -e
 
-          docker compose -p "$project" -f docker-compose.playwright.yml down --volumes --remove-orphans || true
+          docker compose -p "$project" -f infra/compose/dev/playwright.yml down --volumes --remove-orphans || true
           exit "$status"
 
       - name: Repair generated file ownership

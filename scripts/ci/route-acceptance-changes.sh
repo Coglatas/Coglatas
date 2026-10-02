@@ -70,9 +70,9 @@ while IFS= read -r path; do
         scripts/ci/run-mbj02-invite-acceptance.sh|\
         scripts/ci/verify-npm-lockfile.mjs|\
         tests/ui/mbj02-invite-acceptance.mjs|\
-        docker-compose.mbj02-invite.yml|\
-        docker-compose.real-backend-smoke.yml|\
-        Dockerfile|Dockerfile.playwright|\
+        infra/compose/test/acceptance/mbj02-invite.yml|\
+        infra/compose/test/real-backend-smoke.yml|\
+        Dockerfile|infra/docker/playwright.Dockerfile|\
         Coglatas.slnx|global.json|Directory.Build.*|Directory.Packages.*|NuGet.config|\
         package.json|package-lock.json|src/*.csproj|\
         src/Coglatas.Application/Admin/*|\
@@ -124,9 +124,9 @@ while IFS= read -r path; do
         scripts/ci/run-mbj03-session-acceptance.sh|\
         scripts/ci/verify-npm-lockfile.mjs|\
         tests/ui/mbj03-session-acceptance.mjs|\
-        docker-compose.mbj03-session.yml|\
-        docker-compose.real-backend-smoke.yml|\
-        Dockerfile|Dockerfile.playwright|\
+        infra/compose/test/acceptance/mbj03-session.yml|\
+        infra/compose/test/real-backend-smoke.yml|\
+        Dockerfile|infra/docker/playwright.Dockerfile|\
         Coglatas.slnx|global.json|Directory.Build.*|Directory.Packages.*|NuGet.config|\
         package.json|package-lock.json|src/*.csproj|\
         src/Coglatas.Application/Admin/*|\

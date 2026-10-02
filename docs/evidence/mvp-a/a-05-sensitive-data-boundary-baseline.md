@@ -105,7 +105,7 @@ Summary counts:
 | `.env.example` | Contains local-development placeholder/default values only; still must not be reused as production secrets. |
 | `.env` | Present locally but ignored/untracked by git. It contains sensitive key names; values were not printed. This is not a committed-secret finding, but local secret safety and rotation status are unknown if the file has been shared outside this workspace. |
 | `docker-compose.yml` / on-prem Compose | Requires environment-provided PostgreSQL password. |
-| `docker-compose.local.yml` | Has development-only fallback values and local admin defaults; not production-safe. |
+| `infra/compose/dev/local.yml` | Has development-only fallback values and local admin defaults; not production-safe. |
 | `.github/workflows/ci.yml` | Contains CI-only PostgreSQL/Compose values and runs a redacted Gitleaks scan in CI. |
 | `launchSettings.json` | Development environment only; no secret values observed. |
 

@@ -162,7 +162,7 @@ Repository: `/workspaces/AIPsiteNYG`
 Local PostgreSQL was started with:
 
 ```bash
-docker compose -f docker-compose.local.yml up -d postgres
+docker compose -f infra/compose/dev/local.yml up -d postgres
 ```
 
 The container became healthy as `aipsitenyg-postgres-1` on port `5432`.

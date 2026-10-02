@@ -209,7 +209,7 @@ Use Docker for PostgreSQL only and run the backend/frontend on the host.
 dotnet restore Coglatas.slnx
 dotnet tool restore
 
-docker compose -f docker-compose.db.yml up -d
+docker compose -f infra/compose/dev/db.yml up -d
 
 dotnet ef database update \
   --project src/Coglatas.Infrastructure \

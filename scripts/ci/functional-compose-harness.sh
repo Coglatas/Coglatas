@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DEFAULT_COMPOSE_FILE="docker-compose.real-backend-smoke.yml"
+DEFAULT_COMPOSE_FILE="infra/compose/test/real-backend-smoke.yml"
 DEFAULT_DIAGNOSTIC_DIR="test-results"
 DEFAULT_SETUP_TIMEOUT_SECONDS="240"
 DEFAULT_ACTOR_EMAIL="e2e-user@example.test"

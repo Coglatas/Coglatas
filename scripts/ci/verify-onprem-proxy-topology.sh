@@ -12,7 +12,7 @@ deploy_env="$(mktemp)"
 deploy_license="$(mktemp)"
 trap 'rm -f "$onprem_config" "$sakura_config" "$trycloudflare_config" "$trycloudflare_caddy_config" "$deploy_env" "$deploy_license"' EXIT
 
-docker compose -f docker-compose.onprem.yml config --format json > "$onprem_config"
+docker compose -f deploy/onprem/compose.yml config --format json > "$onprem_config"
 docker compose -p deploy -f deploy/sakura/docker-compose.yml config --format json > "$sakura_config"
 docker compose -p deploy \
   -f deploy/sakura/docker-compose.yml \

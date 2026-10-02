@@ -1,7 +1,9 @@
+name: coglatas
+
 services:
   app:
     build:
-      context: .
+      context: ../..
       dockerfile: Dockerfile
       secrets:
         - syncfusion_license
@@ -57,7 +59,7 @@ services:
     working_dir: /src
     restart: "no"
     volumes:
-      - ./:/src
+      - ../../:/src
       - coglatas_onprem_nuget:/root/.nuget/packages
     environment:
       ASPNETCORE_ENVIRONMENT: Production

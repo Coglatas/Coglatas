@@ -242,7 +242,7 @@ delivery contract. See `docs/verification/p2-message-follow-ups.md`.
 - A fresh environment can create the first login user or PlatformAdmin only through the explicit `COGLATAS_SEED_ADMIN_*` startup seed.
 - Invite acceptance does not create tenant/workspace membership.
 - Object-storage examples are not deployable because the adapter is intentionally unsupported.
-- `docker-compose.onprem.yml` now stages a controlled SDK migration before the app, but fresh-stack production-profile startup evidence is still required.
+- `deploy/onprem/compose.yml` now stages a controlled SDK migration before the app, but fresh-stack production-profile startup evidence is still required.
 - On-prem proxy configuration now binds the origin to loopback and validates an explicit forwarded-header trust boundary; target-host TLS/proxy evidence is still required.
 - Angular browser UI coverage is materially smaller than backend API coverage.
 - The regular Playwright suite mocks API contracts and does not prove

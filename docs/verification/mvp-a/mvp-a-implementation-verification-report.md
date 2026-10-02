@@ -30,7 +30,7 @@ The current P0 blocker is baseline identity/bootstrap: a fresh startup seeds a t
 | Docker | 29.3.0-1 |
 | Docker Compose | v2.40.3 |
 | Node.js / npm | Node v24.14.0, npm 11.9.0 |
-| PostgreSQL | Docker Compose `postgres:18-alpine` from `docker-compose.local.yml` |
+| PostgreSQL | Docker Compose `postgres:18-alpine` from `infra/compose/dev/local.yml` |
 | Important limitation | No seeded/bootstrap login user exists on fresh startup |
 
 See [mvp-a-environment-notes.md](mvp-a-environment-notes.md).
@@ -45,7 +45,7 @@ See [mvp-a-environment-notes.md](mvp-a-environment-notes.md).
 | Application entrypoint | `src/AipPortal.Web/Program.cs` |
 | Startup configuration | `Program.cs`, `src/AipPortal.Web/Extensions/DependencyInjection.cs`, `src/AipPortal.Infrastructure/DependencyInjection.cs` |
 | Appsettings | `appsettings.json`, `appsettings.Development.json`, `appsettings.Test.json`, on-prem/SaaS/production examples |
-| Docker | `Dockerfile`, `docker-compose.yml`, `docker-compose.local.yml`, `docker-compose.onprem.yml` |
+| Docker | `Dockerfile`, `docker-compose.yml`, `infra/compose/dev/local.yml`, `deploy/onprem/compose.yml` |
 | Database config | Npgsql provider in `AipPortal.Infrastructure/DependencyInjection.cs`; connection string `DefaultConnection` |
 | DbContext | `src/AipPortal.Infrastructure/Persistence/AppDbContext.cs` |
 | Migrations | 12 migrations in `src/AipPortal.Infrastructure/Persistence/Migrations/` |

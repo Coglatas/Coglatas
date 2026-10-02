@@ -1,5 +1,5 @@
 # Issue #483's synthetic demo overlay. It must be composed with
-# docker-compose.real-backend-smoke.yml through scripts/demo/reset.ps1.
+# infra/compose/test/real-backend-smoke.yml through scripts/demo/reset.ps1.
 # The script fixes the Compose project name, validates COGLATAS_DEMO_MODE=1, and is
 # the only supported command that may remove the resulting isolated volumes.
 services:

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-COMPOSE_FILE="$ROOT/docker-compose.performance.yml"
+COMPOSE_FILE="$ROOT/infra/compose/performance/environment.yml"
 RUNTIME_MODE="${COGLATAS_PERFORMANCE_RUNTIME_MODE:-production}"
 COMPOSE_OVERRIDE=""
 PROFILE="${COGLATAS_PERFORMANCE_PROFILE:-small}"
@@ -35,7 +35,7 @@ case "$RUNTIME_MODE" in
     fi
     ;;
   source)
-    COMPOSE_OVERRIDE="$ROOT/docker-compose.performance.pr.yml"
+    COMPOSE_OVERRIDE="$ROOT/infra/compose/performance/pr.yml"
     ;;
   *)
     echo "PERF-02: COGLATAS_PERFORMANCE_RUNTIME_MODE must be production or source" >&2

@@ -38,7 +38,7 @@ Verify:
 
 ```powershell
 $env:POSTGRES_PASSWORD='<strong-password>'
-docker compose -f docker-compose.onprem.yml up --build
+docker compose -f deploy/onprem/compose.yml up --build
 ```
 
 Verify:

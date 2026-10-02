@@ -16,7 +16,7 @@ services:
     environment:
       NUGET_PACKAGES: /root/.nuget/packages
     volumes:
-      - ./:/src
+      - ../../../:/src
       - performance_nuget:/root/.nuget/packages
       - ${COGLATAS_PERFORMANCE_EVIDENCE_DIR:?COGLATAS_PERFORMANCE_EVIDENCE_DIR is required}:/app/performance-evidence
       - performance_uploads:/app/storage/uploads

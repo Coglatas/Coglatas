@@ -5,7 +5,7 @@ on:
     paths:
       - ".github/workflows/licensed-real-backend-acceptance.yml"
       - ".github/workflows/real-backend-p0-preflight.yml"
-      - "docker-compose.real-backend-smoke.yml"
+      - "infra/compose/test/real-backend-smoke.yml"
       - "package.json"
       - "scripts/ci/build-playwright-grep.mjs"
       - "scripts/ci/functional-compose-harness.sh"
@@ -33,7 +33,7 @@ on:
     paths:
       - ".github/workflows/licensed-real-backend-acceptance.yml"
       - ".github/workflows/real-backend-p0-preflight.yml"
-      - "docker-compose.real-backend-smoke.yml"
+      - "infra/compose/test/real-backend-smoke.yml"
       - "package.json"
       - "scripts/ci/build-playwright-grep.mjs"
       - "scripts/ci/functional-compose-harness.sh"

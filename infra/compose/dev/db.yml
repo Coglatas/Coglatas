@@ -1,4 +1,6 @@
 # Recommended default Docker usage for contributors: PostgreSQL only.
+name: coglatas
+
 services:
   postgres:
     image: postgres:18-alpine
