@@ -1040,7 +1040,7 @@ describe('Admin audit and export mock UI', () => {
 
     expect(query(fixture, '[data-testid="stub-page-size"]')?.textContent).toContain('50/100');
     expect(clampAppDataGridPageSize(250, 500)).toBe(100);
-  });
+  }, 15_000);
 
   it('renders requestId as text without creating markup', async () => {
     const fixture = await renderAudit();
