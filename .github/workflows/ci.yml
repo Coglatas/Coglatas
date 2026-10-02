@@ -70,6 +70,9 @@ jobs:
       DOTNET_NOLOGO: "1"
       DOTNET_MULTILEVEL_LOOKUP: "0"
       DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE: "1"
+      # Provider tests that only need the latest schema clone one migrated template
+      # instead of replaying the full EF migration chain for every isolated database.
+      COGLATAS_TEST_USE_MIGRATED_TEMPLATE: "true"
       ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
       POSTGRES_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
 
