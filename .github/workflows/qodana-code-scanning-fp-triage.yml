@@ -6,9 +6,9 @@ on:
       - ops/qodana-code-scanning-triage-20261002
     paths:
       - .github/workflows/qodana-code-scanning-fp-triage.yml
-      - scripts/quality/qodana-reviewed-alerts.json
+      - scripts/quality/apply-qodana-full-audit-20261002.py
       - scripts/quality/apply-reviewed-qodana-alerts.py
-      - scripts/quality/QodanaAuditIndexer.cs
+      - scripts/quality/qodana-reviewed-alerts.json
 
 concurrency:
   group: qodana-fp-triage
@@ -18,14 +18,16 @@ permissions:
   contents: read
 
 jobs:
-  triage:
+  inventory:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     permissions:
       contents: read
       security-events: read
+    outputs:
+      source_sha: ${{ steps.inventory.outputs.source_sha }}
     steps:
-      - name: Export current alerts without mutations
+      - name: Export all current alert states without mutations
         id: inventory
         shell: bash
         env:
@@ -41,7 +43,7 @@ jobs:
           import urllib.request
           repo = os.environ['GITHUB_REPOSITORY']
           api = os.environ['GITHUB_API_URL']
-          out = pathlib.Path(os.environ['RUNNER_TEMP']) / 'qodana-fp-evidence'
+          out = pathlib.Path(os.environ['RUNNER_TEMP']) / 'qodana-fp-inventory'
           out.mkdir()
           headers = {'Accept': 'application/vnd.github+json',
                      'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
@@ -49,7 +51,7 @@ jobs:
                      'User-Agent': 'Coglatas-Qodana-Evidence-Review'}
           def get(path):
               req = urllib.request.Request(api + '/repos/' + repo + path, headers=headers)
-              with urllib.request.urlopen(req, timeout=90) as response:
+              with urllib.request.urlopen(req, timeout=60) as response:
                   return json.load(response)
           source_sha = get('/git/ref/heads/main')['object']['sha']
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
@@ -57,7 +59,7 @@ jobs:
           summary = {'source_sha': source_sha, 'repository': repo,
                      'run_id': os.environ['GITHUB_RUN_ID'],
                      'captured_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                     'mode': 'READ_ONLY_FULL_REAUDIT', 'states': {}}
+                     'mode': 'READ_ONLY_FULL_AUDIT_INVENTORY', 'states': {}}
           for state in ('open', 'dismissed', 'fixed'):
               alerts = []
               for page in range(1, 101):
@@ -75,59 +77,52 @@ jobs:
                   'rules': dict(collections.Counter(a['rule']['id'] for a in alerts)),
                   'analysis_revisions': dict(collections.Counter(a['most_recent_instance']['commit_sha'] for a in alerts))}
           summary['main_unchanged_during_export'] = get('/git/ref/heads/main')['object']['sha'] == source_sha
-          (out / 'summary.json').write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding='utf-8')
+          (out / 'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
           print(json.dumps(summary, indent=2))
           if not summary['main_unchanged_during_export']:
-              raise RuntimeError('Main changed during export; do not use mixed evidence')
+              raise RuntimeError('Main changed during export')
           PY
+      - name: Upload immutable before-inventory
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: qodana-full-audit-before-${{ github.run_id }}
+          path: ${{ runner.temp }}/qodana-fp-inventory/
+          if-no-files-found: error
+          retention-days: 14
 
+  apply-reviewed:
+    if: ${{ github.event.head_commit.message == 'ops: apply full Qodana audit 20261002 (28 dismissals, 13 reopenings)' }}
+    needs: inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
       - name: Checkout the exact source revision without persisted credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ steps.inventory.outputs.source_sha }}
+          ref: ${{ needs.inventory.outputs.source_sha }}
           path: source
           persist-credentials: false
           fetch-depth: 1
-
-      - name: Checkout the immutable review tooling without persisted credentials
+      - name: Checkout immutable approvals and the previously reviewed applier
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.sha }}
           path: review
           persist-credentials: false
           fetch-depth: 1
-
-      - name: Index source with SDK Roslyn without building or executing the application
+      - name: Validate all 41 identities and 24 source hashes then verify each correction
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          work="$(mktemp -d "$RUNNER_TEMP/qodana-roslyn.XXXXXX")"
-          cp review/scripts/quality/QodanaAuditIndexer.cs "$work/Program.cs"
-          cp review/scripts/quality/QodanaAuditIndexer.cs "$RUNNER_TEMP/qodana-fp-evidence/Indexer.cs.txt"
-          cd "$work"
-          major="$(dotnet --version | cut -d. -f1)"
-          cat > NuGet.Config <<'XML'
-          <configuration><packageSources><clear /></packageSources></configuration>
-          XML
-          cat > AuditIndexer.csproj <<'XML'
-          <Project Sdk="Microsoft.NET.Sdk">
-            <PropertyGroup>
-              <OutputType>Exe</OutputType>
-              <TargetFramework>FRAMEWORK</TargetFramework>
-              <ImplicitUsings>enable</ImplicitUsings>
-              <Nullable>enable</Nullable>
-            </PropertyGroup>
-            <ItemGroup>
-              <FrameworkReference Include="Microsoft.AspNetCore.App" />
-              <Reference Include="Microsoft.CodeAnalysis"><HintPath>$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.dll</HintPath></Reference>
-              <Reference Include="Microsoft.CodeAnalysis.CSharp"><HintPath>$(MSBuildSDKsPath)/../Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll</HintPath></Reference>
-            </ItemGroup>
-          </Project>
-          XML
-          sed -i "s/FRAMEWORK/net${major}.0/" AuditIndexer.csproj
-          dotnet run --project AuditIndexer.csproj -- "$GITHUB_WORKSPACE/source" "$RUNNER_TEMP/qodana-fp-evidence"
-
-      - name: Package tracked first-party sources without running application code
-        if: ${{ !cancelled() && steps.inventory.outcome == 'success' }}
+          python3 review/scripts/quality/apply-qodana-full-audit-20261002.py \
+            source "$RUNNER_TEMP/qodana-full-audit-receipt"
+      - name: Preserve exact approval code and reviewed evidence files without executing application code
+        if: always()
         shell: bash
         run: |
           python3 - <<'PY'
@@ -135,37 +130,33 @@ jobs:
           import json
           import os
           import pathlib
-          import subprocess
+          import shutil
           import tarfile
-          root = pathlib.Path('source')
-          out = pathlib.Path(os.environ['RUNNER_TEMP']) / 'qodana-fp-evidence'
-          names = subprocess.check_output(['git', '-C', str(root), 'ls-files', '-z']).decode().split('\0')
-          selected = []
-          hashes = {}
-          for name in names:
-              if not name or '/wwwroot/' in name or '/node_modules/' in name:
-                  continue
-              path = pathlib.PurePosixPath(name)
-              if (name.startswith(('src/', 'tests/', 'frontend/src/', 'scripts/quality/'))
-                      and path.suffix in {'.cs', '.csproj', '.json', '.ts', '.html', '.props', '.targets', '.py', '.xml'}
-                      or '/' not in name and path.suffix in {'.json', '.props', '.targets', '.editorconfig', '.yml', '.yaml', '.DotSettings', '.sln', '.slnx'}
-                      or name == '.editorconfig'):
-                  p = root / name
-                  if p.is_file() and not p.is_symlink():
-                      selected.append(name)
-                      hashes[name] = hashlib.sha256(p.read_bytes()).hexdigest()
-          with tarfile.open(out / 'review-sources.tar.gz', 'w:gz') as archive:
-              for name in selected:
-                  archive.add(root / name, arcname=name, recursive=False)
-          (out / 'source-file-sha256.json').write_text(json.dumps(hashes, indent=2))
-          print('Packaged tracked first-party files:', len(selected))
+          out = pathlib.Path(os.environ['RUNNER_TEMP']) / 'qodana-full-audit-receipt'
+          out.mkdir(exist_ok=True)
+          root = pathlib.Path('source').resolve()
+          plan = out / 'approved-full-audit-manifest.json'
+          if plan.exists():
+              manifest = json.loads(plan.read_text())
+              actual = {}
+              with tarfile.open(out / 'reviewed-source-files.tar.gz', 'w:gz') as archive:
+                  for name in manifest['source_sha256']:
+                      path = (root / name).resolve()
+                      if not path.is_relative_to(root) or not path.is_file():
+                          raise RuntimeError('Invalid evidence path')
+                      actual[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+                      archive.add(path, arcname=name, recursive=False)
+              (out / 'actual-source-sha256.json').write_text(json.dumps(actual, indent=2))
+          for name in ('apply-qodana-full-audit-20261002.py', 'apply-reviewed-qodana-alerts.py'):
+              path = pathlib.Path('review/scripts/quality') / name
+              if path.is_file():
+                  shutil.copyfile(path, out / (name + '.txt'))
           PY
-
-      - name: Upload full re-audit evidence
+      - name: Upload verified full-audit correction receipt
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: qodana-fp-evidence-${{ github.run_id }}
-          path: ${{ runner.temp }}/qodana-fp-evidence/
+          name: qodana-full-audit-receipt-${{ github.run_id }}
+          path: ${{ runner.temp }}/qodana-full-audit-receipt/
           if-no-files-found: error
           retention-days: 14
