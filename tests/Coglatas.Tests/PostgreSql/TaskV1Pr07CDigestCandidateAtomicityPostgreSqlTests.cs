@@ -27,9 +27,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
 
             await using (var db = CreateTenantContext(database, graph.Tenant))
@@ -100,9 +99,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var suffix = Guid.NewGuid().ToString("N");
             var adviser = UserFor("adviser-only", suffix);
@@ -193,9 +191,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
 
             TaskItem active;
@@ -305,9 +302,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await AddCategoryTasksAsync(database, graph);
             await AddJobAsync(database, graph);
@@ -367,9 +363,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await AddQualifyingTaskAsync(database, graph);
             var utcJob = await AddJobAsync(database, graph);
@@ -439,9 +434,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await EnablePersistedNotificationsFeatureAsync(database, graph);
             await AddQualifyingTaskAsync(database, graph);
@@ -495,9 +489,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await EnablePersistedNotificationsFeatureAsync(database, graph);
             await AddQualifyingTaskAsync(database, graph);
@@ -546,9 +539,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await EnablePersistedNotificationsFeatureAsync(database, graph);
             await AddQualifyingTaskAsync(database, graph);
@@ -589,9 +581,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await EnablePersistedNotificationsFeatureAsync(database, graph);
             await AddQualifyingTaskAsync(database, graph);
@@ -743,9 +734,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await AddQualifyingTaskAsync(database, graph);
             var job = await AddJobAsync(database, graph);
@@ -800,9 +790,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await EnablePersistedNotificationsFeatureAsync(database, graph);
             await AddQualifyingTaskAsync(database, graph);
@@ -871,9 +860,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await EnablePersistedNotificationsFeatureAsync(database, graph);
             await AddQualifyingTaskAsync(database, graph);
@@ -929,9 +917,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
 
             var settingsGraph = await SeedGraphAsync(database);
             await AddQualifyingTaskAsync(database, settingsGraph);
@@ -989,9 +976,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await EnablePersistedNotificationsFeatureAsync(database, graph);
             var task = await AddQualifyingTaskAsync(database, graph);
@@ -1078,9 +1064,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await AddQualifyingTaskAsync(database, graph);
             await AddJobAsync(database, graph);
@@ -1143,9 +1128,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await AddQualifyingTaskAsync(database, graph);
 
@@ -1164,9 +1148,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await AddQualifyingTaskAsync(database, graph);
 
@@ -1183,9 +1166,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await AddQualifyingTaskAsync(database, graph);
 
@@ -1202,9 +1184,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var task = await AddQualifyingTaskAsync(database, graph);
 
@@ -1222,9 +1203,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             var task = await AddQualifyingTaskAsync(database, graph);
             await using (var setup = CreateTenantContext(database, graph.Tenant))
@@ -1257,9 +1237,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             TaskItem task;
             await using (var setup = CreateTenantContext(database, graph.Tenant))
@@ -1292,9 +1271,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await AddJobAsync(database, graph);
 
@@ -1320,9 +1298,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await AddQualifyingTaskAsync(database, graph);
             var job = await AddJobAsync(database, graph);
@@ -1368,9 +1345,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await AddQualifyingTaskAsync(database, graph);
             await AddJobAsync(database, graph);
@@ -1698,9 +1674,8 @@ public sealed class TaskV1Pr07CDigestCandidateAtomicityPostgreSqlTests
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
         SameRecipientQueuedClaimLeaseObservation? observation = null;
 
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedGraphAsync(database);
             await EnablePersistedNotificationsFeatureAsync(database, graph);
             await AddQualifyingTaskAsync(database, graph);

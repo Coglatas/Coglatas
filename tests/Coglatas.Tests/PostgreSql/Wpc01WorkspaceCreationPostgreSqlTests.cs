@@ -70,9 +70,8 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
     public async Task CoordinatorSeamConcurrentRetryCommitsOneLogicalWorkspaceAndOneSideEffectSet()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedAuthorityAsync(database, "concurrent");
             await using var firstScope = CreateServiceScope(database, graph);
             await using var secondScope = CreateServiceScope(database, graph);
@@ -105,9 +104,8 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
     public async Task InitializationFailureRollsBackClaimWorkspaceOwnerAuditAndOutbox()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedAuthorityAsync(database, "rollback");
             var request = new CreateWorkspaceRequest("Rollback Workspace", null, null);
 
@@ -139,9 +137,8 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
     public async Task UnavailableCanonicalGeneralFailsClosedWithoutCreatingAnyRows()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedAuthorityAsync(database, "general-gate");
             await using var scope = CreateServiceScope(
                 database,
@@ -167,9 +164,8 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
     public async Task ConcurrentRetryWithUnavailableGeneralLeavesNoCreateSideEffects()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedAuthorityAsync(database, "general-concurrent-gate");
             await using var first = CreateServiceScope(
                 database,
@@ -200,9 +196,8 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
     public async Task CoordinatorSeamDuplicateDisplayNamesPersistWithDistinctBoundedSlugs()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedAuthorityAsync(database, "duplicate-slugs");
             await using var scope = CreateServiceScope(database, graph);
             var request = new CreateWorkspaceRequest(new string('A', 160), null, null);
@@ -228,9 +223,8 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
     public async Task PlanningProjectDiscoveryRequiresExplicitProjectMembership()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedPlanningAccessGraphAsync(database);
             await using var db = CreateTenantContext(database, graph.TenantId, graph.TenantSlug);
             var users = new UserRepository(db);
@@ -390,9 +384,8 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
     public async Task ActiveGroupedProjectReadBoundaryIsEquivalentAcrossDetailListSearchMessagingAndMyTasks()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedActiveVisibilityGraphAsync(database);
             await using var db = CreateTenantContext(database, graph.TenantId, graph.TenantSlug);
             var users = new UserRepository(db);
@@ -770,9 +763,8 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
     public async Task MessageSearchAuthorizesAllMatchingConversationsBeforeDeterministicLimit()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedActiveVisibilityGraphAsync(database);
             await using var db = CreateTenantContext(database, graph.TenantId, graph.TenantSlug);
             var messaging = new MessagingRepository(db);
@@ -1004,9 +996,8 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
     public async Task ExplicitMemberCanListArchivedHistoryWithoutSearchOrDetailDisclosure()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedActiveVisibilityGraphAsync(database);
             await using var db = CreateTenantContext(database, graph.TenantId, graph.TenantSlug);
             var users = new UserRepository(db);
@@ -1079,9 +1070,8 @@ public sealed class Wpc01WorkspaceCreationPostgreSqlTests
     public async Task RecursiveConversationReadScopeRejectsCyclesAndInconsistentProjectScope()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedActiveVisibilityGraphAsync(database);
             await using var db = CreateTenantContext(database, graph.TenantId, graph.TenantSlug);
             var users = new UserRepository(db);

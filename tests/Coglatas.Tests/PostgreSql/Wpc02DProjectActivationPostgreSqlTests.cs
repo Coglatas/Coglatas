@@ -18,9 +18,8 @@ public sealed class Wpc02DProjectActivationPostgreSqlTests
     public async Task DraftHasNoWorkflow_ActivationCommitsCanonicalOperationalDefaultsAtomically()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedPlanningProjectAsync(database, "activate");
 
             await using (var before = CreateTenantContext(database, graph))
@@ -102,9 +101,8 @@ public sealed class Wpc02DProjectActivationPostgreSqlTests
     public async Task StaleVersionRejectsActivationWithoutProvisioningOrAudit()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedPlanningProjectAsync(database, "stale");
 
             await using (var scope = CreateActivationScope(database, graph, graph.OwnerUserId, canManage: true))
@@ -124,9 +122,8 @@ public sealed class Wpc02DProjectActivationPostgreSqlTests
     public async Task CapabilityDeniedRejectsActivationWithoutProvisioningOrAudit()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedPlanningProjectAsync(database, "denied");
 
             await using (var scope = CreateActivationScope(database, graph, graph.OwnerUserId, canManage: false))
@@ -145,9 +142,8 @@ public sealed class Wpc02DProjectActivationPostgreSqlTests
     public async Task InvalidExistingWorkflowFailsAfterGeneralStagingWithoutPartialCommit()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedPlanningProjectAsync(database, "invalid-workflow");
 
             await using (var seed = CreateTenantContext(database, graph))
@@ -200,9 +196,8 @@ public sealed class Wpc02DProjectActivationPostgreSqlTests
     public async Task CompatibleExistingWorkflowIsReusedWithoutRegeneration()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedPlanningProjectAsync(database, "reuse");
             Guid existingDefinitionId;
 
@@ -247,9 +242,8 @@ public sealed class Wpc02DProjectActivationPostgreSqlTests
     public async Task ConcurrentActivationCommitsExactlyOneCanonicalOutcome()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedPlanningProjectAsync(database, "concurrent");
             await using var first = CreateActivationScope(database, graph, graph.OwnerUserId, canManage: true);
             await using var second = CreateActivationScope(database, graph, graph.OwnerUserId, canManage: true);

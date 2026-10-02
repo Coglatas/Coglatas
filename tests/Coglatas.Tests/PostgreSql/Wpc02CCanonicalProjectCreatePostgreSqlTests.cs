@@ -19,9 +19,8 @@ public sealed class Wpc02CCanonicalProjectCreatePostgreSqlTests
     public async Task OwnerCreateAndRetryCommitsOneCanonicalPlanningProject()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedAuthorityAsync(database, "owner");
             var request = new CanonicalCreateProjectRequest(
                 "Canonical Project",
@@ -79,9 +78,8 @@ public sealed class Wpc02CCanonicalProjectCreatePostgreSqlTests
     public async Task GroupManagerAuthorityCannotEscapeBoundGroup()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedAuthorityAsync(database, "group");
             await using var scope = CreateServiceScope(database, graph, graph.GroupManagerUserId, SystemRole.NormalUser);
 
@@ -110,9 +108,8 @@ public sealed class Wpc02CCanonicalProjectCreatePostgreSqlTests
     public async Task DelegatedProjectCreateDoesNotImplyVisibilityManagement()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedAuthorityAsync(database, "delegated", grantProjectCreate: true);
 
             await using (var scope = CreateServiceScope(database, graph, graph.DelegatedUserId, SystemRole.NormalUser))
@@ -155,9 +152,8 @@ public sealed class Wpc02CCanonicalProjectCreatePostgreSqlTests
     public async Task SystemAdminWithoutWorkspaceMembershipHasNoImplicitCreateAuthority()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedAuthorityAsync(database, "system-admin");
             await using var scope = CreateServiceScope(database, graph, graph.SystemAdminUserId, SystemRole.SystemAdmin);
 
@@ -180,9 +176,8 @@ public sealed class Wpc02CCanonicalProjectCreatePostgreSqlTests
     public async Task CreateOptionsUseCanonicalAuthorityWithoutDisclosingOtherGroups()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedAuthorityAsync(database, "create-options", grantProjectCreate: true);
             Guid otherActiveGroupId;
             Guid archivedGroupId;
@@ -263,9 +258,8 @@ public sealed class Wpc02CCanonicalProjectCreatePostgreSqlTests
     public async Task ActivationPermissionBatchFailsClosedAfterMembershipOrWorkspaceRevocation()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedAuthorityAsync(database, "activation-permission");
             Guid projectId;
             await using (var seed = CreateTenantContext(database, graph))
@@ -338,9 +332,8 @@ public sealed class Wpc02CCanonicalProjectCreatePostgreSqlTests
     public async Task ConcurrentRetryCommitsOneProjectMembershipAuditAndAuthorizationEvent()
     {
         var connectionString = PostgreSqlTestEnvironment.RequireConnectionString();
-        await PostgreSqlMigrationTestDatabase.WithTemporaryDatabaseAsync(connectionString, async database =>
+        await PostgreSqlMigrationTestDatabase.WithMigratedTemporaryDatabaseAsync(connectionString, async database =>
         {
-            await PostgreSqlMigrationTestDatabase.MigrateAsync(database);
             var graph = await SeedAuthorityAsync(database, "concurrent");
             await using var first = CreateServiceScope(database, graph, graph.OwnerUserId, SystemRole.NormalUser);
             await using var second = CreateServiceScope(database, graph, graph.OwnerUserId, SystemRole.NormalUser);
