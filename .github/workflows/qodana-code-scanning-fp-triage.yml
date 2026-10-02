@@ -22,8 +22,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      actions: read
-      security-events: write
+      security-events: read
     steps:
       - name: Export current alerts without mutations
         id: inventory
@@ -57,8 +56,8 @@ jobs:
           summary = {'source_sha': source_sha, 'repository': repo,
                      'run_id': os.environ['GITHUB_RUN_ID'],
                      'captured_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                     'mode': 'READ_ONLY_INVENTORY', 'states': {}}
-          for state in ('open', 'dismissed'):
+                     'mode': 'READ_ONLY_FULL_REAUDIT', 'states': {}}
+          for state in ('open', 'dismissed', 'fixed'):
               alerts = []
               for page in range(1, 101):
                   query = urllib.parse.urlencode({'state': state, 'ref': 'refs/heads/main',
@@ -72,10 +71,13 @@ jobs:
               (out / ('alerts-' + state + '.json')).write_text(json.dumps(alerts, ensure_ascii=False), encoding='utf-8')
               summary['states'][state] = {'count': len(alerts),
                   'tools': dict(collections.Counter(a['tool']['name'] for a in alerts)),
-                  'rules': dict(collections.Counter(a['rule']['id'] for a in alerts))}
+                  'rules': dict(collections.Counter(a['rule']['id'] for a in alerts)),
+                  'analysis_revisions': dict(collections.Counter(a['most_recent_instance']['commit_sha'] for a in alerts))}
           summary['main_unchanged_during_export'] = get('/git/ref/heads/main')['object']['sha'] == source_sha
           (out / 'summary.json').write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding='utf-8')
           print(json.dumps(summary, indent=2))
+          if not summary['main_unchanged_during_export']:
+              raise RuntimeError('Main changed during export; do not use mixed evidence')
           PY
 
       - name: Checkout the exact source revision without persisted credentials
@@ -86,28 +88,12 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Checkout the immutable review revision without persisted credentials
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: ${{ github.sha }}
-          path: review
-          persist-credentials: false
-          fetch-depth: 1
-
-      - name: Validate individual decisions and apply only on the explicit apply commit
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python3 review/scripts/quality/apply-reviewed-qodana-alerts.py \
-            review/scripts/quality/qodana-reviewed-alerts.json \
-            source \
-            "$RUNNER_TEMP/qodana-fp-evidence"
-
       - name: Package tracked first-party sources without running application code
         shell: bash
         run: |
           python3 - <<'PY'
+          import hashlib
+          import json
           import os
           import pathlib
           import subprocess
@@ -116,22 +102,27 @@ jobs:
           out = pathlib.Path(os.environ['RUNNER_TEMP']) / 'qodana-fp-evidence'
           names = subprocess.check_output(['git', '-C', str(root), 'ls-files', '-z']).decode().split('\0')
           selected = []
+          hashes = {}
           for name in names:
-              if not name or '/Migrations/' in name or '/wwwroot/' in name or '/node_modules/' in name:
+              if not name or '/wwwroot/' in name or '/node_modules/' in name:
                   continue
               path = pathlib.PurePosixPath(name)
-              if (name.startswith(('src/', 'tests/Coglatas.Tests/', 'tests/Coglatas.ArchitectureTests/', 'frontend/src/'))
-                      and path.suffix in {'.cs', '.csproj', '.json', '.ts', '.html', '.props', '.targets'}):
-                  selected.append(name)
-          with tarfile.open(out / 'review-sources.tar.gz', 'w:gz') as archive:
-              for name in selected:
+              if (name.startswith(('src/', 'tests/', 'frontend/src/', 'scripts/quality/'))
+                      and path.suffix in {'.cs', '.csproj', '.json', '.ts', '.html', '.props', '.targets', '.py', '.xml'}
+                      or '/' not in name and path.suffix in {'.json', '.props', '.targets', '.editorconfig', '.yml', '.yaml', '.DotSettings', '.sln', '.slnx'}
+                      or name == '.editorconfig'):
                   p = root / name
                   if p.is_file() and not p.is_symlink():
-                      archive.add(p, arcname=name, recursive=False)
+                      selected.append(name)
+                      hashes[name] = hashlib.sha256(p.read_bytes()).hexdigest()
+          with tarfile.open(out / 'review-sources.tar.gz', 'w:gz') as archive:
+              for name in selected:
+                  archive.add(root / name, arcname=name, recursive=False)
+          (out / 'source-file-sha256.json').write_text(json.dumps(hashes, indent=2))
           print('Packaged tracked first-party files:', len(selected))
           PY
 
-      - name: Upload individual review and state verification evidence
+      - name: Upload full re-audit evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
