@@ -235,26 +235,26 @@ jobs:
         id: route
         shell: bash
         env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || (github.event_name == 'push' && github.event.before || '') }}
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: bash scripts/ci/route-main-ci-changes.sh
 
-      - name: Skip frontend checks for unrelated PR
-        if: github.event_name == 'pull_request' && steps.route.outputs.frontend != 'true'
+      - name: Skip frontend checks for unrelated changes
+        if: steps.route.outputs.frontend != 'true'
         run: echo "No frontend-relevant changes detected; frontend-test passes without running the frontend suite."
 
       - name: Set up Node.js
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
+        if: steps.route.outputs.frontend == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24"
 
       - name: Use repository npm version without lifecycle scripts
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
+        if: steps.route.outputs.frontend == 'true'
         run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
 
       - name: Validate MVP-A CI helper syntax
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
+        if: steps.route.outputs.frontend == 'true'
         shell: bash
         run: |
           python3 -m py_compile \
@@ -276,19 +276,19 @@ jobs:
           node --check /tmp/mvp-a-authz-boundary-acceptance.mjs
 
       - name: Verify MVP-A accessibility coverage contract
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
+        if: steps.route.outputs.frontend == 'true'
         run: python3 scripts/ci/verify-mvp-a-required-a11y-tests.py
 
       - name: Install UI runner dependencies with reviewed lifecycle policy
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
+        if: steps.route.outputs.frontend == 'true'
         run: bash scripts/ci/npm-ci-retry.sh .
 
       - name: Install Angular dependencies with reviewed lifecycle policy
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
+        if: steps.route.outputs.frontend == 'true'
         run: bash scripts/ci/npm-ci-retry.sh frontend
 
       - name: Run frontend checks in parallel
-        if: github.event_name != 'pull_request' || steps.route.outputs.frontend == 'true'
+        if: steps.route.outputs.frontend == 'true'
         shell: bash
         env:
           FRONTEND_BUILD: ${{ steps.route.outputs.frontend_build }}
@@ -300,7 +300,7 @@ jobs:
         run: bash scripts/ci/run-frontend-parallel.sh
 
       - name: Upload browser artifacts on failure
-        if: failure() && (github.event_name != 'pull_request' || steps.route.outputs.frontend_playwright == 'true')
+        if: failure() && steps.route.outputs.frontend_playwright == 'true'
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
