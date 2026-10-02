@@ -49,6 +49,13 @@ interface SyncfusionActionEvent {
   cancel?: boolean;
 }
 
+interface SyncfusionGanttEditSettings {
+  readonly allowEditing: false;
+  readonly allowAdding: false;
+  readonly allowDeleting: false;
+  readonly allowTaskbarEditing: boolean;
+}
+
 const dateOnlyPattern = /^(\d{4})-(\d{2})-(\d{2})$/u;
 export const SYNCFUSION_GANTT_THEME_ASSETS = [
   'assets/vendor/syncfusion/base/material3.css',
@@ -148,9 +155,16 @@ export class SyncfusionGanttComponent {
   @Output() readonly interactionActiveChange = new EventEmitter<boolean>();
   @Output() readonly vendorFailed = new EventEmitter<void>();
 
-  private interactionActive = false;
-  private cachedDataSourceContract: CoglatasGanttContract<object> | null = null;
-  private cachedDataSource: readonly SyncfusionGanttRow[] = [];
+  private interactionActive = false,
+    cachedDataSourceContract: CoglatasGanttContract<object> | null = null,
+    cachedDataSource: readonly SyncfusionGanttRow[] = [],
+    cachedEditSettingsContract: CoglatasGanttContract<object> | null = null,
+    cachedEditSettings: SyncfusionGanttEditSettings = {
+      allowEditing: false,
+      allowAdding: false,
+      allowDeleting: false,
+      allowTaskbarEditing: false
+    };
 
   readonly taskFields = {
     id: 'taskId',
@@ -172,24 +186,23 @@ export class SyncfusionGanttComponent {
     { field: 'progress', headerText: 'Progress', width: 95 }
   ];
 
-  get editSettings(): {
-    allowEditing: false;
-    allowAdding: false;
-    allowDeleting: false;
-    allowTaskbarEditing: boolean;
-  } {
-    return {
+  get editSettings(): SyncfusionGanttEditSettings {
+    if (this.cachedEditSettingsContract === this.contract) {
+      return this.cachedEditSettings;
+    }
+
+    const editSettings: SyncfusionGanttEditSettings = {
       allowEditing: false,
       allowAdding: false,
       allowDeleting: false,
       allowTaskbarEditing: this.hasAnyPointerEdit
     };
+    this.cachedEditSettingsContract = this.contract;
+    this.cachedEditSettings = editSettings;
+    return editSettings;
   }
 
   get dataSource(): readonly SyncfusionGanttRow[] {
-    // Syncfusion treats a new dataSource array reference as a data refresh.
-    // Keep the projection referentially stable for an immutable contract input
-    // so ordinary Angular change detection cannot restart the vendor spinner.
     if (this.cachedDataSourceContract === this.contract) {
       return this.cachedDataSource;
     }
