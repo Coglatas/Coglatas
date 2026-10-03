@@ -1,0 +1,111 @@
+name: API Performance
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-api-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  route:
+    name: API performance routing
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      required: ${{ steps.route.outputs.required }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Classify relevant changes
+        id: route
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          required=true
+          if [[ "$EVENT_NAME" == pull_request ]]; then
+            base="$PR_BASE_SHA"
+          else
+            base="$PUSH_BASE_SHA"
+          fi
+          if [[ "$EVENT_NAME" != workflow_dispatch && -n "$base" && ! "$base" =~ ^0+$ ]]; then
+            python3 scripts/performance/api_k6.py governance --base "$base"
+            required="$(python3 scripts/performance/api_k6.py route --base "$base")"
+          fi
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+          echo "API performance relevant: $required" >> "$GITHUB_STEP_SUMMARY"
+
+  benchmark:
+    name: API k6 benchmark
+    needs: route
+    if: needs.route.outputs.required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test collection, failure policy, and normalization
+        run: |
+          python3 -m unittest discover -s tests/ci -p 'test_performance_api*.py'
+          node --test tests/ci/performance-api-k6.test.mjs
+          python3 scripts/performance/api_k6.py validate
+      - name: Generate synthetic credential
+        run: |
+          password="$(python3 -c 'import secrets; print("PerfCi-" + secrets.token_urlsafe(24))')"
+          echo "::add-mask::$password"
+          echo "COGLATAS_PERFORMANCE_PASSWORD=$password" >> "$GITHUB_ENV"
+      - name: Measure Release backend and real PostgreSQL
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          mode=regression
+          if [[ "$EVENT_NAME" == pull_request ]]; then mode=fast; fi
+          bash scripts/performance/run-api-k6.sh "$mode"
+      - name: Upload sanitized API measurements and decisions
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: perf04-api-${{ github.sha }}
+          path: |
+            artifacts/performance/api/current-*.json
+            artifacts/performance/api/baseline-*.json
+            artifacts/performance/api/result.json
+            artifacts/performance/api/result.md
+          if-no-files-found: error
+          retention-days: 14
+
+  gate:
+    name: performance-fast
+    if: always()
+    needs: [route, benchmark]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enforce applicable benchmark result
+        env:
+          ROUTING_RESULT: ${{ needs.route.result }}
+          REQUIRED: ${{ needs.route.outputs.required }}
+          BENCHMARK_RESULT: ${{ needs.benchmark.result }}
+        run: |
+          set -euo pipefail
+          test "$ROUTING_RESULT" == success
+          case "$REQUIRED" in
+            true) test "$BENCHMARK_RESULT" == success ;;
+            false) test "$BENCHMARK_RESULT" == skipped; echo "API performance: validated not-applicable" ;;
+            *) exit 1 ;;
+          esac
