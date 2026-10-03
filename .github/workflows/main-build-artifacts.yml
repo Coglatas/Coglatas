@@ -157,6 +157,7 @@ jobs:
     uses: ./.github/workflows/performance-environment.yml
     with:
       profile: small
+      reuse_main_artifacts: true
 
   licensed-real-backend:
     name: Real-backend E2E from main artifacts
@@ -164,8 +165,11 @@ jobs:
     uses: ./.github/workflows/licensed-real-backend-acceptance.yml
     with:
       suite: all
+      reuse_main_artifacts: true
 
   sbom-image-security:
     name: SBOM image scan from main artifacts
     needs: main-build-artifacts
     uses: ./.github/workflows/sbom-image-security.yml
+    with:
+      reuse_main_artifacts: true
