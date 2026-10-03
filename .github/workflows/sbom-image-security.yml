@@ -2,10 +2,6 @@ name: SBOM Image Security
 
 on:
   workflow_call:
-    inputs:
-      target_sha:
-        required: true
-        type: string
   workflow_dispatch:
   release:
     types: [published]
@@ -21,7 +17,7 @@ env:
   SYFT_VERSION: "1.51.0"
   GRYPE_VERSION: "0.118.0"
   TRIVY_VERSION: "0.65.0"
-  EVIDENCE_REPOSITORY_SHA: ${{ github.event_name == 'workflow_call' && inputs.target_sha || github.sha }}
+  EVIDENCE_REPOSITORY_SHA: ${{ github.sha }}
 
 jobs:
   image-sbom:
@@ -32,8 +28,8 @@ jobs:
 
     env:
       SYNCFUSION_LICENSE: ${{ secrets.SYNCFUSION_LICENSE }}
-      TARGET_SHA: ${{ github.event_name == 'workflow_call' && inputs.target_sha || github.sha }}
-      IMAGE_NAME: coglatas-sbom:${{ github.event_name == 'workflow_call' && inputs.target_sha || github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+      TARGET_SHA: ${{ github.sha }}
+      IMAGE_NAME: coglatas-sbom:${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
       DOCKER_BUILDKIT: "1"
       BUILDKIT_PROGRESS: plain
 
@@ -41,7 +37,6 @@ jobs:
       - name: Checkout reviewed commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
           persist-credentials: false
 
