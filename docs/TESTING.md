@@ -659,6 +659,17 @@ config. Keeping those discovery roots separate is required: Playwright file
 arguments are scoped to the active `testDir`. Neither invocation uses
 `--pass-with-no-tests`, so a missing owner selection is a failure.
 
+Issue #588's required canonical owner can be run independently with
+`node tests/ui/run-real-backend-fci04.mjs functional-fast functional-full`.
+The protected P0 runner requires its fast path before the legacy manifest;
+Main artifact-reuse acceptance selects its full path. The owner reporter
+requires one real-backend test, one passing attempt, and all stable gate steps;
+skip/retry/missing-owner results fail. The journey verifies the same persisted
+result hash/body after replay, reload, and session re-entry, and denies the
+protected browser route after logout. Completion artifacts record only the
+gate, candidate SHA, Journey ID, and completed steps. Local discovery or
+preflight tests alone do not prove execution on the real stack.
+
 For an already-running real backend only, direct execution requires the marker,
 URL, and synthetic credentials explicitly:
 

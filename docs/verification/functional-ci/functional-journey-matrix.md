@@ -49,6 +49,24 @@ Runtime budgets (`B1`-`B4`) are defined in the policy.
 | `FUNC-AUDIT-001` | An authorized user can navigate/filter Audit evidence, open a redacted detail, and return without losing safe state/focus | Synthetic audit rows with sensitive fields; authorized and unauthorized users | filter/list -> open detail/deep link -> reveal allowed sensitive projection -> close/back -> state/focus retained | unauthorized sensitive metadata denied/redacted; injected content rendered as text; foreign audit metadata not disclosed | `audit/navigation` | No mock of Audit/auth/redaction/persistence APIs for owner credit | production Angular; ASP.NET Core; EF Core; PostgreSQL | `functional-extended`, optionally `functional-full`, projected to `functional-release` via #482 | `tests/ui/angular-smoke.spec.ts` has focused mocked 320px/redaction/focus coverage only; #482 terminal regression provides integrated downstream evidence | `B3` | `NOT_IMPLEMENTED` |
 | `FUNC-XNAV-001` | Global navigation across major screens does not land on blank/404/redirect-loop states and preserves session boundary | Authorized synthetic user with representative Workspace/Project data | navigate Workspace -> Files -> Messages -> Project/Task -> Audit/Announcement where authorized | unauthorized routes deny/redirect safely; logout/tenant invalidation clears protected frontend state | `audit/navigation` (cross-screen integration owner) | Domain owner APIs must be real for release credit; focused static route smoke is non-owner | production Angular; ASP.NET Core; PostgreSQL; representative domain fixtures | `functional-extended`, `functional-release` | `tests/ui/angular-smoke.spec.ts` focused static route smoke; #482 is the intended integrated owner | `B4` | `NOT_IMPLEMENTED` (awaiting #482 completion) |
 
+## FCI-04 required execution contract
+
+`FUNC-TASK-001` retains one canonical owner in
+`tests/functional/project-task/core-golden-journey.spec.ts`. The focused runner
+`tests/ui/run-real-backend-fci04.mjs` selects that owner by exact gate/Journey/
+real-backend tags and requires one passing attempt plus every stable gate step.
+Fast requires STEP-01/02/05..11; full adds STEP-03/04 for Workspace context,
+Project/Task/My Tasks navigation, and Task mutation/fresh read/reload. Result
+replay, browser reload, and session re-entry must preserve the persisted content
+hash and body; logout denies both owner APIs and the protected browser route.
+
+The protected P0 runner executes fast before its independent legacy manifest.
+Main's artifact-reuse acceptance explicitly executes full. Trusted FCI-04
+write-access branch pushes and protected `fci04` dispatch run both selections
+against the exact candidate in one isolated real stack. Missing/skipped/retried
+owners and missing steps fail; green static preflights alone are not real-stack
+execution evidence. Broader gate routing/sharding remains owned by FCI-08/09.
+
 ## Existing suite mapping summary
 
 This section makes the required Issue #577 mappings explicit even when one

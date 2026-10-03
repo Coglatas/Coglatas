@@ -82,6 +82,19 @@ The Functional list reporter prints `test.step` entries. Owner steps should
 include both the stable journey ID and a stable step ID so console failures
 identify the broken segment without requiring a trace artifact.
 
+FCI-04's required execution entry point is
+`node tests/ui/run-real-backend-fci04.mjs [functional-fast] [functional-full]`.
+With no arguments it runs both gates sequentially in one isolated Compose
+stack. The protected P0 runner also executes this same owner before the legacy
+manifest (fast by default, full for Main artifact-reuse acceptance). It never
+uses the legacy title grep to select the migrated owner.
+
+The required FCI-04 reporter rejects zero/multiple owners, missing real-backend
+metadata, skip/failure/retry, and missing stable owner steps. Fast requires
+STEP-01/02/05..11; full requires STEP-01..11. Completion artifacts contain only
+Journey ID, gate, candidate SHA, status, and step names, with no response bodies
+or session material. Discovery with `--list` is static evidence only.
+
 ## Backend classification
 
 `backend: 'real'` means the journey reaches the real application HTTP surface and authoritative persisted state for the behavior under test. A test that intercepts or fabricates success for core auth/business API routes must use `backend: 'mock'` and cannot satisfy required real Functional coverage.
