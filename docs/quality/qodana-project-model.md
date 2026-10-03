@@ -59,8 +59,8 @@ Qodana runs `scripts/quality/qodana-bootstrap.sh` before inspections. For the Co
 1. Reads the required SDK from `global.json`.
 2. Installs that exact SDK if the image does not provide it.
 3. Prints the active SDK/MSBuild information.
-4. Runs `dotnet restore Coglatas.slnx --verbosity normal`.
-5. Runs `dotnet build Coglatas.slnx --configuration Release --no-restore`.
+4. Runs `dotnet restore Coglatas.slnx --verbosity normal` for the Qodana execution environment.
+5. On main artifact-hub runs, verifies and reuses the exact-SHA prebuilt `bin/obj` tree and skips compilation; on standalone/manual fallback runs, executes `dotnet build Coglatas.slnx --configuration Release --no-restore`.
 6. Skips the frontend bootstrap because `qodana-cdnet` does not analyze the active Angular/TypeScript application.
 
 Restore, build, SDK, package-resolution, solution-load and project-model failures are hard failures.
