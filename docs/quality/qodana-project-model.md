@@ -67,7 +67,7 @@ Restore, build, SDK, package-resolution, solution-load and project-model failure
 
 ## Pull-request quality gate
 
-`.github/workflows/qodana_code_quality.yml` retains the established caller for pull requests, `main` pushes, the weekly schedule and manual dispatch. It delegates analysis to the immutable reusable workflow `qodana_trusted_gate.yml`. The caller now pins the same reviewed gate blob through the main-reachable #724 commit instead of the former intermediate PR commit, so GitHub Actions can resolve the reusable workflow while the reviewed implementation remains unchanged. This existing lane remains tokenless; Qodana Cloud credentials are never passed to it.
+`.github/workflows/qodana_code_quality.yml` is the trusted Community caller for `main` pushes and manual dispatch. It delegates analysis to the local reusable workflow `qodana_trusted_gate.yml`. Pull-request JetBrains analysis is handled separately by the ReSharper InspectCode fast lane, so Qodana no longer spends the PR feedback budget on full repository inspection. The Community lane remains tokenless; Qodana Cloud credentials are never passed to it.
 
 For PRs:
 
