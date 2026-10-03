@@ -4,14 +4,11 @@ name: Qodana Cloud Full Analysis
 # for pull_request or review events. Manual dispatches are also restricted to
 # the default branch by the job-level ref guard.
 on:
-  workflow_call:
-    inputs:
-      reuse_main_artifacts:
-        required: false
-        type: boolean
-        default: false
+  workflow_run:
+    workflows: ["Main Build Artifacts"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
-  # Main pushes run Qodana Cloud through Main Build Artifacts so the trusted build is reused.
   # Scheduled trigger temporarily disabled on 2026-09-19 to reduce CI consumption.
   # schedule:
   #   - cron: "17 18 * * 0"
@@ -22,11 +19,17 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   qodana-cloud:
     name: Qodana Cloud / Full Repository
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     # Reuse the repository's existing protected trusted-build environment so
     # secret-bearing Qodana publication remains behind an established boundary.
@@ -44,7 +47,8 @@ jobs:
       QODANA_UNRESOLVED_FILE_THRESHOLD: "0"
       QODANA_CRITICAL_THRESHOLD: "0"
       QODANA_RULE_BASELINE_PATH: scripts/quality/qodana-rule-baseline.json
-      QODANA_REUSE_PREBUILT_DOTNET_BUILD: ${{ inputs.reuse_main_artifacts && 'true' || 'false' }}
+      TARGET_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      QODANA_REUSE_PREBUILT_DOTNET_BUILD: ${{ github.event_name == 'workflow_run' && 'true' || 'false' }}
 
     steps:
       - name: Repair previous Docker workspace ownership
@@ -60,20 +64,24 @@ jobs:
       - name: Checkout trusted main revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Download trusted main build artifacts
-        if: inputs.reuse_main_artifacts == true
+        if: github.event_name == 'workflow_run'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: main-build-artifacts
           path: ${{ runner.temp }}/main-build-artifacts
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
 
       - name: Restore trusted main .NET build
-        if: inputs.reuse_main_artifacts == true
+        if: github.event_name == 'workflow_run'
         shell: bash
-        run: bash scripts/ci/restore-main-dotnet-build.sh "$RUNNER_TEMP/main-build-artifacts" "$GITHUB_SHA" "$GITHUB_WORKSPACE"
+        run: bash scripts/ci/restore-main-dotnet-build.sh "$RUNNER_TEMP/main-build-artifacts" "$TARGET_SHA" "$GITHUB_WORKSPACE"
 
       - name: Configure persistent .NET caches
         shell: bash
