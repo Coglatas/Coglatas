@@ -80,5 +80,5 @@ test('pull requests still preflight browser-facing changes while main execution 
   assert.match(workflow, /- "tests\/ui\/\*\*"/u);
   assert.match(workflow, /- "playwright\.config\.ts"/u);
   assert.match(workflow, /- "scripts\/ci\/compat-critical\*"/u);
-  assert.doesNotMatch(workflow, /\n  push:\n/u);
+  assert.doesNotMatch(workflow, /\n\s{2}push:\n/u);
 });
