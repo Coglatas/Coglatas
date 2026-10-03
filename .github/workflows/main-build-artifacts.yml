@@ -154,3 +154,27 @@ jobs:
       - name: Remove per-run runtime image
         if: always()
         run: docker image rm --force "$IMAGE_NAME" || true
+
+
+  performance-environment:
+    name: Performance from main artifacts
+    needs: main-build-artifacts
+    uses: ./.github/workflows/performance-environment.yml
+    with:
+      target_sha: ${{ github.event.workflow_run.head_sha }}
+      profile: small
+
+  licensed-real-backend:
+    name: Real-backend E2E from main artifacts
+    needs: main-build-artifacts
+    uses: ./.github/workflows/licensed-real-backend-acceptance.yml
+    with:
+      target_sha: ${{ github.event.workflow_run.head_sha }}
+      suite: all
+
+  sbom-image-security:
+    name: SBOM image scan from main artifacts
+    needs: main-build-artifacts
+    uses: ./.github/workflows/sbom-image-security.yml
+    with:
+      target_sha: ${{ github.event.workflow_run.head_sha }}
