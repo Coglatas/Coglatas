@@ -15,7 +15,7 @@ const focusedGrep = process.env.COGLATAS_REAL_BACKEND_SMOKE_GREP?.trim(),
   successExitCode = 0;
 
 if (process.env.COGLATAS_FCI04_ONLY !== '1') {
-  playwrightPlan.push(...buildRealBackendPlaywrightPlan(process.argv.slice(2), focusedGrep));
+  playwrightPlan.push(...buildRealBackendPlaywrightPlan(process.argv.slice(2), focusedGrep, process.env.COGLATAS_FUNCTIONAL_FILES_GATE));
 }
 
 if (process.env.COGLATAS_ISSUE_683_EVIDENCE === '1') {
@@ -42,7 +42,10 @@ try {
       await prepareRealBackendP0State(configuration);
     }
     console.log(`Running ${run.name}.`);
-    return runPlaywright(configuration.baseURL, run.args, run.environment);
+    return runPlaywright(configuration.baseURL, run.args, {
+      COGLATAS_FUNCTIONAL_SELECTED_GATES: run.functionalGate ?? '',
+      ...run.environment,
+    });
   }, Promise.resolve(successExitCode));
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);

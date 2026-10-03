@@ -26,6 +26,7 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   reporter: [
+    ['./tests/functional/files/files-owner-reporter.mjs'],
     ['list', { printSteps: true }],
     ['junit', { outputFile: 'test-results/functional-playwright-results.xml' }],
     ...(process.env.COGLATAS_FCI04_REQUIRED === '1'

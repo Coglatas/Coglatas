@@ -35,16 +35,20 @@ test('COMPAT-01 main matrix isolates every engine and uses one critical profile'
     assert.match(workflow, entry);
   }
 
-  assert.match(workflow, /workflow_call:[\s\S]*reuse_main_frontend_artifact:/u);
-  assert.match(
-    workflow,
-    /compat-browser-engine:\s+if: inputs\.reuse_main_frontend_artifact == true/u
-  );
   assert.match(workflow, /fail-fast: false/u);
   assert.match(workflow, /name: compat-\$\{\{ matrix\.engine \}\}/u);
   assert.match(
     workflow,
     /npm run test:ui:compat-critical -- --profile browser-engine -- --project=\$\{\{ matrix\.project \}\}/u
+  );
+  assert.doesNotMatch(workflow, /continue-on-error:/u);
+});
+
+test('main browser engines restore the exact frontend artifact without rebuilding', () => {
+  assert.match(workflow, /workflow_call:[\s\S]*reuse_main_frontend_artifact:/u);
+  assert.match(
+    workflow,
+    /compat-browser-engine:\s+if: inputs\.reuse_main_frontend_artifact == true/u
   );
   assert.match(workflow, /name: main-frontend-build/u);
   assert.match(workflow, /restore-main-frontend-build\.sh/u);
@@ -55,7 +59,6 @@ test('COMPAT-01 main matrix isolates every engine and uses one critical profile'
   );
   assert.match(config, /skipFrontendBuild = process\.env\.PLAYWRIGHT_SKIP_BUILD === "1"/u);
   assert.match(config, /skipFrontendBuild[\s\S]*node tests\/ui\/serve-static\.mjs/u);
-  assert.doesNotMatch(workflow, /continue-on-error:/u);
 });
 
 test('COMPAT-01 remains secretless, retry-free, and emits engine-scoped evidence', () => {
