@@ -348,7 +348,7 @@ while IFS= read -r path; do
   [[ -n "$path" ]] || continue
 
   case "$path" in
-    .github/workflows/ci.yml|.github/workflows/resharper_pr.yml|scripts/quality/check-resharper-pr-sarif.py|scripts/ci/route-main-ci-changes.sh|scripts/ci/parallel-lane-lib.sh|scripts/ci/run-frontend-parallel.sh|scripts/ci/run-security-runtime-parallel.sh)
+    .github/workflows/ci.yml|.github/workflows/main-build-artifacts.yml|.github/workflows/compat-critical-preflight.yml|.github/workflows/mobile-compatibility.yml|.github/workflows/resharper_pr.yml|scripts/quality/check-resharper-pr-sarif.py|scripts/ci/route-main-ci-changes.sh|scripts/ci/parallel-lane-lib.sh|scripts/ci/run-frontend-parallel.sh|scripts/ci/run-security-runtime-parallel.sh)
       backend=true
       backend_ef=true
       backend_tests=true

@@ -1,6 +1,12 @@
 name: Compatibility Critical Suite Preflight
 
 on:
+  workflow_call:
+    inputs:
+      reuse_main_frontend_artifact:
+        required: false
+        type: boolean
+        default: false
   pull_request:
     paths:
       - ".github/workflows/compat-critical-preflight.yml"
@@ -16,23 +22,6 @@ on:
       - "tests/ui/**"
       - "docs/ci/compat-critical-suite.md"
       - "docs/TESTING.md"
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/compat-critical-preflight.yml"
-      - ".github/workflows/mobile-compatibility.yml"
-      - "frontend/**"
-      - "package.json"
-      - "package-lock.json"
-      - "playwright.config.ts"
-      - "scripts/ci/compat-critical*"
-      - "scripts/ci/build-compat-critical-grep.mjs"
-      - "scripts/ci/run-compat-critical.mjs"
-      - "scripts/ci/verify-compat-critical.mjs"
-      - "tests/ui/**"
-      - "docs/ci/compat-critical-suite.md"
-      - "docs/TESTING.md"
-
 concurrency:
   group: compat-critical-preflight-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -139,7 +128,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   compat-browser-engine:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: inputs.reuse_main_frontend_artifact == true
     needs: compat-critical-preflight
     name: compat-${{ matrix.engine }}
     runs-on: ubuntu-latest
@@ -172,13 +161,21 @@ jobs:
       - name: Install repository Playwright dependencies
         run: npm ci --prefer-offline --ignore-scripts --no-audit --no-fund
 
-      - name: Install Angular dependencies without lifecycle scripts
-        run: npm --prefix frontend ci --prefer-offline --ignore-scripts --no-audit --no-fund
+      - name: Download Main Frontend producer artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: main-frontend-build
+          path: ${{ runner.temp }}/main-frontend-build
+
+      - name: Restore prebuilt frontend output
+        run: bash scripts/ci/restore-main-frontend-build.sh "$RUNNER_TEMP/main-frontend-build" "$GITHUB_SHA" "$GITHUB_WORKSPACE"
 
       - name: Install ${{ matrix.engine }} browser and system dependencies
         run: node node_modules/@playwright/test/cli.js install --with-deps "${{ matrix.browser }}"
 
       - name: Run compat-critical on ${{ matrix.engine }} with zero retries
+        env:
+          PLAYWRIGHT_SKIP_BUILD: "1"
         run: npm run test:ui:compat-critical -- --profile browser-engine -- --project=${{ matrix.project }}
 
       - name: Summarize engine evidence
