@@ -78,13 +78,23 @@ jobs:
         run: bash scripts/ci/restore-main-build-artifacts.sh "$RUNNER_TEMP/main-build-artifacts" "$TARGET_SHA" "$GITHUB_WORKSPACE"
 
 
-      - name: Verify protected license input
+      - name: Resolve build credential requirement
         shell: bash
+        env:
+          REUSE_MAIN_ARTIFACTS: ${{ inputs.reuse_main_artifacts && 'true' || 'false' }}
         run: |
-          test -n "${SYNCFUSION_LICENSE:-}" || {
-            echo "SYNCFUSION_LICENSE is not configured in the protected environment." >&2
-            exit 1
-          }
+          set -euo pipefail
+          if [[ "$REUSE_MAIN_ARTIFACTS" == "true" ]]; then
+            # The app image was already built in Main CI. Compose requires the
+            # declared secret environment variable while rendering config, but
+            # --no-build ensures this sentinel is never used as build material.
+            echo "SYNCFUSION_LICENSE=artifact-reuse-no-build" >> "$GITHUB_ENV"
+          else
+            test -n "${SYNCFUSION_LICENSE:-}" || {
+              echo "SYNCFUSION_LICENSE is not configured in the protected environment." >&2
+              exit 1
+            }
+          fi
 
       - name: Install acceptance runner dependencies
         run: bash scripts/ci/npm-ci-retry.sh .
