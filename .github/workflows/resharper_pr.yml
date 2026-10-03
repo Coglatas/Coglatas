@@ -2,23 +2,6 @@ name: ReSharper PR Analysis
 
 on:
   workflow_call:
-    inputs:
-      build-artifact-name:
-        description: Build artifact produced by the caller's authoritative .NET build job.
-        required: true
-        type: string
-      analysis-sha:
-        description: Exact commit whose build outputs are contained in the artifact.
-        required: true
-        type: string
-      base-sha:
-        description: Pull-request base SHA used to determine changed files.
-        required: true
-        type: string
-      head-sha:
-        description: Pull-request head SHA used to determine changed files.
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -40,7 +23,6 @@ jobs:
       - name: Checkout analyzed revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.analysis-sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -52,7 +34,7 @@ jobs:
       - name: Download authoritative .NET build artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: ${{ inputs.build-artifact-name }}
+          name: dotnet-release-build
           path: ${{ runner.temp }}/dotnet-build-artifact
 
       - name: Restore authoritative build outputs
@@ -83,8 +65,8 @@ jobs:
       - name: Classify ReSharper project scope
         id: scope
         env:
-          BASE_SHA: ${{ inputs.base-sha }}
-          HEAD_SHA: ${{ inputs.head-sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         shell: bash
         run: |
           set -euo pipefail
