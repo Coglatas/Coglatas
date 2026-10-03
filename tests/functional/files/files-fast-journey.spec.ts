@@ -211,43 +211,19 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
         assertNoSensitiveText(deletedGrantPreview);
         evidence.deletedGrantStatus = deletedGrant.status();
       } finally {
-        // Recover the exact run-owned FileObject if upload committed but response
-        // delivery/parsing failed. Never delete another fixture's inventory.
-        if (!fileObjectId && uploadAttempted && workspaceId) {
-          const candidates = (await readFileList(api, workspaceId)).filter((item) =>
-            readOptionalString(item, 'originalFileName', 'OriginalFileName') === fileName,
-          );
-          if (candidates.length > 1) {
-            throw new Error('FCI-05 cleanup found multiple run-owned FileObjects.');
-          }
-          fileObjectId = candidates.length === 1
-            ? requireStringField(candidates[0], 'fileObjectId', 'FileObjectId')
-            : null;
-        }
-        if (!cleanupSucceeded && fileObjectId) {
-          try {
-            const cleanup = await csrfAwareRequest(
-              api,
-              'DELETE',
-              `/api/files/${fileObjectId}?reason=fci-05-finally-cleanup`,
-            );
-            cleanupSucceeded = cleanup.status() === 200;
-            if (cleanupSucceeded && workspaceId) {
-              cleanupSucceeded = !(await fileNamesForWorkspace(api, workspaceId)).includes(fileName);
-            }
-            evidence.cleanupSucceeded = cleanupSucceeded;
-          } catch {
-            // The isolated Compose project is still volume-cleaned by the FCI-02 harness.
-          }
+        // Recover only this run's object if response delivery/parsing failed.
+        if (!cleanupSucceeded && uploadAttempted && workspaceId) {
+          cleanupSucceeded = await cleanupUploadedFile(api, workspaceId, fileName, fileObjectId);
+          evidence.cleanupSucceeded = cleanupSucceeded;
         }
 
         await testInfo.attach('fci-05-files-fast-evidence.json', {
           body: JSON.stringify(evidence, null, 2),
           contentType: 'application/json',
         });
-        if (fileObjectId && !cleanupSucceeded) {
-          throw new Error('FCI-05 could not verify run-owned FileObject cleanup; isolated storage teardown is still required.');
-        }
+      }
+      if (uploadAttempted && !cleanupSucceeded) {
+        throw new Error('FCI-05 could not verify run-owned FileObject cleanup; isolated storage teardown is still required.');
       }
     },
   );
@@ -325,14 +301,46 @@ function assertNoSensitiveText(text: string): void {
   }
 }
 
-async function assertSafeResponse(
+function assertSafeResponse(
   response: APIResponse | Response,
   options: { label: string; expectedStatus: number | number[] },
-): Promise<void> {
+): void {
   const expected = Array.isArray(options.expectedStatus) ? options.expectedStatus : [options.expectedStatus];
   if (!expected.includes(response.status())) {
     // Grant/storage failure bodies may contain credentials or protected bytes.
     // Status and stable step labels are sufficient diagnostics for this owner.
     throw new Error(`${options.label}: HTTP ${response.status()}, expected ${expected.join(' or ')}. Response body omitted.`);
+  }
+}
+
+async function cleanupUploadedFile(
+  api: APIRequestContext, workspaceId: string, fileName: string, fileObjectId: string | null,
+): Promise<boolean> {
+  try {
+    const candidates = (await readFileList(api, workspaceId)).filter((item) =>
+      readOptionalString(item, 'originalFileName', 'OriginalFileName') === fileName,
+    );
+    if (candidates.length > 1) {
+      return false;
+    }
+    const recoveredId = candidates.length === 1
+      ? requireStringField(candidates[0], 'fileObjectId', 'FileObjectId')
+      : null;
+    if (fileObjectId && recoveredId && fileObjectId !== recoveredId) {
+      return false;
+    }
+    const cleanupTargetId = fileObjectId ?? recoveredId;
+    if (cleanupTargetId) {
+      const cleanup = await csrfAwareRequest(
+        api, 'DELETE', `/api/files/${cleanupTargetId}?reason=fci-05-finally-cleanup`,
+      );
+      if (cleanup.status() !== 200) {
+        return false;
+      }
+    }
+    return !(await fileNamesForWorkspace(api, workspaceId)).includes(fileName);
+  } catch {
+    // The isolated Compose project remains volume-cleaned by the outer harness.
+    return false;
   }
 }

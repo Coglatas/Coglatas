@@ -7,7 +7,7 @@ export default class FilesOwnerReporter {
 
   onEnd(result) {
     if (this.listOnly || result.status !== 'passed') {
-      return;
+      return undefined;
     }
     const selected = this.selected ?? [];
     const owners = selected.filter((entry) => entry.annotations.some((annotation) =>
@@ -20,5 +20,6 @@ export default class FilesOwnerReporter {
       console.error('FCI-05 owner evidence is empty, skipped, or unsuccessful; refusing Green.');
       return { status: 'failed' };
     }
+    return undefined;
   }
 }
