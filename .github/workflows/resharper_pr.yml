@@ -1,13 +1,24 @@
 name: ReSharper PR Analysis
 
 on:
-  pull_request:
-    branches:
-      - main
-
-concurrency:
-  group: resharper-pr-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  workflow_call:
+    inputs:
+      build-artifact-name:
+        description: Build artifact produced by the caller's authoritative .NET build job.
+        required: true
+        type: string
+      analysis-sha:
+        description: Exact commit whose build outputs are contained in the artifact.
+        required: true
+        type: string
+      base-sha:
+        description: Pull-request base SHA used to determine changed files.
+        required: true
+        type: string
+      head-sha:
+        description: Pull-request head SHA used to determine changed files.
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -26,10 +37,10 @@ jobs:
       RESHARPER_VERSION: "2026.2.2"
 
     steps:
-      - name: Checkout pull-request head
+      - name: Checkout analyzed revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ inputs.analysis-sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -38,24 +49,54 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Classify pull-request analysis scope
+      - name: Download authoritative .NET build artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ inputs.build-artifact-name }}
+          path: ${{ runner.temp }}/dotnet-build-artifact
+
+      - name: Restore authoritative build outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/dotnet-build-artifact/dotnet-release-build.tar"
+          [[ -f "$archive" ]] || {
+            echo "::error::Shared .NET build artifact is missing its archive."
+            exit 1
+          }
+
+          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
+
+          stamp="artifacts/ci/dotnet-build-sha"
+          [[ -f "$stamp" ]] || {
+            echo "::error::Shared .NET build artifact is missing its SHA stamp."
+            exit 1
+          }
+
+          expected="$(git rev-parse HEAD)"
+          actual="$(tr -d '\r\n' < "$stamp")"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Shared .NET build artifact SHA $actual does not match analyzed revision $expected."
+            exit 1
+          fi
+
+      - name: Classify ReSharper project scope
         id: scope
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_SHA: ${{ inputs.base-sha }}
+          HEAD_SHA: ${{ inputs.head-sha }}
         shell: bash
         run: |
           set -euo pipefail
           report_dir="$RUNNER_TEMP/resharper"
           changed_files="$report_dir/changed-files.nul"
           projects_file="$report_dir/projects.txt"
-          restore_targets="$report_dir/restore-targets.txt"
           mkdir -p "$report_dir"
 
-          git diff --name-only --diff-filter=ACMRT -z "$BASE_SHA...HEAD" > "$changed_files"
+          git diff --name-only --diff-filter=ACMRT -z "$BASE_SHA...$HEAD_SHA" > "$changed_files"
 
           CHANGED_FILES_PATH="$changed_files" \
           PROJECTS_FILE="$projects_file" \
-          RESTORE_TARGETS_FILE="$restore_targets" \
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import os
           from pathlib import Path
@@ -63,7 +104,6 @@ jobs:
           root = Path.cwd().resolve()
           changed_path = Path(os.environ["CHANGED_FILES_PATH"])
           projects_path = Path(os.environ["PROJECTS_FILE"])
-          restore_targets_path = Path(os.environ["RESTORE_TARGETS_FILE"])
 
           paths = [
               item.decode("utf-8", errors="surrogateescape").replace("\\", "/")
@@ -72,7 +112,9 @@ jobs:
           ]
 
           self_test_paths = {
+              ".github/workflows/ci.yml",
               ".github/workflows/resharper_pr.yml",
+              "scripts/ci/route-main-ci-changes.sh",
               "scripts/quality/check-resharper-pr-sarif.py",
           }
           global_names = {
@@ -119,11 +161,10 @@ jobs:
               return None
 
           relevant = [path for path in paths if is_dotnet_input(path)]
-          needs_analysis = bool(relevant)
           full_solution = any(is_global_input(path) for path in relevant)
 
           selected: dict[str, Path] = {}
-          if needs_analysis and not full_solution:
+          if not full_solution:
               for path in relevant:
                   if path in self_test_paths:
                       continue
@@ -134,44 +175,25 @@ jobs:
                       break
                   selected[project.stem] = project.relative_to(root)
 
-          # Workflow-only changes still execute a real, bounded InspectCode run.
-          if needs_analysis and not full_solution and not selected:
+          # Pipeline-only changes still exercise a real but bounded inspection.
+          if not full_solution and not selected:
               representative = Path("src/Coglatas.Domain/Coglatas.Domain.csproj")
               selected[representative.stem] = representative
 
           if full_solution:
               projects_path.write_text("", encoding="utf-8")
-              restore_targets_path.write_text("Coglatas.slnx\n", encoding="utf-8")
           else:
               projects_path.write_text(
                   "".join(f"{name}\n" for name in sorted(selected)),
                   encoding="utf-8",
               )
-              restore_targets_path.write_text(
-                  "".join(f"{selected[name].as_posix()}\n" for name in sorted(selected)),
-                  encoding="utf-8",
-              )
 
-          print(f"needs_analysis={'true' if needs_analysis else 'false'}")
           print(f"full_solution={'true' if full_solution else 'false'}")
           print(f"changed_files_path={changed_path}")
           print(f"projects_path={projects_path}")
-          print(f"restore_targets_path={restore_targets_path}")
           PY
 
-      - name: Restore selected .NET projects
-        if: steps.scope.outputs.needs_analysis == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          while IFS= read -r target; do
-            [[ -n "$target" ]] || continue
-            echo "Restoring $target"
-            dotnet restore "$target" --verbosity minimal
-          done < "${{ steps.scope.outputs.restore_targets_path }}"
-
       - name: Install ReSharper command-line tools
-        if: steps.scope.outputs.needs_analysis == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -181,8 +203,7 @@ jobs:
             --tool-path "$tool_dir"
           echo "RESHARPER_JB=$tool_dir/jb" >> "$GITHUB_ENV"
 
-      - name: Run ReSharper InspectCode fast lane
-        if: steps.scope.outputs.needs_analysis == 'true'
+      - name: Run ReSharper InspectCode against shared build outputs
         shell: bash
         run: |
           set -euo pipefail
@@ -216,20 +237,14 @@ jobs:
           "$RESHARPER_JB" "${args[@]}"
 
       - name: Gate changed files on ReSharper findings
-        if: steps.scope.outputs.needs_analysis == 'true'
         shell: bash
         run: |
           python3 scripts/quality/check-resharper-pr-sarif.py \
             "$RUNNER_TEMP/resharper/inspectcode.sarif.json" \
             "${{ steps.scope.outputs.changed_files_path }}"
 
-      - name: Skip ReSharper for non-.NET pull request
-        if: steps.scope.outputs.needs_analysis != 'true'
-        shell: bash
-        run: echo "No .NET or ReSharper configuration changes detected; fast lane is not required."
-
       - name: Upload ReSharper report
-        if: always() && steps.scope.outputs.needs_analysis == 'true'
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: resharper-pr-sarif
