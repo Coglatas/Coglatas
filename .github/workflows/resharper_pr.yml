@@ -8,9 +8,14 @@ permissions:
 
 jobs:
   resharper-inspectcode:
-    name: ReSharper InspectCode / PR
+    name: ReSharper A/B (${{ matrix.build_mode }}, run ${{ matrix.repetition }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        build_mode: [no-build, build]
+        repetition: [1, 2, 3]
     permissions:
       contents: read
 
@@ -175,6 +180,10 @@ jobs:
           print(f"projects_path={projects_path}")
           PY
 
+      - name: Restore NuGet packages for identical A/B inputs
+        shell: bash
+        run: dotnet restore Coglatas.slnx --disable-parallel --verbosity minimal
+
       - name: Install ReSharper command-line tools
         shell: bash
         run: |
@@ -185,8 +194,12 @@ jobs:
             --tool-path "$tool_dir"
           echo "RESHARPER_JB=$tool_dir/jb" >> "$GITHUB_ENV"
 
-      - name: Run ReSharper InspectCode against shared build outputs
+      - name: Run ReSharper InspectCode A/B variant
+        id: inspectcode
         shell: bash
+        env:
+          RESHARPER_BUILD_MODE: ${{ matrix.build_mode }}
+          RESHARPER_REPETITION: ${{ matrix.repetition }}
         run: |
           set -euo pipefail
           sarif="$RUNNER_TEMP/resharper/inspectcode.sarif.json"
@@ -197,18 +210,27 @@ jobs:
             --output="$sarif"
             --severity=WARNING
             --no-swea
-            --no-build
             --no-updates
             --properties:Configuration=Release
             --properties:RunAnalyzers=false
             --verbosity=WARN
           )
 
+          case "$RESHARPER_BUILD_MODE" in
+            no-build) args+=(--no-build) ;;
+            build) args+=(--build) ;;
+            *)
+              echo "::error::Unexpected A/B build mode: $RESHARPER_BUILD_MODE"
+              exit 2
+              ;;
+          esac
+
           while IFS= read -r project; do
             [[ -n "$project" ]] || continue
             args+=(--project="$project")
           done < "${{ steps.scope.outputs.projects_path }}"
 
+          echo "ReSharper A/B variant: $RESHARPER_BUILD_MODE run $RESHARPER_REPETITION"
           echo "ReSharper scope:"
           if [[ -s "${{ steps.scope.outputs.projects_path }}" ]]; then
             cat "${{ steps.scope.outputs.projects_path }}"
@@ -216,7 +238,12 @@ jobs:
             echo "full solution"
           fi
 
+          start_ns="$(date +%s%N)"
           "$RESHARPER_JB" "${args[@]}"
+          end_ns="$(date +%s%N)"
+          elapsed_ms="$(( (end_ns - start_ns) / 1000000 ))"
+          echo "elapsed_ms=$elapsed_ms" >> "$GITHUB_OUTPUT"
+          printf 'InspectCode elapsed: %d.%03d s\n' "$((elapsed_ms / 1000))" "$((elapsed_ms % 1000))"
 
       - name: Gate changed files on ReSharper findings
         shell: bash
@@ -225,11 +252,30 @@ jobs:
             "$RUNNER_TEMP/resharper/inspectcode.sarif.json" \
             "${{ steps.scope.outputs.changed_files_path }}"
 
+      - name: Record ReSharper A/B timing
+        if: always()
+        shell: bash
+        env:
+          RESHARPER_BUILD_MODE: ${{ matrix.build_mode }}
+          RESHARPER_REPETITION: ${{ matrix.repetition }}
+          ELAPSED_MS: ${{ steps.inspectcode.outputs.elapsed_ms }}
+        run: |
+          {
+            echo "### ReSharper A/B benchmark"
+            echo "- variant: $RESHARPER_BUILD_MODE"
+            echo "- repetition: $RESHARPER_REPETITION"
+            if [[ -n "$ELAPSED_MS" ]]; then
+              awk -v ms="$ELAPSED_MS" 'BEGIN { printf "- InspectCode elapsed: %.3f s\\n", ms / 1000 }'
+            else
+              echo "- InspectCode elapsed: unavailable"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload ReSharper report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: resharper-pr-sarif
+          name: resharper-ab-${{ matrix.build_mode }}-${{ matrix.repetition }}
           path: ${{ runner.temp }}/resharper/inspectcode.sarif.json
           if-no-files-found: warn
           retention-days: 7
