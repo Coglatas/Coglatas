@@ -10,6 +10,7 @@ concurrency:
 permissions:
   contents: read
   checks: read
+  actions: read
 
 jobs:
   mvp-a-final-gate:
@@ -27,7 +28,7 @@ jobs:
           fi
 
       - name: Checkout final candidate
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
@@ -45,6 +46,8 @@ jobs:
           python3 -m py_compile \
             scripts/ci/verify-mvp-a-required-a11y-tests.py \
             scripts/ci/verify-mvp-a-final-checks.py
+          python3 scripts/ci/test-functional-evidence.py
+          python3 scripts/ci/test-mvp-a-final-checks.py
           bash -n scripts/ci/mvp-a-authz-boundary-acceptance.sh
           bash -n scripts/ci/run-mvp-a-authz-boundary-acceptance.sh
 

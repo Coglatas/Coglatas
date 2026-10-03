@@ -63,6 +63,16 @@ Do not infer that an entity, configuration property, controller route, or archiv
 
 ## Architecture
 
+Functional CI has canonical real-stack owner source for core, Files,
+collaboration, and authorization-negative journeys. The artifact-only domain
+workflow and exact-SHA metadata consumer are documented in
+`docs/verification/functional-ci/functional-execution-evidence.md`; configured
+topology and local schema/reporter tests require hosted exact-commit execution
+before acceptance. Legacy MBJ/My Tasks/grant owners remain independently
+required, product DB-query failures remain blockers, and #481/#482 retain their
+separate release responsibilities. This CI work introduces no Avalonia
+implementation.
+
 The application is one deployable ASP.NET Core process split into four projects:
 
 - `Coglatas.Domain`: entities, enums, and shared domain types.

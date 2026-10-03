@@ -8,6 +8,12 @@ real-functional coverage, result states, quarantine, duplicate ownership, and
 runtime budgets are in
 [`functional-test-policy.md`](./functional-test-policy.md).
 
+The artifact-only canonical domain execution and schema-v1 evidence slice is
+described in [`functional-execution-evidence.md`](./functional-execution-evidence.md).
+Use its explicit source/runtime qualifications when reconciling #605/#611/#615;
+the existing historical matrix owners and #481/#482 remain separate acceptance
+requirements.
+
 ## 1. Target topology
 
 ```text
