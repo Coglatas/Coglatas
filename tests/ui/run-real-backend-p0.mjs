@@ -10,6 +10,7 @@ process.env.COGLATAS_REAL_BACKEND_SMOKE_GREP = await buildPlaywrightGrep(manifes
 });
 process.env.COGLATAS_REAL_BACKEND_SMOKE_SCOPE = 'PR P0 required set';
 process.env.COGLATAS_REAL_BACKEND_P0_SETUP = '1';
+process.env.COGLATAS_FCI04_GATES ??= 'functional-fast';
 
 await import('./run-real-backend-smoke-compose.mjs');
 

@@ -26,6 +26,9 @@ on:
       - "tests/ui/real-backend-smoke.spec.ts"
       - "tests/ui/prepare-real-backend-p0-state.mjs"
       - "tests/ui/run-real-backend-p0.mjs"
+      - "tests/ui/run-real-backend-fci04.mjs"
+      - "tests/functional/**"
+      - "playwright.functional.config.ts"
       - "tests/ui/run-real-backend-playwright.mjs"
       - "tests/ui/run-real-backend-smoke-compose.mjs"
   push:
@@ -54,6 +57,9 @@ on:
       - "tests/ui/real-backend-smoke.spec.ts"
       - "tests/ui/prepare-real-backend-p0-state.mjs"
       - "tests/ui/run-real-backend-p0.mjs"
+      - "tests/ui/run-real-backend-fci04.mjs"
+      - "tests/functional/**"
+      - "playwright.functional.config.ts"
       - "tests/ui/run-real-backend-playwright.mjs"
       - "tests/ui/run-real-backend-smoke-compose.mjs"
 
@@ -83,6 +89,7 @@ jobs:
       - name: Test P0 manifest and existing real-backend helpers
         run: >-
           node --test
+          tests/functional/fci04-owner-reporter.node-test.mjs
           tests/ui/build-playwright-grep.node-test.mjs
           tests/ui/real-backend-smoke-compose-helpers.node-test.mjs
           tests/ui/verify-playwright-required-tests.node-test.mjs
@@ -101,6 +108,8 @@ jobs:
           node --check tests/ui/issue-683-race-evidence.mjs
           node --check tests/ui/issue-683-race-evidence-reporter.mjs
           node --check tests/ui/run-issue-683-real-backend-evidence.mjs
+          node --check tests/ui/run-real-backend-fci04.mjs
+          node --check tests/functional/fixtures/fci04-owner-reporter.mjs
           node --check tests/ui/run-real-backend-p0.mjs
           node --check tests/ui/run-real-backend-playwright.mjs
           node --check tests/ui/run-real-backend-smoke-compose.mjs

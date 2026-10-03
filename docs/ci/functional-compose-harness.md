@@ -17,6 +17,21 @@ runner now executes migrated `tests/functional/` owners with their dedicated
 Playwright config before running the legacy `tests/ui/` regression config, so
 both discovery roots fail closed independently.
 
+For the canonical FCI-04 core owner, run:
+
+```bash
+node tests/ui/run-real-backend-fci04.mjs functional-fast functional-full
+```
+
+This uses the existing Node Compose lifecycle with one isolated real stack and
+executes the same `FUNC-TASK-001` owner once per explicit gate. The P0 manifest
+runner requires `functional-fast` before the legacy suite; Main's protected
+artifact-reuse acceptance explicitly selects `functional-full`. Required owner
+execution rejects missing, skipped, retried, mistagged, or incomplete results.
+Selecting only unrelated legacy tests cannot satisfy the owner. Fast/full
+completion records are written to `test-results/fci04-<gate>-owner.json` and
+contain no protected bodies or tokens.
+
 ## Lifecycle contract
 
 The shell harness owns this common sequence:
@@ -97,7 +112,9 @@ Before persistence, the harness redacts password, connection-password, authoriza
 
 The protected full real-backend lane remains `.github/workflows/licensed-real-backend-acceptance.yml`:
 
-- trigger: `push` to `main` or explicit `workflow_dispatch`
+- trigger: Main CI's reusable-workflow call after its build producer; `push`
+  to the existing integration branch or trusted `test/fci04-*` write-access
+  branches; explicit `workflow_dispatch` (including the focused `fci04` suite)
 - protected environment: `syncfusion-licensed-build`
 - license source: `${{ secrets.SYNCFUSION_LICENSE }}`
 - checkout: exact `${{ github.sha }}`
@@ -105,6 +122,10 @@ The protected full real-backend lane remains `.github/workflows/licensed-real-ba
 - no `pull_request` or `pull_request_target` execution
 
 `scripts/ci/verify-functional-trust-boundary.sh` verifies these invariants from the PR-safe `Real Backend P0 Preflight`. An untrusted PR can therefore validate the contract without receiving the protected license.
+
+The trusted FCI-04 branch push runs only the focused fast/full core owner and
+does not start unrelated legacy/MBJ lanes. It preserves exact-SHA checkout and
+the protected environment; PR-safe preflights never receive the license.
 
 ## PR-safe self-test
 

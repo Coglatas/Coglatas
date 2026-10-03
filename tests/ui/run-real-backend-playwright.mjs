@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { buildFci04OwnerPlan } from '../functional/fixtures/fci04-owner-plan.mjs';
 import { fileURLToPath } from 'node:url';
 import { prepareRealBackendP0State } from './prepare-real-backend-p0-state.mjs';
 import {
@@ -8,9 +9,14 @@ import {
 } from './real-backend-smoke-compose-helpers.mjs';
 
 const focusedGrep = process.env.COGLATAS_REAL_BACKEND_SMOKE_GREP?.trim(),
+  ownerPlan = buildFci04OwnerPlan(process.env.COGLATAS_FCI04_GATES, process.env.COGLATAS_FCI04_ONLY === '1'),
   playwrightCli = fileURLToPath(new URL('../../node_modules/@playwright/test/cli.js', import.meta.url)),
-  playwrightPlan = buildRealBackendPlaywrightPlan(process.argv.slice(2), focusedGrep),
+  playwrightPlan = [...ownerPlan],
   successExitCode = 0;
+
+if (process.env.COGLATAS_FCI04_ONLY !== '1') {
+  playwrightPlan.push(...buildRealBackendPlaywrightPlan(process.argv.slice(2), focusedGrep));
+}
 
 if (process.env.COGLATAS_ISSUE_683_EVIDENCE === '1') {
   for (const run of playwrightPlan.filter((entry) => entry.name !== 'Functional real-backend owners')) {
@@ -32,7 +38,7 @@ try {
       return previousCode;
     }
     console.log(`Running ${run.name}.`);
-    return runPlaywright(configuration.baseURL, run.args);
+    return runPlaywright(configuration.baseURL, run.args, run.environment);
   }, Promise.resolve(successExitCode));
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
@@ -82,7 +88,7 @@ function validateConfiguration(environment) {
   return { baseURL, email, password };
 }
 
-function runPlaywright(baseURL, playwrightArgs) {
+function runPlaywright(baseURL, playwrightArgs, additionalEnvironment = {}) {
   return new Promise((resolve) => {
     let settled = false;
     const finish = (code) => {
@@ -94,7 +100,7 @@ function runPlaywright(baseURL, playwrightArgs) {
 
     const child = spawn(process.execPath, [playwrightCli, 'test', ...playwrightArgs], {
       cwd: process.cwd(),
-      env: { ...process.env, PLAYWRIGHT_BASE_URL: baseURL },
+      env: { ...process.env, PLAYWRIGHT_BASE_URL: baseURL, ...additionalEnvironment },
       stdio: 'inherit'
     });
 
