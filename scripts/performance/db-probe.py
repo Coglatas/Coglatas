@@ -6,6 +6,7 @@ import argparse
 import http.cookiejar
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -95,6 +96,8 @@ def collect(args, contract):
         cardinality = fixture["cardinalities"]["workspaces"] if scenario["focus"] == "workspaces" else fixture["focus"][scenario["focus"]]
         record = {"id": scenario["id"], "cardinality": cardinality, "samples": [], "failures": []}
         output["scenarios"].append(record)
+        write_json_atomic(args.output, output)
+        print(json.dumps({"scenario": scenario["id"], "phase": "collecting"}), flush=True)
         route_template = scenario["path"].format(**fixture["identities"])
         for size in policy["pageSizes"]:
             remembered = {}
@@ -147,6 +150,7 @@ def collect(args, contract):
                     failures = capture_failures(capture, scenario, size, policy)
                     record["failures"].extend(failures)
                     record["samples"].append({"pageSize": size, "page": page, "iteration": iteration, "returnedCount": len(identities), "requestDurationMs": elapsed_ms, "dbTimeFraction": capture["totalDurationMs"] / elapsed_ms, "capture": capture, "fingerprintCounts": fingerprint_counts(capture)})
+                    write_json_atomic(args.output, output)
             samples = [s["capture"]["totalDurationMs"] for s in record["samples"] if s["pageSize"] == size and s["page"] == 1]
             output["measurements"].append({"schemaVersion": 1, "scenario": scenario["id"], "metric": "db.total_time_ms", "unit": "ms", "headSha": output["headSha"], "samples": samples, "attempt": 1, "pageSize": size, "measurementEnvelope": {"warmupSamplesExcluded": True, "environmentStable": True, "benchmarkExitCode": 0, "timedOut": False}})
         record["failures"] = sorted(set(record["failures"]))
@@ -186,7 +190,14 @@ def main():
             "missing head identity", "DB probe CSRF bootstrap failed", "DB probe login failed", "missing message cursor",
             "selected EXPLAIN command failed", "selected plan fixture is too small", "request capture file missing"
         }
-        reason = str(error) if str(error) in safe_messages else type(error).__name__
+        message = str(error)
+        reason = message if message in safe_messages else type(error).__name__
+        if re.fullmatch(r"scenario [a-z.\-]+ failed with HTTP [0-9]{3}", message):
+            reason = message
+        elif re.fullmatch(r"invalid (numeric|integer) (commandCount|totalDurationMs|durationMs|readOperations)", message):
+            reason = message
+        elif error.__cause__ is not None:
+            reason = "evidence-read-" + type(error.__cause__).__name__
         print(f"PERF-05 collection failed: {reason}", file=sys.stderr)
         return 2
 

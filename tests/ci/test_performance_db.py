@@ -96,6 +96,17 @@ class PerformanceDbGateTests(unittest.TestCase):
         bitmap = {"Node Type": "Bitmap Heap Scan", "Relation Name": "task_items", "Plans": [{"Node Type": "Bitmap Index Scan", "Index Name": "PK_task_items"}]}
         self.assertTrue(plan_invariant(bitmap, "task_items", "PK_task_items"))
 
+    def test_high_baseline_outlier_cannot_hide_repeated_n_plus_one(self):
+        small = self.profile(60, {5: 4, 10: 4})
+        small["samples"][0]["capture"] = capture(50)
+        failures = growth_failures(small, self.profile(260, {5: 14, 10: 14}), self.policy)
+        self.assertIn("n-plus-one-cardinality-growth", failures)
+        self.assertIn("unstable-query-count", failures)
+
+    def test_aggregate_rejects_partial_or_forged_fixture_evidence(self):
+        with self.assertRaises(PerformanceContractError):
+            module.evaluate({"collectionComplete": False}, {"collectionComplete": True}, self.contract)
+
     def test_missing_growth_measurements_fail_closed(self):
         small = self.profile(60, {5: 4, 10: 4})
         medium = self.profile(260, {5: 4, 10: 4})

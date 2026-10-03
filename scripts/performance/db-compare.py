@@ -4,15 +4,21 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
-from common import PerformanceContractError, load_json, repository_root, write_json_atomic
+from common import PerformanceContractError, load_json, repository_root, write_json_atomic, fixture_hash
 from db_gate import capture_failures, growth_failures, validate_contract
 from compare import compare_documents, summarize, environment_compatibility_key
 
 
 def evaluate(small, medium, contract):
+    for profile, expected in ((small, "small"), (medium, "medium")):
+        if profile.get("schemaVersion") != 1 or profile.get("fixtureVersion") != 1 or profile.get("fixtureHash") != fixture_hash(expected):
+            raise PerformanceContractError("incompatible fixture/schema identity")
+        if not re.fullmatch(r"[0-9a-f]{40}", profile.get("headSha", "")):
+            raise PerformanceContractError("invalid head identity")
     if any(p.get("collectionComplete") is not True for p in (small, medium)):
         raise PerformanceContractError("incomplete DB collection")
     if small["profile"] != "small" or medium["profile"] != "medium" or small["headSha"] != medium["headSha"]:
