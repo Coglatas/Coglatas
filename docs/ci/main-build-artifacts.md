@@ -35,6 +35,10 @@ push main
       |   +-- OpenAPI from prebuilt assembly
       |                                        |
       +-- Main Frontend producer ---------------+
+      |   +-- Angular production dist
+      |   +-- Storybook static output
+      |   +--> Browser engine compatibility (Chromium/Firefox/WebKit)
+      |   +--> Mobile compatibility (Chromium/WebKit/320px)
       |   +-- npm ci frontend
       |   +-- licensed Angular production build
       |   +-- Storybook build

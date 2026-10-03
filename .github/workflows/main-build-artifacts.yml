@@ -8,6 +8,28 @@ permissions:
   contents: read
 
 jobs:
+  main-browser-route:
+    name: Main browser routing
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      frontend_playwright: ${{ steps.route.outputs.frontend_playwright }}
+
+    steps:
+      - name: Checkout trusted main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Route browser-facing changes
+        id: route
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: bash scripts/ci/route-main-ci-changes.sh
+
   main-dotnet-build:
     name: Main .NET producer
     concurrency:
@@ -177,6 +199,26 @@ jobs:
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
+
+  browser-engine-compatibility:
+    name: Browser engines from Main frontend artifact
+    if: needs.main-browser-route.outputs.frontend_playwright == 'true'
+    needs:
+      - main-browser-route
+      - main-frontend-build
+    uses: ./.github/workflows/compat-critical-preflight.yml
+    with:
+      reuse_main_frontend_artifact: true
+
+  mobile-browser-compatibility:
+    name: Mobile browsers from Main frontend artifact
+    if: needs.main-browser-route.outputs.frontend_playwright == 'true'
+    needs:
+      - main-browser-route
+      - main-frontend-build
+    uses: ./.github/workflows/mobile-compatibility.yml
+    with:
+      reuse_main_frontend_artifact: true
 
   main-build-artifacts:
     name: Main runtime artifact assembler

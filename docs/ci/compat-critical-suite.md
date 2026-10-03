@@ -109,8 +109,7 @@ the ordinary functional/static suite keeps its established Chromium pair. The
 matrix therefore reuses one COMPAT-04 `mobile` selection contract instead of
 maintaining a second title list or multiplying the full browser suite.
 
-`.github/workflows/mobile-compatibility.yml` executes this matrix only for relevant
-`main` pushes (or an explicit manual dispatch), not for pull requests.
+On `main`, `.github/workflows/main-build-artifacts.yml` routes browser-facing changes once and invokes both the desktop browser-engine and mobile compatibility workflows after the `main-frontend-build` artifact is available. Those jobs restore the exact-SHA Angular `dist` output and set `PLAYWRIGHT_SKIP_BUILD=1`, so Chromium/Firefox/WebKit validate the same built product rather than rebuilding it independently. `mobile-compatibility.yml` retains manual dispatch as a standalone fallback; pull requests keep the compatibility contract preflight without running the main browser matrices.
 
 The mobile profile covers shell boot, navigation, representative form/list and
 overlay behavior, touch activation, and horizontal-overflow containment. The

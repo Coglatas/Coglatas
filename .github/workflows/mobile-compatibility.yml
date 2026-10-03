@@ -1,24 +1,13 @@
 name: Mobile Compatibility
 
 on:
+  workflow_call:
+    inputs:
+      reuse_main_frontend_artifact:
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
-  push:
-    branches: ['main']
-    paths:
-      - '.github/workflows/mobile-compatibility.yml'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'playwright.config.ts'
-      - 'scripts/ci/compat-critical.contract.json'
-      - 'scripts/ci/compat-critical-contract.mjs'
-      - 'scripts/ci/run-compat-critical.mjs'
-      - 'scripts/ci/verify-compat-critical.mjs'
-      - 'scripts/ci/verify-npm-lockfile.mjs'
-      - 'tests/ui/angular-smoke.spec.ts'
-      - 'tests/ui/mobile-compatibility.spec.ts'
-      - 'tests/ui/serve-static.mjs'
-      - 'frontend/**'
-
 concurrency:
   group: mobile-compatibility-${{ github.ref }}
   cancel-in-progress: true
@@ -68,13 +57,29 @@ jobs:
           node scripts/ci/verify-npm-lockfile.mjs .
           node scripts/ci/verify-npm-lockfile.mjs frontend
 
-      - name: Clean-install compatibility dependencies without lifecycle scripts
+      - name: Install repository Playwright dependencies
         shell: bash
         run: |
           npm ci --prefer-offline --ignore-scripts --no-audit --no-fund
-          npm --prefix frontend ci --prefer-offline --ignore-scripts --no-audit --no-fund
           npm ls --all --json >/dev/null
+
+      - name: Install frontend dependencies for manual fallback
+        if: inputs.reuse_main_frontend_artifact != true
+        shell: bash
+        run: |
+          npm --prefix frontend ci --prefer-offline --ignore-scripts --no-audit --no-fund
           npm --prefix frontend ls --all --json >/dev/null
+
+      - name: Download Main Frontend producer artifact
+        if: inputs.reuse_main_frontend_artifact == true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: main-frontend-build
+          path: ${{ runner.temp }}/main-frontend-build
+
+      - name: Restore prebuilt frontend output
+        if: inputs.reuse_main_frontend_artifact == true
+        run: bash scripts/ci/restore-main-frontend-build.sh "$RUNNER_TEMP/main-frontend-build" "$GITHUB_SHA" "$GITHUB_WORKSPACE"
 
       - name: Install ${{ matrix.browser }} runtime
         run: >-
@@ -84,6 +89,7 @@ jobs:
       - name: Run mobile compatibility profile
         env:
           CI: 'true'
+          PLAYWRIGHT_SKIP_BUILD: ${{ inputs.reuse_main_frontend_artifact && '1' || '0' }}
         run: >-
           npm run test:ui:compat-critical --
           --profile mobile --
