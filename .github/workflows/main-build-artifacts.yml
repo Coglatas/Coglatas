@@ -4,16 +4,15 @@ on:
   push:
     branches: ["main"]
 
-concurrency:
-  group: main-ci-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
 
 jobs:
   main-dotnet-build:
     name: Main .NET producer
+    concurrency:
+      group: main-dotnet-producer-${{ github.ref }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -96,6 +95,9 @@ jobs:
 
   main-frontend-build:
     name: Main Frontend producer
+    concurrency:
+      group: main-frontend-producer-${{ github.ref }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     environment: syncfusion-licensed-build
     timeout-minutes: 60
@@ -178,6 +180,9 @@ jobs:
 
   main-build-artifacts:
     name: Main runtime artifact assembler
+    concurrency:
+      group: main-runtime-assembler-${{ github.ref }}
+      cancel-in-progress: true
     needs:
       - main-dotnet-build
       - main-frontend-build
@@ -291,6 +296,9 @@ jobs:
 
   qodana-cloud:
     name: Qodana Cloud from main artifacts
+    concurrency:
+      group: main-qodana-cloud-${{ github.ref }}
+      cancel-in-progress: true
     needs: main-build-artifacts
     runs-on: ubuntu-latest
     environment: syncfusion-licensed-build

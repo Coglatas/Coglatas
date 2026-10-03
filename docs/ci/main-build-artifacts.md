@@ -9,6 +9,17 @@ backend tests, frontend tests, security validation, Qodana, Performance, real-ba
 artifact hub. It runs on every `push` to `main` and uses the protected
 `syncfusion-licensed-build` environment.
 
+## Scheduling policy
+
+Main CI does not use workflow-level concurrency. A previous long-running Qodana,
+Performance, or acceptance consumer must never prevent the next trusted main
+revision from creating its build jobs.
+
+Concurrency is scoped to the producer/assembler jobs instead. A newer main push
+may cancel an older in-flight .NET producer, frontend producer, runtime assembler,
+or Qodana Cloud job for the same ref, while unrelated downstream work does not
+block the next build from starting.
+
 ## Build graph
 
 ```text
