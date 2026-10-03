@@ -2,11 +2,15 @@
 
 Issue #629 defines a three-layer, fail-closed contract for merge-blocking status contexts:
 
-1. **Static topology** — repository workflows/jobs must continue to emit the registered context without event-level path filtering, job-level broad skips, dependency-induced skips, or `continue-on-error` masking.
+1. **Static topology** — repository workflows/jobs must continue to emit the registered context without event-level path filtering, job-level broad skips, undeclared dependency-induced skips, or `continue-on-error` masking. A required workflow job may depend only on prerequisites explicitly registered in `governance/required-checks.json`; each prerequisite must itself be unconditional, dependency-free, and fail-closed.
 2. **Live ruleset topology** — the active default-branch ruleset must require exactly the registered contexts, with strict required-status-check semantics and the registered integration identity where GitHub supports pinning it.
 3. **Exact-head evidence** — only results attached to the PR's authoritative `.head.sha`, re-fetched from the Pull Request API by trusted default-branch code, can satisfy a gate.
 
-`governance/policy.json` / `GOV-CHECKS-001` remains authoritative for which logical checks are required. `governance/required-checks.json` is the operational registry: it adds a stable logical gate ID, producer identity, source workflow/job, trigger contract, scope, accepted conclusion, timeout/staleness policy, ruleset integration binding, and rename state. `scripts/ci/check-required-pr-checks.py` rejects a registry projection that differs from `GOV-CHECKS-001`.
+`governance/policy.json` / `GOV-CHECKS-001` remains authoritative for which logical checks are required. `governance/required-checks.json` is the operational registry: it adds a stable logical gate ID, producer identity, source workflow/job, trigger contract, scope, accepted conclusion, timeout/staleness policy, ruleset integration binding, explicit same-workflow prerequisites, and rename state. `scripts/ci/check-required-pr-checks.py` rejects a registry projection that differs from `GOV-CHECKS-001` and rejects any prerequisite topology not declared by the registry.
+
+## Required-job prerequisites
+
+The current build gate declares `dotnet-build` as the sole prerequisite of `build-test`. The prerequisite is not itself a merge-required context, but it is statically required to have no job-level `if`, no `needs`, and no `continue-on-error`. If the producer fails, GitHub cannot report `build-test` as a successful current-head required check; the exact-head evaluator already rejects skipped, cancelled, missing, and failed required results. This preserves fail-closed merge behavior while allowing one authoritative build to feed multiple downstream consumers.
 
 ## Result semantics
 
