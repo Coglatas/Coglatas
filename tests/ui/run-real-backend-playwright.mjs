@@ -9,7 +9,7 @@ import {
 
 const focusedGrep = process.env.COGLATAS_REAL_BACKEND_SMOKE_GREP?.trim(),
   playwrightCli = fileURLToPath(new URL('../../node_modules/@playwright/test/cli.js', import.meta.url)),
-  playwrightPlan = buildRealBackendPlaywrightPlan(process.argv.slice(2), focusedGrep),
+  playwrightPlan = buildRealBackendPlaywrightPlan(process.argv.slice(2), focusedGrep, process.env.COGLATAS_FUNCTIONAL_FILES_GATE),
   successExitCode = 0;
 
 if (process.env.COGLATAS_ISSUE_683_EVIDENCE === '1') {
@@ -32,7 +32,7 @@ try {
       return previousCode;
     }
     console.log(`Running ${run.name}.`);
-    return runPlaywright(configuration.baseURL, run.args);
+    return runPlaywright(configuration.baseURL, run.args, run.functionalGate);
   }, Promise.resolve(successExitCode));
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
@@ -82,7 +82,7 @@ function validateConfiguration(environment) {
   return { baseURL, email, password };
 }
 
-function runPlaywright(baseURL, playwrightArgs) {
+function runPlaywright(baseURL, playwrightArgs, functionalGate = '') {
   return new Promise((resolve) => {
     let settled = false;
     const finish = (code) => {
@@ -94,7 +94,7 @@ function runPlaywright(baseURL, playwrightArgs) {
 
     const child = spawn(process.execPath, [playwrightCli, 'test', ...playwrightArgs], {
       cwd: process.cwd(),
-      env: { ...process.env, PLAYWRIGHT_BASE_URL: baseURL },
+      env: { ...process.env, PLAYWRIGHT_BASE_URL: baseURL, COGLATAS_FUNCTIONAL_SELECTED_GATES: functionalGate },
       stdio: 'inherit'
     });
 

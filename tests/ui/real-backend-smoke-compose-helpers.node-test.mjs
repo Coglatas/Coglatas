@@ -114,3 +114,14 @@ test('keeps manifest-focused and custom runs on the legacy-compatible single inv
     args: ['custom.spec.ts', '--grep', 'focused']
   }]);
 });
+
+test('P0 selection executes one Files owner independently of the legacy title grep', () => {
+  for (const gate of ['functional-fast', 'functional-full']) {
+    const [owner, legacy] = buildRealBackendPlaywrightPlan([], 'legacy required title', gate);
+    assert.equal(owner.functionalGate, gate);
+    assert.ok(owner.args.includes('files/files-fast-journey.spec.ts'));
+    assert.equal(owner.args.includes('--grep'), false);
+    assert.ok(legacy.args.includes('legacy required title'));
+  }
+  assert.throws(() => buildRealBackendPlaywrightPlan([], '', 'typo'), /Files owner gate/u);
+});
