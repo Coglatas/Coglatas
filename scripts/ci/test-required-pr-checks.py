@@ -138,6 +138,49 @@ jobs:
         errors = guard.required_check_errors(".github/workflows/ci.yml", text, REGISTRY)
         self.assertEqual([], errors)
 
+    def test_declared_prerequisite_may_depend_on_unconditional_preflight(self) -> None:
+        text = """
+on:
+  pull_request:
+jobs:
+  changes:
+    name: CI preflight + route
+    runs-on: ubuntu-latest
+  dotnet-build:
+    name: .NET build producer
+    needs: changes
+    runs-on: ubuntu-latest
+  build-test:
+    name: build-test
+    needs: dotnet-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+"""
+        errors = guard.required_check_errors(".github/workflows/ci.yml", text, REGISTRY)
+        self.assertEqual([], errors)
+
+    def test_transitive_preflight_with_job_if_is_rejected(self) -> None:
+        text = """
+on:
+  pull_request:
+jobs:
+  changes:
+    name: CI preflight + route
+    if: github.actor != 'x'
+    runs-on: ubuntu-latest
+  dotnet-build:
+    name: .NET build producer
+    needs: changes
+    runs-on: ubuntu-latest
+  build-test:
+    name: build-test
+    needs: dotnet-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+"""
+        errors = guard.required_check_errors(".github/workflows/ci.yml", text, REGISTRY)
+        self.assertTrue(any("prerequisite job 'changes' must not use job-level if" in error for error in errors))
+
     def test_declared_prerequisite_with_job_if_is_rejected(self) -> None:
         text = """
 on:
