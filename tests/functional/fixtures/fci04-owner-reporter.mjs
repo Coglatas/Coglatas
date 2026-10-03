@@ -59,8 +59,8 @@ export default class Fci04OwnerReporter {
       if (result.status !== 'passed') {
         throw new Error(`${FCI04_JOURNEY}: overall runner status is ${result.status}.`);
       }
-      mkdirSync('test-results', { recursive: true });
-      writeFileSync(`test-results/fci04-${gate}-owner.json`, `${JSON.stringify({
+      mkdirSync('artifacts/fci04', { recursive: true });
+      writeFileSync(`artifacts/fci04/fci04-${gate}-owner.json`, `${JSON.stringify({
         ...evidence,
         candidateSha: process.env.TARGET_SHA ?? process.env.GITHUB_SHA ?? null,
       }, null, 2)}\n`);

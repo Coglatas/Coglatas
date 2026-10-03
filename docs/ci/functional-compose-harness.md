@@ -29,8 +29,11 @@ runner requires `functional-fast` before the legacy suite; Main's protected
 artifact-reuse acceptance explicitly selects `functional-full`. Required owner
 execution rejects missing, skipped, retried, mistagged, or incomplete results.
 Selecting only unrelated legacy tests cannot satisfy the owner. Fast/full
-completion records are written to `test-results/fci04-<gate>-owner.json` and
-contain no protected bodies or tokens.
+completion records are written to `artifacts/fci04/fci04-<gate>-owner.json` and
+contain no protected bodies or tokens. They live outside Playwright's cleaned
+output directory so later gate/legacy runs preserve earlier completion records.
+The legacy P0 membership-revocation setup runs after the owner and before the
+legacy tests, preserving the full owner's authorized Workspace-switch proof.
 
 ## Lifecycle contract
 

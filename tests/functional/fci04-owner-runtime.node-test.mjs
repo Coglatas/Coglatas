@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,6 +31,9 @@ function runFixture(gate, mode) {
     writeFileSync(join(directory, 'playwright.config.ts'), `export default {
       testDir: '.', workers: 1, retries: 0, reporter: [['list'], [${JSON.stringify(reporter)}]]
     };`);
+    const priorEvidence = join(directory, 'artifacts/fci04/prior-owner.json');
+    mkdirSync(join(directory, 'artifacts/fci04'), { recursive: true });
+    writeFileSync(priorEvidence, 'previous gate completion');
     const result = spawnSync(process.execPath, [playwrightCli, 'test', '--pass-with-no-tests'], {
       cwd: directory,
       env: { ...process.env, COGLATAS_FUNCTIONAL_SELECTED_GATES: gate, TARGET_SHA: 'a'.repeat(40) },
@@ -38,10 +41,11 @@ function runFixture(gate, mode) {
       timeout: 30_000,
     });
     assert.ifError(result.error);
+    assert.equal(readFileSync(priorEvidence, 'utf8'), 'previous gate completion');
     const output = `${result.stdout}\n${result.stderr}`;
     if (mode === 'passed') {
       assert.equal(result.status, 0, output);
-      const evidence = JSON.parse(readFileSync(join(directory, `test-results/fci04-${gate}-owner.json`), 'utf8'));
+      const evidence = JSON.parse(readFileSync(join(directory, `artifacts/fci04/fci04-${gate}-owner.json`), 'utf8'));
       assert.equal(evidence.status, 'PASS');
       assert.equal(evidence.candidateSha, 'a'.repeat(40));
       assert.deepEqual(evidence.completedSteps, requiredFci04Steps(gate));

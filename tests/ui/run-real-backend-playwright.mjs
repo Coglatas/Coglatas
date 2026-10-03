@@ -29,13 +29,17 @@ let exitCode = 1;
 try {
   const configuration = validateConfiguration(process.env);
   await waitForReady(configuration.baseURL);
-  if (process.env.COGLATAS_REAL_BACKEND_P0_SETUP === '1') {
-    await prepareRealBackendP0State(configuration);
-  }
+  let prepareLegacyP0 = process.env.COGLATAS_REAL_BACKEND_P0_SETUP === '1';
   exitCode = await playwrightPlan.reduce(async (previousCodePromise, run) => {
     const previousCode = await previousCodePromise;
     if (previousCode !== successExitCode) {
       return previousCode;
+    }
+    // Legacy P0 revokes the secondary Workspace. Let the full owner prove
+    // Authorized switching first, then prepare that legacy denial fixture.
+    if (prepareLegacyP0 && run.environment?.COGLATAS_FCI04_REQUIRED !== '1') {
+      prepareLegacyP0 = false;
+      await prepareRealBackendP0State(configuration);
     }
     console.log(`Running ${run.name}.`);
     return runPlaywright(configuration.baseURL, run.args, run.environment);

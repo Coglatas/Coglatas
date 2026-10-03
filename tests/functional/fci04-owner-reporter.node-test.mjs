@@ -1,10 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { requiredFci04Steps, validateFci04Owner } from './fixtures/fci04-owner-reporter.mjs';
-import { buildFci04OwnerPlan } from './fixtures/fci04-owner-plan.mjs';
+import { buildFci04OwnerPlan, fci04P0Gates } from './fixtures/fci04-owner-plan.mjs';
 
 const owner = { journey: 'FUNC-TASK-001', backend: 'real', gates: 'functional-fast,functional-full' };
 const record = (gate) => ({ status: 'passed', retry: 0, steps: requiredFci04Steps(gate) });
+
+test('P0 requires an owner for unset/empty gates and rejects empty normalized or unknown selections', () => {
+  for (const raw of [undefined, '', '   ']) {
+    assert.equal(fci04P0Gates(raw), 'functional-fast');
+    assert.equal(buildFci04OwnerPlan(fci04P0Gates(raw)).length, 1);
+  }
+  assert.equal(fci04P0Gates('functional-full'), 'functional-full');
+  assert.throws(() => fci04P0Gates(','), /zero selected owner gates/);
+  assert.throws(() => fci04P0Gates('functional-fastish'), /explicit functional/);
+});
 
 test('selects one exact real owner per explicit gate independently of legacy grep', () => {
   const plan = buildFci04OwnerPlan('functional-fast,functional-full,functional-fast', true);

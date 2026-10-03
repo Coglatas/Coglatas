@@ -189,7 +189,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: fci04-owner-${{ github.sha }}
-          path: test-results/fci04-*-owner.json
+          path: artifacts/fci04/fci04-*-owner.json
           if-no-files-found: ignore
           retention-days: 7
 

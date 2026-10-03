@@ -518,13 +518,16 @@ async function runFullNavigation(
   await expect(primaryProjectCard).toBeVisible();
 
   const workspaceSwitcher = page.getByTestId('workspace-switcher');
+  await workspaceSwitcher.selectOption(secondWorkspaceId);
+  await expect(page).toHaveURL(/\/app\/workspaces$/);
+  await expect(workspaceSwitcher).toHaveValue(secondWorkspaceId);
   const secondProjectsResponsePromise = waitForApiResponse(
     page,
     'GET',
     '/api/projects',
     (url) => url.searchParams.get('workspaceId') === secondWorkspaceId,
   );
-  await workspaceSwitcher.selectOption(secondWorkspaceId);
+  await page.getByRole('link', { name: 'Projects' }).first().click();
   const secondProjectsResponse = await secondProjectsResponsePromise;
   expect(secondProjectsResponse.status(), await secondProjectsResponse.text()).toBe(200);
   await expect(workspaceSwitcher).toHaveValue(secondWorkspaceId);
@@ -536,13 +539,16 @@ async function runFullNavigation(
   await expect(page.getByTestId('project-summary-card').filter({ hasText: smokeSecondProjectTitle }).first()).toBeVisible();
   await expect(page.getByTestId('project-summary-card').filter({ hasText: smokeProjectTitle })).toHaveCount(0);
 
+  await workspaceSwitcher.selectOption(workspaceId);
+  await expect(page).toHaveURL(/\/app\/workspaces$/);
+  await expect(workspaceSwitcher).toHaveValue(workspaceId);
   const restoredProjectsResponsePromise = waitForApiResponse(
     page,
     'GET',
     '/api/projects',
     (url) => url.searchParams.get('workspaceId') === workspaceId,
   );
-  await workspaceSwitcher.selectOption(workspaceId);
+  await page.getByRole('link', { name: 'Projects' }).first().click();
   const restoredProjectsResponse = await restoredProjectsResponsePromise;
   expect(restoredProjectsResponse.status(), await restoredProjectsResponse.text()).toBe(200);
   await expect(workspaceSwitcher).toHaveValue(workspaceId);

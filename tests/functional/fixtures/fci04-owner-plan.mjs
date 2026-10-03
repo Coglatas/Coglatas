@@ -1,5 +1,11 @@
 import { buildFunctionalGrep } from '../../../scripts/ci/build-functional-grep.mjs';
 
+export function fci04P0Gates(rawGates) {
+  const gates = rawGates?.trim() || 'functional-fast';
+  buildFci04OwnerPlan(gates, true);
+  return gates;
+}
+
 export function buildFci04OwnerPlan(rawGates = '', ownerOnly = false) {
   const gates = rawGates.split(',').filter(Boolean);
   if (gates.some((gate) => !['functional-fast', 'functional-full'].includes(gate))) {
