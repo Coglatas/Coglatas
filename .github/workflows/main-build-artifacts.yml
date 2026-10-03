@@ -51,7 +51,16 @@ jobs:
         run: dotnet restore Coglatas.slnx --disable-parallel --verbosity minimal
 
       - name: Build authoritative .NET graph once
-        run: dotnet build Coglatas.slnx --configuration Release --no-restore --disable-build-servers -m:1
+        run: >-
+          dotnet build Coglatas.slnx
+          --configuration Release
+          --no-restore
+          --disable-build-servers
+          -m:1
+          -p:GenerateSecurityOpenApiContract=true
+
+      - name: Verify authoritative OpenAPI build output
+        run: test -f artifacts/openapi/coglatas-openapi.json
 
       - name: Package reusable .NET build outputs
         shell: bash
@@ -104,6 +113,20 @@ jobs:
           mkdir -p artifacts/main-runtime/frontend
           cp -a frontend/dist/coglatas-web/. artifacts/main-runtime/frontend/
 
+      - name: Build Storybook once
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm --prefix frontend run build-storybook
+
+      - name: Package reusable frontend build outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ci
+          git rev-parse HEAD > artifacts/ci/frontend-build-sha
+          test -f frontend/storybook-static/index.html
+          tar -cf "$RUNNER_TEMP/frontend-build-artifacts.tar"             artifacts/ci/frontend-build-sha             frontend/dist/coglatas-web             frontend/storybook-static
+
       - name: Build production runtime image once
         shell: bash
         run: |
@@ -132,8 +155,11 @@ jobs:
           git rev-parse HEAD > "$out/source-sha"
           printf '%s\n' "$IMAGE_NAME" > "$out/runtime-image-name"
           cp "$RUNNER_TEMP/dotnet-release-build.tar" "$out/dotnet-release-build.tar"
+          cp "$RUNNER_TEMP/frontend-build-artifacts.tar" "$out/frontend-build-artifacts.tar"
+          mkdir -p "$out/openapi"
+          cp artifacts/openapi/coglatas-openapi.json "$out/openapi/coglatas-openapi.json"
           docker save "$IMAGE_NAME" | gzip -1 > "$out/runtime-image.tar.gz"
-          ls -lh "$out"
+          ls -lh "$out" "$out/openapi"
 
       - name: Upload main build artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -147,6 +173,11 @@ jobs:
       - name: Remove per-run runtime image
         if: always()
         run: docker image rm --force "$IMAGE_NAME" || true
+
+  main-validation:
+    name: Main Test / Frontend / Security
+    needs: main-build-artifacts
+    uses: ./.github/workflows/main-validation.yml
 
   qodana-community:
     name: Qodana Community from main artifacts

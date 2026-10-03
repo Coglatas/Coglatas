@@ -1,0 +1,363 @@
+name: Main Validation
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  main-backend-test:
+    name: Main Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: coglatas_ci
+          POSTGRES_USER: coglatas_ci
+          POSTGRES_PASSWORD: coglatas_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U coglatas_ci -d coglatas_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      ASPNETCORE_ENVIRONMENT: Test
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      DOTNET_MULTILEVEL_LOOKUP: "0"
+      DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE: "1"
+      COGLATAS_TEST_USE_MIGRATED_TEMPLATE: "true"
+      ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
+      POSTGRES_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
+
+    steps:
+      - name: Checkout trusted main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Download main build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: main-build-artifacts
+          path: ${{ runner.temp }}/main-build-artifacts
+
+      - name: Restore prebuilt .NET outputs
+        run: bash scripts/ci/restore-main-dotnet-build.sh "$RUNNER_TEMP/main-build-artifacts" "$GITHUB_SHA" "$GITHUB_WORKSPACE"
+
+      - name: Restore NuGet packages
+        run: dotnet restore Coglatas.slnx --disable-parallel --verbosity minimal
+
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      - name: Apply PostgreSQL migrations from prebuilt outputs
+        run: dotnet ef database update --project src/Coglatas.Infrastructure --startup-project src/Coglatas.Web --configuration Release --no-build
+
+      - name: Reject pending EF Core model changes
+        run: dotnet ef migrations has-pending-model-changes --project src/Coglatas.Infrastructure --startup-project src/Coglatas.Web --configuration Release --no-build
+
+      - name: Run full backend tests with coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/test-results
+          mkdir -p artifacts/test-results/backend artifacts/test-results/architecture
+
+          common_args=(
+            --configuration Release
+            --no-build
+            --no-restore
+            --disable-build-servers
+            -m:1
+            --verbosity normal
+            --collect "XPlat Code Coverage"
+          )
+
+          dotnet test tests/Coglatas.Architecture.Tests/Coglatas.Architecture.Tests.csproj \
+            "${common_args[@]}" \
+            --logger "trx;LogFileName=architecture-tests.trx" \
+            --results-directory artifacts/test-results/architecture
+
+          dotnet test tests/Coglatas.Tests/Coglatas.Tests.csproj \
+            "${common_args[@]}" \
+            --logger "trx;LogFileName=backend-tests.trx" \
+            --results-directory artifacts/test-results/backend
+
+      - name: Verify backend TRX evidence
+        shell: bash
+        run: |
+          bash scripts/ci/verify-trx-results.sh \
+            artifacts/test-results/backend/backend-tests.trx \
+            --minimum-total 1 \
+            --label "backend test suite"
+          bash scripts/ci/verify-trx-results.sh \
+            artifacts/test-results/architecture/architecture-tests.trx \
+            --minimum-total 1 \
+            --label "architecture test suite"
+
+      - name: Generate .NET coverage report
+        shell: bash
+        run: |
+          dotnet reportgenerator \
+            "-reports:artifacts/test-results/**/coverage.cobertura.xml" \
+            "-targetdir:artifacts/coverage" \
+            "-reporttypes:Html;Cobertura;MarkdownSummaryGithub"
+          cat artifacts/coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload .NET coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: main-dotnet-coverage-report
+          path: artifacts/coverage
+          if-no-files-found: error
+          retention-days: 7
+
+  main-frontend-test:
+    name: Main Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout trusted main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+
+      - name: Use repository npm version without lifecycle scripts
+        run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+
+      - name: Download main build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: main-build-artifacts
+          path: ${{ runner.temp }}/main-build-artifacts
+
+      - name: Restore prebuilt frontend outputs
+        run: bash scripts/ci/restore-main-frontend-build.sh "$RUNNER_TEMP/main-build-artifacts" "$GITHUB_SHA" "$GITHUB_WORKSPACE"
+
+      - name: Install UI runner dependencies
+        run: bash scripts/ci/npm-ci-retry.sh .
+
+      - name: Install Angular dependencies
+        run: bash scripts/ci/npm-ci-retry.sh frontend
+
+      - name: Run full frontend validation without rebuilding
+        shell: bash
+        env:
+          FRONTEND_BUILD: "false"
+          FRONTEND_UNIT: "true"
+          FRONTEND_ARCHITECTURE: "true"
+          FRONTEND_LICENSE_GUARD: "true"
+          FRONTEND_STORYBOOK: "false"
+          FRONTEND_PLAYWRIGHT: "true"
+          COGLATAS_PLAYWRIGHT_REUSE_HOST_BUILD: "true"
+        run: bash scripts/ci/run-frontend-parallel.sh
+
+      - name: Verify redistributed Storybook output
+        run: test -f frontend/storybook-static/index.html
+
+      - name: Upload browser artifacts on failure
+        if: failure()
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: main-frontend-browser-artifacts
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  main-security-test:
+    name: Main Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    env:
+      POSTGRES_DB: coglatas
+      POSTGRES_USER: coglatas
+      POSTGRES_PASSWORD: ci_dummy_password
+      DB_PASSWORD: ci_dummy_password
+      LOCAL_ADMIN_PASSWORD: ci_dummy_local_admin_password
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+
+    steps:
+      - name: Checkout trusted main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download main build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: main-build-artifacts
+          path: ${{ runner.temp }}/main-build-artifacts
+
+      - name: Restore prebuilt .NET outputs
+        run: bash scripts/ci/restore-main-dotnet-build.sh "$RUNNER_TEMP/main-build-artifacts" "$GITHUB_SHA" "$GITHUB_WORKSPACE"
+
+      - name: Restore authoritative OpenAPI artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$RUNNER_TEMP/main-build-artifacts/openapi/coglatas-openapi.json"
+          mkdir -p artifacts/openapi
+          cp "$RUNNER_TEMP/main-build-artifacts/openapi/coglatas-openapi.json" artifacts/openapi/coglatas-openapi.json
+
+      - name: Create masked synthetic security credential
+        shell: bash
+        run: |
+          password="$(python3 - <<'PY'
+          import secrets
+          print(secrets.token_urlsafe(36))
+          PY
+          )"
+          printf '::add-mask::%s\n' "$password"
+          printf 'COGLATAS_SECURITY_CI_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore NuGet packages
+        run: dotnet restore Coglatas.slnx --disable-parallel --verbosity minimal
+
+      - name: Reject vulnerable NuGet packages
+        shell: bash
+        run: |
+          set +e
+          dotnet list Coglatas.slnx package --vulnerable --include-transitive > dotnet-vulnerable-packages.txt 2>&1
+          status=$?
+          set -e
+          cat dotnet-vulnerable-packages.txt
+          if grep -q "has the following vulnerable packages" dotnet-vulnerable-packages.txt; then
+            exit 1
+          fi
+          exit "$status"
+
+      - name: Verify prebuilt SEC-01 / AV-MIG contract
+        env:
+          COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS: "1"
+          COGLATAS_SECURITY_REUSE_PREBUILT_OPENAPI: "1"
+          COGLATAS_SECURITY_AVMIG_SELFTESTS: "1"
+        run: bash scripts/ci/generate-security-openapi-contract.sh
+
+      - name: Validate security Compose and harness contracts
+        shell: bash
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: |
+          set -euo pipefail
+          docker compose -f infra/compose/dev/db.yml config --quiet
+          docker compose -f infra/compose/dev/full.yml config --quiet
+          docker compose -f infra/compose/dev/playwright.yml config --quiet
+          docker compose -p coglatas-real-backend-smoke-ci-config -f infra/compose/test/real-backend-smoke.yml config --quiet
+          docker compose -p coglatas-security-ci-config -f infra/compose/test/real-backend-smoke.yml -f infra/compose/security/security.yml config --quiet
+          docker compose config --quiet
+          bash scripts/ci/verify-onprem-proxy-topology.sh
+          docker compose \
+            -p coglatas-security-ci-config \
+            -f infra/compose/test/real-backend-smoke.yml \
+            -f infra/compose/security/security.yml \
+            config --format json |
+            python3 scripts/ci/verify-security-compose.py
+          bash scripts/security/test-scanner-harness.sh
+          bash scripts/security/test-schemathesis-contract.sh
+          bash scripts/security/test-zap-contract.sh
+          bash scripts/security/test-aud02-lifecycle.sh
+
+      - name: Assemble security runtime image from prebuilt outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="coglatas-security-runtime:${GITHUB_SHA}"
+          context="$RUNNER_TEMP/security-runtime-context"
+          rm -rf "$context"
+          mkdir -p "$context"
+          cp -a src "$context/src"
+          cp -a .config "$context/.config"
+          cp global.json Coglatas.slnx "$context/"
+          for candidate in NuGet.config Directory.Build.props Directory.Build.targets Directory.Packages.props; do
+            [[ -e "$candidate" ]] && cp "$candidate" "$context/"
+          done
+          docker build \
+            --file "$GITHUB_WORKSPACE/infra/docker/security-runtime-prebuilt.Dockerfile" \
+            --tag "$image" \
+            "$context"
+          printf 'COGLATAS_SECURITY_RUNTIME_IMAGE=%s\n' "$image" >> "$GITHUB_ENV"
+
+      - name: Run isolated security runtime lanes in parallel
+        shell: bash
+        env:
+          SYNCFUSION_LICENSE: compose-config-validation-placeholder
+        run: bash scripts/ci/run-security-runtime-parallel.sh
+
+      - name: Scan repository filesystem with Trivy
+        shell: bash
+        run: |
+          set +e
+          docker run --rm \
+            -v "$PWD:/repo" \
+            aquasec/trivy:0.65.0 \
+            fs --scanners vuln \
+            --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+            --format table --output /repo/trivy-filesystem-report.txt \
+            /repo
+          status=$?
+          set -e
+          cat trivy-filesystem-report.txt
+          exit "$status"
+
+      - name: Scan current main history with Gitleaks
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          docker run --rm \
+            -v "$PWD:/repo" \
+            zricethezav/gitleaks:v8.24.3 \
+            detect --source /repo --redact --verbose \
+            --log-opts="$GITHUB_SHA" \
+            --report-format json \
+            --report-path /repo/gitleaks-report.json
+          status=$?
+          set -e
+          [[ -f gitleaks-report.json ]] || printf '[]\n' > gitleaks-report.json
+          exit "$status"
+
+      - name: Upload security evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: main-security-evidence
+          path: |
+            artifacts/security/
+            artifacts/openapi/coglatas-openapi.json
+            dotnet-vulnerable-packages.txt
+            trivy-filesystem-report.txt
+            gitleaks-report.json
+          if-no-files-found: warn
+          retention-days: 7

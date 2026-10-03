@@ -3,7 +3,7 @@
 ## Purpose
 
 Main-branch CI must not rebuild the same production application independently in
-Performance, real-backend E2E, and image-SBOM workflows.
+backend tests, frontend tests, security validation, Qodana, Performance, real-backend E2E, or image-SBOM workflows.
 
 `.github/workflows/main-build-artifacts.yml` is the trusted main-only `Main CI`
 artifact hub. It runs on every `push` to `main` and uses the protected
@@ -26,6 +26,24 @@ push main
       |
       +-- assemble production runtime image    (once)
       +-- package runtime image + .NET build
+      |
+      +--> Main Test
+      |     +-- restore .NET bin/obj
+      |     +-- EF migration/model validation --no-build
+      |     +-- full backend + architecture tests --no-build
+      |     +-- coverage
+      |
+      +--> Main Frontend
+      |     +-- restore production dist + Storybook
+      |     +-- unit + architecture + license checks
+      |     +-- Playwright reuses redistributed dist
+      |
+      +--> Main Security
+      |     +-- restore .NET bin/obj + authoritative OpenAPI
+      |     +-- dependency / Compose / contract checks
+      |     +-- assemble SDK security image from prebuilt bin/obj
+      |     +-- SEC-03/04/05/06 + AUD-02 runtime lanes
+      |     +-- Trivy + Gitleaks
       |
       +--> Qodana Community
       |     +-- restore .NET bin/obj

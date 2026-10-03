@@ -75,7 +75,7 @@ The SonarQube Quality Gate is supplied by the SonarQube Cloud GitHub integration
 
 `.github/workflows/ci.yml` is pull-request-only and contains the ReSharper fast lane. It does not run on `main` pushes.
 
-`.github/workflows/main-build-artifacts.yml` is the trusted main-only `Main CI` build/artifact hub. It has no ReSharper job. Main validation consumes the trusted build through Qodana Community/Cloud, Performance, real-backend E2E, and image SBOM/security consumers.
+`.github/workflows/main-build-artifacts.yml` is the trusted main-only `Main CI` build/artifact hub. It has no ReSharper job. Main validation fans the trusted build out to Main Test, Main Frontend, Main Security, Qodana Community/Cloud, Performance, real-backend E2E, and image SBOM consumers.
 
 ## Pull-request routing and build redistribution
 
