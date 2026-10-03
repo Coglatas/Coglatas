@@ -667,7 +667,7 @@ public sealed class WorkspaceService(
     }
 
     private static bool ContainsDatabaseUnsafeNull(string? value) =>
-        value?.Contains('\0', StringComparison.Ordinal) == true;
+        value?.Contains('\0') == true;
 
     private static bool IsValidClientRequestIdentity(string value) =>
         value.Length is >= 8 and <= 128 &&
