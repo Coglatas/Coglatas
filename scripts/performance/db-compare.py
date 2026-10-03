@@ -13,6 +13,8 @@ from compare import compare_documents, summarize, environment_compatibility_key
 
 
 def evaluate(small, medium, contract):
+    if any(p.get("collectionComplete") is not True for p in (small, medium)):
+        raise PerformanceContractError("incomplete DB collection")
     if small["profile"] != "small" or medium["profile"] != "medium" or small["headSha"] != medium["headSha"]:
         raise PerformanceContractError("incompatible dataset/head pair")
     if small["fixtureVersion"] != medium["fixtureVersion"] or not all(p.get("warmupSamplesExcluded") is True for p in (small, medium)):

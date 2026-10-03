@@ -89,7 +89,8 @@ def collect(args, contract):
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
     headers = login(opener, base, fixture)
     policy = contract["policy"]
-    output = {"schemaVersion": 1, "headSha": fingerprint["commitSha"], "profile": args.profile, "fixtureHash": fixture["fixtureHash"], "fixtureVersion": fixture["fixtureVersion"], "warmupSamplesExcluded": True, "scenarios": [], "plans": [], "measurements": []}
+    output = {"schemaVersion": 1, "headSha": fingerprint["commitSha"], "profile": args.profile, "fixtureHash": fixture["fixtureHash"], "fixtureVersion": fixture["fixtureVersion"], "warmupSamplesExcluded": True, "collectionComplete": False, "scenarios": [], "plans": [], "measurements": []}
+    write_json_atomic(args.output, output)
     for scenario in contract["scenarios"]:
         cardinality = fixture["cardinalities"]["workspaces"] if scenario["focus"] == "workspaces" else fixture["focus"][scenario["focus"]]
         record = {"id": scenario["id"], "cardinality": cardinality, "samples": [], "failures": []}
@@ -145,6 +146,7 @@ def collect(args, contract):
             samples = [s["capture"]["totalDurationMs"] for s in record["samples"] if s["pageSize"] == size and s["page"] == 1]
             output["measurements"].append({"schemaVersion": 1, "scenario": scenario["id"], "metric": "db.total_time_ms", "unit": "ms", "headSha": output["headSha"], "samples": samples, "attempt": 1, "pageSize": size, "measurementEnvelope": {"warmupSamplesExcluded": True, "environmentStable": True, "benchmarkExitCode": 0, "timedOut": False}})
         record["failures"] = sorted(set(record["failures"]))
+        write_json_atomic(args.output, output)
     for check in contract["planChecks"]:
         if check["profile"] == args.profile:
             project = os.environ.get("COGLATAS_PERFORMANCE_COMPOSE_PROJECT")
@@ -152,6 +154,7 @@ def collect(args, contract):
             if project:
                 command = ["docker", "compose", "-p", project, "-f", str(repository_root() / "infra/compose/performance/environment.yml"), "exec", "-T", "postgres", "psql", "-U", "coglatas_performance", "-d", "coglatas_performance"]
             output["plans"].append(plan_check(check, fixture, command))
+    output["collectionComplete"] = True
     return output
 
 
@@ -169,9 +172,18 @@ def main():
         # Aggregation is the single blocking boundary, after both datasets exist.
         print(json.dumps({"profile": args.profile, "scenarios": len(output["scenarios"]), "structuralFailures": sum(bool(s["failures"]) for s in output["scenarios"])}, sort_keys=True))
         return 0
-    except (PerformanceContractError, OSError, ValueError, KeyError, subprocess.TimeoutExpired):
+    except (PerformanceContractError, OSError, ValueError, KeyError, subprocess.TimeoutExpired) as error:
         # Incoming exception text may contain SQL/connection strings/error bodies.
-        print("PERF-05 collection failed: invalid, incomplete, unsafe, or timed-out evidence", file=sys.stderr)
+        safe_messages = {
+            "instrumentation empty or inconsistent", "unsafe or invalid capture fields", "unsafe command fields",
+            "invalid SQL identity", "unsafe table identity", "inconsistent DB duration", "inconsistent slow command evidence",
+            "invalid slow command evidence", "DB probe response is not a collection", "DB probe response has no items",
+            "invalid or duplicate response identity", "capture HTTP status mismatch", "fixture/fingerprint mismatch",
+            "missing head identity", "DB probe CSRF bootstrap failed", "DB probe login failed", "missing message cursor",
+            "selected EXPLAIN command failed", "selected plan fixture is too small"
+        }
+        reason = str(error) if str(error) in safe_messages else type(error).__name__
+        print(f"PERF-05 collection failed: {reason}", file=sys.stderr)
         return 2
 
 
