@@ -5,9 +5,7 @@ name: Qodana Deep Analysis
 # from the same trusted main commit before and after repository transfer.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+  # Main pushes run Qodana through Main Build Artifacts so the trusted build is reused.
   # Scheduled trigger temporarily disabled on 2026-09-19 to reduce CI consumption.
   # schedule:
   #   - cron: "17 18 * * 0"
