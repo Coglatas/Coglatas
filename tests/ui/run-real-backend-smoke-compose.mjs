@@ -9,6 +9,7 @@ import {
 const composeFile = 'infra/compose/test/real-backend-smoke.yml';
 const projectName = getComposeProjectName(process.env, process.pid);
 const composeEnv = { ...process.env, COMPOSE_PROJECT_NAME: projectName };
+const reusePrebuiltApp = composeEnv.COGLATAS_REUSE_PREBUILT_APP_IMAGE === '1';
 
 let composeInvocation;
 let cleanupPromise;
@@ -28,7 +29,9 @@ async function main() {
 
     exitCode = (await runCompose(['-p', projectName, '-f', composeFile, 'config', '--quiet'], { capture: true, redact: true })).exitCode;
     if (exitCode === 0) {
-      exitCode = (await runCompose(['-p', projectName, '-f', composeFile, 'up', '--build', '--detach', 'postgres', 'app'])).exitCode;
+      const upArgs = ['-p', projectName, '-f', composeFile, 'up', '--detach'];
+      upArgs.push(reusePrebuiltApp ? '--no-build' : '--build', 'postgres', 'app');
+      exitCode = (await runCompose(upArgs)).exitCode;
     }
 
     if (exitCode === 0) {
@@ -53,7 +56,7 @@ async function main() {
 }
 
 function realBackendPlaywrightRunArgs() {
-  const args = ['-p', projectName, '-f', composeFile, 'run', '--build'];
+  const args = ['-p', projectName, '-f', composeFile, 'run'];
   if (composeEnv.COGLATAS_REAL_BACKEND_P0_SETUP === '1') {
     args.push('--env', 'COGLATAS_REAL_BACKEND_P0_SETUP=1');
   }
