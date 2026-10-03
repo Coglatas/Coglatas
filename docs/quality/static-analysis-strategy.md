@@ -75,7 +75,7 @@ The SonarQube Quality Gate is supplied by the SonarQube Cloud GitHub integration
 
 `.github/workflows/ci.yml` is pull-request-only and contains the ReSharper fast lane. It does not run on `main` pushes.
 
-`.github/workflows/main-build-artifacts.yml` is the trusted main-only build/artifact hub. It has no ReSharper job. Main validation consumes the trusted build through Qodana Community/Cloud, Performance, real-backend E2E, and image SBOM/security consumers.
+`.github/workflows/main-build-artifacts.yml` is the trusted main-only `Main CI` build/artifact hub. It has no ReSharper job. Main validation consumes the trusted build through Qodana Community/Cloud, Performance, real-backend E2E, and image SBOM/security consumers.
 
 ## Pull-request routing and build redistribution
 
@@ -99,6 +99,6 @@ The PR workflow builds the Release .NET graph once in the `dotnet-build` produce
 
 Qodana uses the `qodana.recommended` profile and additionally enables all inspections whose default JetBrains severity is `ERROR`, `WARNING`, or `WEAK WARNING`. Generated output, dependency directories, test artifacts, runtime data and the inactive legacy frontend scaffold remain excluded; first-party source and tests remain in scope.
 
-Qodana is the trusted-main deep lane rather than the pull-request fast lane. Main pushes enter through `.github/workflows/main-build-artifacts.yml`, which restores the trusted build artifact into both the Community and Cloud Qodana lanes; the standalone Qodana workflows remain manual fallbacks. The temporarily disabled schedules remain disabled.
+Qodana is the trusted-main deep lane rather than the pull-request fast lane. Every main push enters through `Main CI` (`.github/workflows/main-build-artifacts.yml`), which restores the trusted build artifact into both the Community and Cloud Qodana lanes; the standalone Qodana workflows remain manual fallbacks. The temporarily disabled schedules remain disabled.
 
 Historical non-critical debt remains visible rather than making the lane permanently red. The post-processing guard still fails on any Critical finding, any unresolved-symbol finding, project-model/restore/build/SDK/package-resolution failure, missing SARIF output, or Qodana execution failure.
