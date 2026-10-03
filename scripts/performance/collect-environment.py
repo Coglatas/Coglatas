@@ -121,9 +121,34 @@ def configured_compose_image_id(
     services = payload.get("services") if isinstance(payload, dict) else None
     service_config = services.get(service) if isinstance(services, dict) else None
     image_name = service_config.get("image") if isinstance(service_config, dict) else None
-    if not isinstance(image_name, str) or not image_name:
-        raise PerformanceContractError(f"service {service} has no configured image")
-    return run(["docker", "image", "inspect", "--format", "{{.Id}}", image_name])
+    if isinstance(image_name, str) and image_name:
+        return run(["docker", "image", "inspect", "--format", "{{.Id}}", image_name])
+
+    # Profile-scoped build-only services are not guaranteed to retain an image
+    # name in every Docker Compose config rendering. The performance harness
+    # explicitly builds this service before fingerprinting, so fall back to the
+    # concrete image materialized by Compose rather than failing on metadata
+    # representation drift.
+    built_image = run(
+        compose_command(
+            project,
+            compose_file,
+            compose_override,
+            "images",
+            "-q",
+            service,
+        )
+    )
+    return run(
+        [
+            "docker",
+            "image",
+            "inspect",
+            "--format",
+            "{{.Id}}",
+            first_line(built_image),
+        ]
+    )
 
 
 def main() -> int:
