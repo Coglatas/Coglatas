@@ -321,6 +321,58 @@ def _field(text: str, block: tuple[int, int, int], key: str) -> str | None:
     return None
 
 
+def _needs_list(raw: str | None) -> list[str]:
+    if raw is None:
+        return []
+    value = raw.strip()
+    if not value:
+        return []
+    if value.startswith("[") and value.endswith("]"):
+        inner = value[1:-1].strip()
+        if not inner:
+            return []
+        return [item.strip().strip("'\"") for item in inner.split(",") if item.strip()]
+    return [value.strip("'\"")]
+
+
+def _prerequisite_chain_errors(
+    relative: str,
+    text: str,
+    jobs: dict[str, tuple[int, int, int]],
+    prerequisite: str,
+    stack: tuple[str, ...] = (),
+) -> list[str]:
+    errors: list[str] = []
+    if prerequisite in stack:
+        cycle = " -> ".join((*stack, prerequisite))
+        return [f"{relative}: required check prerequisite dependency cycle detected: {cycle}"]
+
+    block = jobs.get(prerequisite)
+    if block is None:
+        return [f"{relative}: required check prerequisite job '{prerequisite}' is missing"]
+
+    if _field(text, block, "if") is not None:
+        errors.append(
+            f"{relative}: required check prerequisite job '{prerequisite}' must not use job-level if"
+        )
+    if _field(text, block, "continue-on-error") is not None:
+        errors.append(
+            f"{relative}: required check prerequisite job '{prerequisite}' must not use continue-on-error"
+        )
+
+    for upstream in _needs_list(_field(text, block, "needs")):
+        errors.extend(
+            _prerequisite_chain_errors(
+                relative,
+                text,
+                jobs,
+                upstream,
+                (*stack, prerequisite),
+            )
+        )
+    return errors
+
+
 def required_check_errors(relative: str, text: str, registry: dict[str, Any] | None = None) -> list[str]:
     registry = registry or load_required_check_registry()
     entries = [c for c in expanded_checks(registry) if c["workflow"] == relative]
@@ -355,24 +407,9 @@ def required_check_errors(relative: str, text: str, registry: dict[str, Any] | N
                         f"{expected_needs!r}"
                     )
                 for prerequisite in expected_needs:
-                    prerequisite_block = jobs.get(prerequisite)
-                    if prerequisite_block is None:
-                        errors.append(
-                            f"{relative}: required check prerequisite job '{prerequisite}' is missing"
-                        )
-                        continue
-                    if _field(text, prerequisite_block, "if") is not None:
-                        errors.append(
-                            f"{relative}: required check prerequisite job '{prerequisite}' must not use job-level if"
-                        )
-                    if _field(text, prerequisite_block, "needs") is not None:
-                        errors.append(
-                            f"{relative}: required check prerequisite job '{prerequisite}' must not depend on another job"
-                        )
-                    if _field(text, prerequisite_block, "continue-on-error") is not None:
-                        errors.append(
-                            f"{relative}: required check prerequisite job '{prerequisite}' must not use continue-on-error"
-                        )
+                    errors.extend(
+                        _prerequisite_chain_errors(relative, text, jobs, prerequisite)
+                    )
             elif actual_needs is not None:
                 errors.append(f"{relative}: required check job '{item['job']}' must not depend on another job")
         if _field(text, block, "continue-on-error") is not None:
