@@ -3,9 +3,11 @@ import { randomUUID } from 'node:crypto';
 import { expect, type APIRequestContext, type APIResponse, type Response, test } from '@playwright/test';
 
 import { functionalMetadata } from '../fixtures/functional-metadata.mjs';
+import { functionalFullExpansionEnabled } from '../fixtures/functional-gate-selection.mjs';
 import { loginViaApi } from '../helpers/auth';
 import { csrfAwareRequest } from '../helpers/csrf';
 import { safeResponsePreview } from '../helpers/safe-response';
+import { runFilesLifecycle } from './files-lifecycle-steps';
 
 const smokeEmail = process.env.COGLATAS_BROWSER_SMOKE_EMAIL ?? '';
 const smokePassword = process.env.COGLATAS_BROWSER_SMOKE_PASSWORD ?? '';
@@ -44,7 +46,7 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
       const runToken = randomUUID();
       const fileName = `fci05-${runToken}.txt`;
       const failedFileName = `fci05-invalid-${runToken}.txt`;
-      const fileContent = `FCI-05 isolated Files evidence ${runToken}\n`;
+      const fileContent = 'FCI-05 deterministic synthetic Files owner content.\n';
       let fileObjectId: string | null = null;
       let workspaceId: string | null = null;
       let uploadAttempted = false;
@@ -64,6 +66,7 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
         deletedReadStatus: null,
         deletedGrantStatus: null,
         cleanupSucceeded: false,
+        fullExpansion: functionalFullExpansionEnabled(),
       };
 
       try {
@@ -175,6 +178,13 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
         assertNoStorageLeak(reloadBody);
         evidence.reloadReadStatus = reloadRead.status();
 
+        if (functionalFullExpansionEnabled()) {
+          const lifecycleEvidence = await runFilesLifecycle({
+            api, page, workspaceId, fileObjectId, fileName, content: Buffer.from(fileContent, 'utf8'),
+          });
+          Object.assign(evidence, lifecycleEvidence);
+        }
+
         const deleteResponse = await csrfAwareRequest(
           api,
           'DELETE',
@@ -210,6 +220,13 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
         expect(deletedGrantPreview.includes(fileName), 'Deleted grant denial omits file metadata').toBe(false);
         assertNoSensitiveText(deletedGrantPreview);
         evidence.deletedGrantStatus = deletedGrant.status();
+        if (functionalFullExpansionEnabled()) {
+          for (const suffix of ['activity', `versions/${fileObjectId}/content`]) {
+            const denied = await api.get(`/api/files/${fileObjectId}/${suffix}`);
+            assertSafeResponse(denied, { label: 'F05 deleted history/version denial', expectedStatus: [400, 404] });
+          }
+          evidence.deletedHistoryDenied = true;
+        }
       } finally {
         // Recover only this run's object if response delivery/parsing failed.
         if (!cleanupSucceeded && uploadAttempted && workspaceId) {

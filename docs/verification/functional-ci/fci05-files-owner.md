@@ -43,5 +43,30 @@ production build have executed. These do not prove real PostgreSQL/storage
 execution. Hosted CI and a protected real-stack run on the final PR commit are
 required before acceptance is marked complete.
 
-Slice C (supported lifecycle expansion) is a separate change. Rename, restore,
-and new version upload must not be invented where no product command exists.
+## Supported lifecycle expansion (Slice C)
+
+The separate lifecycle change adds `F05-FULL-01` through `F05-FULL-04` to the
+same `FUNC-FILE-002` owner. An explicit fast selection omits these steps;
+full/extended and an unscoped direct journey invocation include them.
+
+- Search the uploaded filename through the real UI and reopen its inspector.
+- Create a unique destination through the public folder API, verify fresh
+  navigation, move the file through the UI, and verify location/version after
+  fresh reads and reload. A stale move leaves the persisted placement unchanged.
+- Change Private to Workspace through the sharing UI, verify the exact sharing
+  version from fresh sharing/detail/list reads and reload, and reject a stale
+  sharing change without overwriting the committed state.
+- Verify the real PostgreSQL-triggered initial version, one current pointer,
+  metadata/byte consistency, sharing history, and the historical UI preview.
+  Deleted-file activity and version content subsequently deny safely.
+
+Folder creation has no product delete route; its run-owned metadata is removed
+by isolated database-volume teardown. File bytes intentionally retained by soft
+delete are removed by the same run's storage-volume teardown. No shared or
+production namespace is used. Folder-filtered browsing, Shared/Starred shortcuts,
+rename, restore, and new version upload have no implemented owner contract and
+are not claimed as covered. Folder navigation metadata and logical moves are
+real, while the file inventory remains the implemented Recent view.
+
+This is source and local contract coverage until an exact-commit real-stack run
+passes. Static discovery and PR checks cannot substitute for that execution.
