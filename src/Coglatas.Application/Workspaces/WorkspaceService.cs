@@ -124,6 +124,18 @@ public sealed class WorkspaceService(
         var name = request.Name.Trim();
         var description = NormalizeOptional(request.Description);
         var icon = NormalizeOptional(request.Icon);
+        if (ContainsDatabaseUnsafeNull(name))
+        {
+            return ValidationFailure("Workspace name contains unsupported characters.", "body.name");
+        }
+        if (ContainsDatabaseUnsafeNull(description))
+        {
+            return ValidationFailure("Workspace description contains unsupported characters.", "body.description");
+        }
+        if (ContainsDatabaseUnsafeNull(icon))
+        {
+            return ValidationFailure("Workspace icon contains unsupported characters.", "body.icon");
+        }
         if (name.Length > 160)
         {
             return ValidationFailure("Workspace name must not exceed 160 characters.", "body.name");
@@ -300,6 +312,19 @@ public sealed class WorkspaceService(
                 "InvalidStateTransition",
                 "Workspace lifecycle changes must use the archive or restore command.",
                 Target: "body.status"));
+        }
+
+        if (ContainsDatabaseUnsafeNull(request.Name))
+        {
+            return ValidationFailure("Workspace name contains unsupported characters.", "body.name");
+        }
+        if (ContainsDatabaseUnsafeNull(request.Description))
+        {
+            return ValidationFailure("Workspace description contains unsupported characters.", "body.description");
+        }
+        if (ContainsDatabaseUnsafeNull(request.Icon))
+        {
+            return ValidationFailure("Workspace icon contains unsupported characters.", "body.icon");
         }
 
         if (request.Name is not null)
@@ -640,6 +665,9 @@ public sealed class WorkspaceService(
         var normalized = value?.Trim();
         return string.IsNullOrEmpty(normalized) ? null : normalized;
     }
+
+    private static bool ContainsDatabaseUnsafeNull(string? value) =>
+        value?.Contains('\0', StringComparison.Ordinal) == true;
 
     private static bool IsValidClientRequestIdentity(string value) =>
         value.Length is >= 8 and <= 128 &&
