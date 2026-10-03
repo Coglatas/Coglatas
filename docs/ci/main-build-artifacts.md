@@ -5,8 +5,8 @@
 Main-branch CI must not rebuild the same production application independently in
 Performance, real-backend E2E, and image-SBOM workflows.
 
-`.github/workflows/main-build-artifacts.yml` is the trusted main-only artifact
-hub. It runs only on `push` to `main` and uses the protected
+`.github/workflows/main-build-artifacts.yml` is the trusted main-only `Main CI`
+artifact hub. It runs on every `push` to `main` (plus manual dispatch) and uses the protected
 `syncfusion-licensed-build` environment.
 
 ## Build graph
@@ -14,7 +14,7 @@ hub. It runs only on `push` to `main` and uses the protected
 ```text
 push main
   |
-  +-- Main Build Artifacts
+  +-- Main CI
       |
       +-- dotnet restore
       +-- dotnet build Release                 (once)
@@ -98,7 +98,7 @@ necessary.
 ## Trust boundary
 
 The artifact hub is not triggered by `pull_request`, `pull_request_target`, or
-`workflow_run`. It cannot be manually dispatched. PR ReSharper never participates
+`workflow_run`. Manual dispatch is allowed only as an explicit trusted fallback. PR ReSharper never participates
 in this graph; it exists only in `.github/workflows/ci.yml`, which is pull-request-only. Protected Syncfusion material
 therefore executes only against the repository's trusted `main` push revision.
 
