@@ -20,3 +20,10 @@
 # Scope exceptions to the exact historical commit/path/rule/line only.
 794050526eba941a6404ebf87ca3e7beeb7d625b:performance/evidence/perf04-task-list-calibration.json:generic-api-key:11
 794050526eba941a6404ebf87ca3e7beeb7d625b:performance/evidence/perf04-task-list-calibration.json:generic-api-key:111
+
+# PERF-04 main squash: the same reviewed metric literal and public SHA-256
+# environment fingerprint above now have new immutable commit fingerprints.
+# Keep exact commit/path/rule/line exceptions; do not broaden their scope.
+ad88351c65f45e9616da67bdb9d0d0380324335b:scripts/performance/api_k6.py:generic-api-key:43
+ad88351c65f45e9616da67bdb9d0d0380324335b:performance/evidence/perf04-task-list-calibration.json:generic-api-key:11
+ad88351c65f45e9616da67bdb9d0d0380324335b:performance/evidence/perf04-task-list-calibration.json:generic-api-key:111
