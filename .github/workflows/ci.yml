@@ -346,11 +346,6 @@ jobs:
     needs: dotnet-build
     if: ${{ github.event_name == 'pull_request' && needs.dotnet-build.outputs.built == 'true' }}
     uses: ./.github/workflows/resharper_pr.yml
-    with:
-      build-artifact-name: dotnet-release-build
-      analysis-sha: ${{ github.sha }}
-      base-sha: ${{ github.event.pull_request.base.sha }}
-      head-sha: ${{ github.event.pull_request.head.sha }}
 
   frontend-test:
     name: frontend-test
