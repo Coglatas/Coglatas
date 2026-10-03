@@ -84,8 +84,15 @@ dotnet msbuild -version
 echo "Restoring canonical solution Coglatas.slnx"
 dotnet restore Coglatas.slnx --verbosity normal
 
-echo "Building canonical solution Coglatas.slnx"
-dotnet build Coglatas.slnx --configuration Release --no-restore
+if [[ "${QODANA_REUSE_PREBUILT_DOTNET_BUILD:-false}" == "true" ]]; then
+  echo "Reusing trusted main .NET build outputs; Qodana bootstrap build is skipped."
+  test -f artifacts/ci/dotnet-build-sha
+  test -d src/Coglatas.Web/bin/Release
+  test -d tests/Coglatas.Tests/bin/Release
+else
+  echo "Building canonical solution Coglatas.slnx"
+  dotnet build Coglatas.slnx --configuration Release --no-restore
+fi
 
 if [[ "${QODANA_SKIP_FRONTEND_BOOTSTRAP:-false}" == "true" ]]; then
   echo "Skipping frontend bootstrap for the .NET-only Qodana inventory."
