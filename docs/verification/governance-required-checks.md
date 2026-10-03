@@ -10,7 +10,7 @@ Issue #629 defines a three-layer, fail-closed contract for merge-blocking status
 
 ## Required-job prerequisites
 
-The current build gate declares `dotnet-build` as the sole prerequisite of `build-test`. The prerequisite is not itself a merge-required context, but it is statically required to have no job-level `if`, no `needs`, and no `continue-on-error`. If the producer fails, GitHub cannot report `build-test` as a successful current-head required check; the exact-head evaluator already rejects skipped, cancelled, missing, and failed required results. This preserves fail-closed merge behavior while allowing one authoritative build to feed multiple downstream consumers.
+The current registry declares `dotnet-build` as the prerequisite of both `build-test` and `security-scan`, and `frontend-build` as the prerequisite of `frontend-test`. These producer jobs are not themselves merge-required contexts, but each is statically required to have no job-level `if`, no `needs`, and no `continue-on-error`. If a producer fails, GitHub cannot report its dependent required job as a successful current-head check; the exact-head evaluator already rejects skipped, cancelled, missing, and failed required results. This preserves fail-closed merge behavior while allowing authoritative backend, security-contract, and frontend build outputs to be redistributed to downstream consumers.
 
 ## Result semantics
 
