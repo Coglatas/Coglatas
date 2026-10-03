@@ -75,20 +75,15 @@ The lane keeps repository permissions at `contents: read`, does not publish quic
 
 ## Full-repository quality gate and Qodana Cloud
 
-`.github/workflows/qodana_cloud_quality.yml` is a separate trusted Cloud-publishing workflow. It has no `pull_request` or review trigger and runs only for:
+Main-push Cloud publication is the protected `qodana-cloud` job inside `.github/workflows/main-build-artifacts.yml`. It restores the same exact-SHA .NET build outputs used by the other main consumers, performs only the environment-local NuGet restore, then runs full repository analysis with `pr-mode: false`. The job is bound to `syncfusion-licensed-build`, receives `QODANA_TOKEN` there, and publishes the report to Qodana Cloud.
 
-- pushes to `main`;
-- manual dispatches on `main`.
-
-The former weekly schedule is currently disabled to reduce CI consumption.
-
-Main pushes call the Cloud workflow from `.github/workflows/main-build-artifacts.yml` with trusted artifact reuse enabled. It restores the same exact-SHA .NET build outputs used by the other main consumers, performs only the environment-local NuGet restore, then runs full repository analysis with `pr-mode: false`. Manual dispatch remains the standalone fallback path and performs normal local build preparation. The workflow passes `QODANA_TOKEN` directly to the pinned Qodana action and publishes the report to Qodana Cloud. Manual dispatches on non-`main` refs are blocked by the job-level ref guard.
+`.github/workflows/qodana_cloud_quality.yml` remains a manual-only fallback for trusted `main`. It performs normal local build preparation instead of consuming the main artifact hub. The former weekly schedule is currently disabled to reduce CI consumption.
 
 Because repository publication policy requires every secret-bearing job to use a static protected environment, the Cloud job is bound to the repository's existing `syncfusion-licensed-build` protected environment. Qodana does not consume the Syncfusion secret; the environment is reused solely as the already-established trusted secret boundary. A dedicated Qodana environment may replace it later if one is created with equivalent protection.
 
 The Cloud lane fails before Qodana starts if `QODANA_TOKEN` is empty. The token must be available to the job as the Qodana Cloud project token for this repository. This prevents a green trusted run from silently producing only a local/GitHub report while Qodana Cloud receives nothing.
 
-Keeping Cloud publication in a workflow with no PR trigger is deliberate: Qodana Cloud credentials never enter the pull-request trust boundary, while the existing immutable PR gate remains unprivileged.
+Keeping Cloud publication exclusively in protected main/manual jobs with no PR trigger is deliberate: Qodana Cloud credentials never enter the pull-request trust boundary, while the ReSharper PR lane remains unprivileged.
 
 The repository currently has historical non-critical Qodana debt. The baseline captured from main commit `c6aedb95c8780a5e8fac42b7b96ecccf80f1ad80` contains 3,479 findings. Instead of accepting unlimited historical debt or requiring an immediate zero-warning migration, the SARIF guard uses a per-inspection ratchet while preserving the full report:
 
