@@ -1,6 +1,6 @@
 # Qodana project model
 
-Last updated: 2026-09-27.
+Last updated: 2026-10-03.
 
 ## Canonical roots
 
@@ -78,8 +78,9 @@ The lane keeps repository permissions at `contents: read`, does not publish quic
 `.github/workflows/qodana_cloud_quality.yml` is a separate trusted Cloud-publishing workflow. It has no `pull_request` or review trigger and runs only for:
 
 - pushes to `main`;
-- the weekly schedule;
 - manual dispatches on `main`.
+
+The former weekly schedule is currently disabled to reduce CI consumption.
 
 The Cloud workflow performs a full repository analysis with `pr-mode: false`, passes `QODANA_TOKEN` directly to the pinned Qodana action, and therefore publishes the report to Qodana Cloud. Manual dispatches on non-`main` refs are blocked by the job-level ref guard.
 
