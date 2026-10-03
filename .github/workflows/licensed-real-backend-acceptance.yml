@@ -3,9 +3,6 @@ name: Licensed Real Backend Acceptance
 on:
   workflow_call:
     inputs:
-      target_sha:
-        required: true
-        type: string
       suite:
         required: false
         type: string
@@ -49,13 +46,12 @@ jobs:
 
     env:
       SYNCFUSION_LICENSE: ${{ secrets.SYNCFUSION_LICENSE }}
-      TARGET_SHA: ${{ github.event_name == 'workflow_call' && inputs.target_sha || github.sha }}
+      TARGET_SHA: ${{ github.sha }}
 
     steps:
       - name: Checkout reviewed commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
           persist-credentials: false
 
