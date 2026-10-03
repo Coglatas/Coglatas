@@ -37,7 +37,12 @@ All decisions are made by `compare_api_documents` in the PERF-03 comparator;
 k6 and the normalization adapter contain no competing performance thresholds.
 
 - PR: one short trial; p50/p95/p99 hard ceilings of 1/2/3 seconds and zero
-  error/timeout budgets. Throughput is recorded. There is no fabricated measured
+  error/timeout budgets. Task list alone has a reviewed 2-second p50 ceiling:
+  initial five-trial main evidence measured 1.19–1.24 seconds on the unchanged
+  baseline, so the initial 1-second default was below existing behavior. The
+  review ledger and `evidence/perf04-task-list-calibration.json` preserve the
+  measurements and before/after policy decisions. Other scenario ceilings and
+  relative/noise/error policies remain unchanged. Throughput is recorded. There is no fabricated measured
   baseline for an absolute-only gate.
 - Main: five independent paired baseline/current trials. Compare medians of the
   per-trial p50/p95/p99 and throughput. A latency increase must exceed both 50%

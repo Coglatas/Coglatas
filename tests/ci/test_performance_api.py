@@ -110,6 +110,20 @@ class ApiGateTests(unittest.TestCase):
             self.current['measurements']['workspace.list'][metric] = 1 / 20
             self.assertEqual('fail', self.fast()['decision'])
 
+    def test_calibrated_task_ceiling_does_not_relax_other_routes(self):
+        self.current['measurements']['task.list']['api.latency.p50_ms'] = 1500
+        self.assertEqual('pass', self.fast()['decision'])
+        self.current['measurements']['workspace.list']['api.latency.p50_ms'] = 1500
+        self.assertEqual('fail', self.fast()['decision'])
+        self.current = run()
+        self.current['measurements']['task.list']['api.latency.p50_ms'] = 2001
+        self.assertEqual('fail', self.fast()['decision'])
+
+    def test_calibrated_task_relative_regression_still_blocks(self):
+        self.base['measurements']['task.list']['api.latency.p50_ms'] = 1100
+        self.current['measurements']['task.list']['api.latency.p50_ms'] = 1800
+        self.assertEqual('fail', self.regression()['decision'])
+
     def test_main_compares_multiple_runs(self):
         result = self.regression()
         self.assertEqual('pass', result['decision'])
@@ -183,6 +197,16 @@ class ApiGateTests(unittest.TestCase):
 
 
 class ApiGovernanceTests(unittest.TestCase):
+    def test_scenario_ceiling_relaxation_is_governed(self):
+        from test_performance_comparator import baseline_updates
+        contract = api_k6.load_contract()
+        original = api_k6.governance_budgets(contract)
+        modified = copy.deepcopy(contract)
+        next(s for s in modified['scenarios'] if s['id'] == 'task.list')['metricOverrides']['api.latency.p50_ms']['ceiling'] += 1
+        ledger = json.loads((ROOT / 'performance/baseline-updates.json').read_text())
+        with self.assertRaises(baseline_updates.BaselineUpdateError):
+            baseline_updates.validate_transition(original, api_k6.governance_budgets(modified), ledger, head_sha=HEAD)
+
     def test_relaxation_and_baseline_changes_require_review_ledger(self):
         from test_performance_comparator import baseline_updates
         contract = api_k6.load_contract()

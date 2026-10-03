@@ -529,6 +529,14 @@ def main() -> int:
     return 1
 
 
+def api_metric_budget(contract: dict[str, Any], scenario: str, metric: str) -> dict[str, Any]:
+    """Resolve reviewed scenario ceilings without relaxing unrelated routes."""
+    rule = dict(contract["metrics"].get(metric, {}))
+    item = next((s for s in contract["scenarios"] if s["id"] == scenario), {})
+    rule.update(item.get("metricOverrides", {}).get(metric, {}))
+    return rule
+
+
 def compare_api_documents(
     measurement: dict[str, Any], baseline: dict[str, Any] | None,
     fingerprint: dict[str, Any], contract: dict[str, Any], policy_document: dict[str, Any],
@@ -549,7 +557,7 @@ def compare_api_documents(
         metric = _require_nonempty(measurement.get("metric"), "metric")
         if contract.get("schemaVersion") != 1 or scenario not in {s["id"] for s in contract["scenarios"]}:
             raise ComparatorError("unknown-scenario", "API scenario is not in the versioned contract")
-        metric_policy = contract["metrics"].get(metric)
+        metric_policy = api_metric_budget(contract, scenario, metric)
         if not isinstance(metric_policy, dict) or measurement.get("unit") != metric_policy.get("unit"):
             raise ComparatorError("unknown-metric", "API metric/unit is not in the versioned contract")
         head = _require_sha(measurement.get("headSha"), "headSha")

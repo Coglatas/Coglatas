@@ -78,7 +78,10 @@
     {
       "id": "task.list",
       "method": "GET",
-      "path": "/api/projects/{taskListProjectId}/tasks?page=1&pageSize=50"
+      "path": "/api/projects/{taskListProjectId}/tasks?page=1&pageSize=50",
+      "metricOverrides": {
+        "api.latency.p50_ms": { "ceiling": 2000 }
+      }
     },
     {
       "id": "task.detail",

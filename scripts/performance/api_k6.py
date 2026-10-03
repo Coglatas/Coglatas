@@ -16,7 +16,7 @@ import urllib.request
 from pathlib import Path
 
 from common import PerformanceContractError, load_json, repository_root, validate_fixture_evidence, validate_target, write_json_atomic
-from compare import compare_api_documents, environment_compatibility_key
+from compare import api_metric_budget, compare_api_documents, environment_compatibility_key
 
 ROOT = repository_root()
 
@@ -63,6 +63,15 @@ def load_contract() -> dict:
         if scenario['id'] in ids:
             raise PerformanceContractError('duplicate required API scenario')
         ids.add(scenario['id'])
+        overrides = scenario.get('metricOverrides', {})
+        if not isinstance(overrides, dict):
+            raise PerformanceContractError('invalid scenario ceiling overrides')
+        for metric, override in overrides.items():
+            if metric not in required_metrics or not metric.startswith('api.latency.') or not isinstance(override, dict) or set(override) != {'ceiling'}:
+                raise PerformanceContractError('only reviewed latency ceilings may be overridden')
+            ceiling = override['ceiling']
+            if isinstance(ceiling, bool) or not isinstance(ceiling, (int, float)) or not math.isfinite(ceiling) or not contract['metrics'][metric]['minimumAbsoluteIncrease'] < ceiling <= 10000:
+                raise PerformanceContractError('scenario latency ceiling is invalid or disabled')
         route = routes.get(scenario['id'])
         if not route or route['method'] != scenario['method'] or re.sub(r'\{[^}]+\}', '{}', route['path']) != re.sub(r'\{[^}]+\}', '{}', scenario['path'].split('?')[0]):
             raise PerformanceContractError('API route is not backed by PERF-01 inventory')
@@ -182,7 +191,8 @@ def evaluate(current: list[dict], baseline: list[dict], mode: str) -> dict:
         rows = [run['measurements'][sid] for run in current]
         scenarios.append({'scenario': sid, 'profile': contract['profile'], 'requestCount': sum(r['requestCount'] for r in rows),
                           'errorCount': sum(r['errorCount'] for r in rows), 'timeoutCount': sum(r['timeoutCount'] for r in rows)})
-        for metric, budget in contract['metrics'].items():
+        for metric in contract['metrics']:
+            budget = api_metric_budget(contract, sid, metric)
             measurement = {
                 'schemaVersion': 1, 'scenario': sid, 'metric': metric, 'unit': budget['unit'],
                 'headSha': reference['headSha'], 'mode': mode, 'samples': [r[metric] for r in rows],
@@ -210,7 +220,8 @@ def evaluate(current: list[dict], baseline: list[dict], mode: str) -> dict:
 def governance_budgets(contract: dict) -> dict:
     budgets = []
     for scenario in contract['scenarios']:
-        for metric, rule in contract['metrics'].items():
+        for metric in contract['metrics']:
+            rule = api_metric_budget(contract, scenario['id'], metric)
             for field in ('ceiling', 'maxIncreasePercent', 'maxDecreasePercent', 'minimumAbsoluteIncrease'):
                 if field in rule:
                     budgets.append({
