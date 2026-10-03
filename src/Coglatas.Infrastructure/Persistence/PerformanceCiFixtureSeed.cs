@@ -591,7 +591,7 @@ public static class PerformanceCiFixtureSeed
                 SharingVersion = 1,
                 Status = FileObjectStatus.Active
             }, fileId);
-            if (inFocusWorkspace && profile.FixtureVersion == DbFixtureVersion)
+            if (inFocusWorkspace && profile.SelectedFixtureVersion == DbFixtureVersion)
             {
                 AddWithId(dbContext, new Attachment
                 {
@@ -616,7 +616,7 @@ public static class PerformanceCiFixtureSeed
             await FlushIfNeededAsync(dbContext, index + 1, cancellationToken);
         }
         await SaveAndClearAsync(dbContext, cancellationToken);
-        if (profile.FixtureVersion == DbFixtureVersion)
+        if (profile.SelectedFixtureVersion == DbFixtureVersion)
         {
             await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
             UPDATE file_objects AS f SET "CreatedAt" = {StableEpoch} + ranked.ordinal * interval '1 millisecond'
@@ -688,7 +688,7 @@ public static class PerformanceCiFixtureSeed
             profile.Focus["workspaceFiles"],
             dbContext.FileObjects.IgnoreQueryFilters().CountAsync(
                 file => file.WorkspaceId == plan.FocusWorkspaceId, cancellationToken));
-        if (profile.FixtureVersion == DbFixtureVersion)
+        if (profile.SelectedFixtureVersion == DbFixtureVersion)
         {
             await AssertCountAsync(
             "workspaceAttachments",
@@ -708,7 +708,7 @@ public static class PerformanceCiFixtureSeed
             profile.Focus["conversationMessages"],
             dbContext.Messages.IgnoreQueryFilters().CountAsync(
                 message => message.ConversationId == plan.FocusConversationId, cancellationToken));
-        if (profile.FixtureVersion == DbFixtureVersion)
+        if (profile.SelectedFixtureVersion == DbFixtureVersion)
         {
             await AssertCountAsync(
             "distinctMessageCursorKeys",
@@ -764,7 +764,7 @@ public static class PerformanceCiFixtureSeed
         var evidence = new
         {
             schemaVersion = 1,
-            fixtureVersion = profile.FixtureVersion,
+            fixtureVersion = profile.SelectedFixtureVersion,
             seedManifestVersion = profile.SeedManifestVersion,
             profile = profile.Name,
             seed = profile.Seed,
@@ -992,7 +992,7 @@ public static class PerformanceCiFixtureSeed
     private sealed record DatasetProfile(
         string Name,
         int Seed,
-        int FixtureVersion,
+        int SelectedFixtureVersion,
         int SeedManifestVersion,
         string FixtureHash,
         Dictionary<string, int> Counts,
