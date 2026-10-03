@@ -79,7 +79,7 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
             ['File', { name: failedFileName, mimeType: 'text/plain', buffer: Buffer.alloc(0) }],
           ]),
         });
-        await assertSafeResponse(rejectedUpload, { label: 'FCI-05 rejected upload', expectedStatus: 400 });
+        assertSafeResponse(rejectedUpload, { label: 'FCI-05 rejected upload', expectedStatus: 400 });
         evidence.failedMutationStatus = rejectedUpload.status();
         expect(await fileNamesForWorkspace(api, workspaceId)).not.toContain(failedFileName);
 
@@ -96,7 +96,7 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
           buffer: Buffer.from(fileContent, 'utf8'),
         });
         const uploadResponse = await uploadResponsePromise;
-        await assertSafeResponse(uploadResponse, { label: 'FCI-05 UI upload', expectedStatus: 200 });
+        assertSafeResponse(uploadResponse, { label: 'FCI-05 UI upload', expectedStatus: 200 });
         evidence.uploadStatus = uploadResponse.status();
 
         const uploadBody = asRecord(await uploadResponse.json(), 'File upload response');
@@ -104,7 +104,7 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
         evidence.fileObjectId = fileObjectId;
 
         const freshRead = await api.get(`/api/files/${fileObjectId}`);
-        await assertSafeResponse(freshRead, { label: 'FCI-05 fresh FileObject read', expectedStatus: 200 });
+        assertSafeResponse(freshRead, { label: 'FCI-05 fresh FileObject read', expectedStatus: 200 });
         const freshBody = asRecord(await freshRead.json(), 'fresh FileObject read');
         expect(requireStringField(freshBody, 'id', 'Id')).toBe(fileObjectId);
         expect(requireStringField(freshBody, 'originalFileName', 'OriginalFileName')).toBe(fileName);
@@ -123,7 +123,7 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
         expect(readOptionalString(uploadedListItem, 'originalFileName', 'OriginalFileName')).toBe(fileName);
         assertNoStorageLeak(uploadedListItem);
 
-        const previewAction = page.getByRole('button', { name: `Preview ${fileName}` });
+        const previewAction = page.getByRole('button', { name: fileName, exact: true });
         await expect(previewAction).toBeVisible({ timeout: 20_000 });
         await previewAction.click();
         const inspector = page.getByTestId('files-preview-pane');
@@ -131,7 +131,7 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
         await expect(inspector.getByRole('heading', { name: fileName })).toBeVisible();
 
         const sharingResponse = await api.get(`/api/files/${fileObjectId}/sharing`);
-        await assertSafeResponse(sharingResponse, { label: 'FCI-05 File sharing read', expectedStatus: 200 });
+        assertSafeResponse(sharingResponse, { label: 'FCI-05 File sharing read', expectedStatus: 200 });
         const sharing = asRecord(await sharingResponse.json(), 'File sharing response');
         const accessState = requireStringField(sharing, 'accessState', 'AccessState');
         evidence.sharingAccessState = accessState;
@@ -155,8 +155,8 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
         });
         await inspector.getByTestId('files-preview-download').click();
         const [grantResponse, downloadResponse] = await Promise.all([grantResponsePromise, downloadResponsePromise]);
-        await assertSafeResponse(grantResponse, { label: 'FCI-05 UI download grant', expectedStatus: 200 });
-        await assertSafeResponse(downloadResponse, { label: 'FCI-05 UI download', expectedStatus: 200 });
+        assertSafeResponse(grantResponse, { label: 'FCI-05 UI download grant', expectedStatus: 200 });
+        assertSafeResponse(downloadResponse, { label: 'FCI-05 UI download', expectedStatus: 200 });
         const grant = asRecord(await grantResponse.json(), 'download grant');
         expect(requireStringField(grant, 'fileObjectId', 'FileObjectId')).toBe(fileObjectId);
         expect((await downloadResponse.body()).equals(Buffer.from(fileContent, 'utf8')), 'Downloaded bytes match the synthetic fixture').toBe(true);
@@ -165,10 +165,10 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
 
         await page.reload();
         await expect(page.getByTestId('files-page')).toBeVisible();
-        await expect(page.getByRole('button', { name: `Preview ${fileName}` })).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByRole('button', { name: fileName, exact: true })).toBeVisible({ timeout: 20_000 });
 
         const reloadRead = await api.get(`/api/files/${fileObjectId}`);
-        await assertSafeResponse(reloadRead, { label: 'FCI-05 reload-backed FileObject read', expectedStatus: 200 });
+        assertSafeResponse(reloadRead, { label: 'FCI-05 reload-backed FileObject read', expectedStatus: 200 });
         const reloadBody = asRecord(await reloadRead.json(), 'reload-backed FileObject read');
         expect(requireStringField(reloadBody, 'id', 'Id')).toBe(fileObjectId);
         expect(requireStringField(reloadBody, 'originalFileName', 'OriginalFileName')).toBe(fileName);
@@ -180,14 +180,14 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
           'DELETE',
           `/api/files/${fileObjectId}?reason=fci-05-cleanup`,
         );
-        await assertSafeResponse(deleteResponse, { label: 'FCI-05 cleanup delete', expectedStatus: 200 });
+        assertSafeResponse(deleteResponse, { label: 'FCI-05 cleanup delete', expectedStatus: 200 });
         cleanupSucceeded = true;
         evidence.cleanupSucceeded = true;
 
         expect(await fileNamesForWorkspace(api, workspaceId)).not.toContain(fileName);
 
         const deletedRead = await api.get(`/api/files/${fileObjectId}`);
-        await assertSafeResponse(deletedRead, {
+        assertSafeResponse(deletedRead, {
           label: 'FCI-05 deleted FileObject denial',
           expectedStatus: [400, 404],
         });
@@ -202,7 +202,7 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
           `/api/files/${fileObjectId}/download-grants`,
           { data: { purpose: 'fci-05-deleted-denial' } },
         );
-        await assertSafeResponse(deletedGrant, {
+        assertSafeResponse(deletedGrant, {
           label: 'FCI-05 deleted FileObject grant denial',
           expectedStatus: [400, 404],
         });
@@ -231,7 +231,7 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
 
 async function resolveWorkspaceId(api: APIRequestContext, workspaceName: string): Promise<string> {
   const response = await api.get('/api/workspaces');
-  await assertSafeResponse(response, { label: 'FCI-05 Workspace list', expectedStatus: 200 });
+  assertSafeResponse(response, { label: 'FCI-05 Workspace list', expectedStatus: 200 });
   const body: unknown = await response.json();
   if (!Array.isArray(body)) {
     throw new Error('FCI-05 Workspace list was not an array.');
@@ -247,7 +247,7 @@ async function resolveWorkspaceId(api: APIRequestContext, workspaceName: string)
 
 async function readFileList(api: APIRequestContext, workspaceId: string): Promise<Record<string, unknown>[]> {
   const response = await api.get(`/api/files?workspaceId=${encodeURIComponent(workspaceId)}&page=1&pageSize=100`);
-  await assertSafeResponse(response, { label: 'FCI-05 File list', expectedStatus: 200 });
+  assertSafeResponse(response, { label: 'FCI-05 File list', expectedStatus: 200 });
   const body = asRecord(await response.json(), 'File list response');
   const items = body.items ?? body.Items;
   if (!Array.isArray(items)) {
