@@ -529,5 +529,134 @@ def main() -> int:
     return 1
 
 
+def api_metric_budget(contract: dict[str, Any], scenario: str, metric: str) -> dict[str, Any]:
+    """Resolve reviewed scenario ceilings without relaxing unrelated routes."""
+    rule = dict(contract["metrics"].get(metric, {}))
+    item = next((s for s in contract["scenarios"] if s["id"] == scenario), {})
+    rule.update(item.get("metricOverrides", {}).get(metric, {}))
+    return rule
+
+
+def compare_api_documents(
+    measurement: dict[str, Any], baseline: dict[str, Any] | None,
+    fingerprint: dict[str, Any], contract: dict[str, Any], policy_document: dict[str, Any],
+) -> dict[str, Any]:
+    """PERF-04 adapter entry point; decisions remain owned by PERF-03.
+
+    PR absolute gates need no fabricated measured baseline. Main compares the
+    medians of independent run-level k6 percentiles/rates, not percentiles of
+    pooled requests or copies of a single sample. Every run must have enough
+    measured requests, and every run must satisfy the hard ceiling.
+    """
+    result = _base_result(measurement, baseline, decision="invalid", reason_code="invalid-api-evidence")
+    try:
+        policy = _policy(policy_document)
+        if measurement.get("schemaVersion") != 1:
+            raise ComparatorError("measurement-schema-mismatch", "API measurement schema must be 1")
+        scenario = _require_nonempty(measurement.get("scenario"), "scenario")
+        metric = _require_nonempty(measurement.get("metric"), "metric")
+        if contract.get("schemaVersion") != 1 or scenario not in {s["id"] for s in contract["scenarios"]}:
+            raise ComparatorError("unknown-scenario", "API scenario is not in the versioned contract")
+        metric_policy = api_metric_budget(contract, scenario, metric)
+        if not isinstance(metric_policy, dict) or measurement.get("unit") != metric_policy.get("unit"):
+            raise ComparatorError("unknown-metric", "API metric/unit is not in the versioned contract")
+        head = _require_sha(measurement.get("headSha"), "headSha")
+        if fingerprint.get("commitSha") != head:
+            raise ComparatorError("environment-head-mismatch", "fingerprint SHA must equal measurement SHA")
+        key = environment_compatibility_key(fingerprint)
+        if fingerprint.get("k6Version") != contract.get("k6Version"):
+            raise ComparatorError("toolchain-mismatch", "k6 version does not match the pinned contract")
+        stable = _validate_envelope(measurement)
+        mode = measurement.get("mode")
+        if mode not in {"fast", "regression"}:
+            raise ComparatorError("invalid-mode", "API mode must be fast or regression")
+        samples = _finite_samples(measurement.get("samples"), "samples")
+        counts = measurement.get("requestCounts")
+        if not isinstance(counts, list) or len(counts) != len(samples):
+            raise ComparatorError("invalid-samples", "request counts must accompany every run")
+        minimum = 1 if mode == "fast" else contract["mainRuns"]
+        result.update({
+            "gate": "hard-ceiling" if "ceiling" in metric_policy else "trend-only",
+            "unit": metric_policy["unit"], "headSha": head,
+            "environmentCompatibilityKey": key,
+            "fixture": {"profile": fingerprint["fixture"]["profile"],
+                        "hash": fingerprint["fixture"]["hash"], "version": fingerprint["fixture"]["version"]},
+            "budget": dict(metric_policy), "attempt": 1,
+        })
+        if len(samples) < minimum or any(isinstance(c, bool) or not isinstance(c, int) or
+                                         c < contract["minimumRequests"] for c in counts):
+            result.update(decision="insufficient-data", reasonCode="insufficient-samples")
+            return result
+        summary = summarize(samples)
+        kind, variability, limit = _variability(metric, metric_policy["unit"], summary, policy)
+        summary.update(variabilityKind=kind, variabilityValue=variability, variabilityLimit=limit)
+        result.update(summary=summary, currentValue=summary["median"])
+        if not stable:
+            result.update(decision="unstable", reasonCode="environment-unstable")
+            return result
+        # Hard failures take precedence over noise. A single 5xx/timeout cannot
+        # disappear in a median error rate, and slow runs cannot be averaged out.
+        if "ceiling" in metric_policy and max(samples) > metric_policy["ceiling"]:
+            result.update(decision="regression", reasonCode="hard-ceiling-exceeded")
+            return result
+        if mode == "fast":
+            result.update(decision="pass", reasonCode="absolute-api-budget-satisfied")
+            return result
+        if not isinstance(baseline, dict):
+            raise ComparatorError("missing-baseline", "main API comparison requires a measured approved-main baseline")
+        baseline_sha = _require_sha(baseline.get("baselineSha"), "baselineSha")
+        if baseline_sha != contract["baseline"]["sha"] or baseline_sha == head:
+            raise ComparatorError("baseline-sha-mismatch", "baseline must match the reviewed main SHA and differ from head")
+        if baseline.get("sourceRef") != "refs/heads/main" or baseline.get("approved") is not True:
+            raise ComparatorError("unapproved-baseline", "baseline must identify approved main source")
+        if (baseline.get("scenario") != scenario or baseline.get("metric") != metric or
+                baseline.get("unit") != metric_policy["unit"]):
+            raise ComparatorError("baseline-identity-mismatch", "baseline scenario/metric/unit mismatch")
+        if baseline.get("environmentCompatibilityKey") != key or baseline.get("k6Version") != contract["k6Version"]:
+            raise ComparatorError("environment-fingerprint-mismatch", "baseline environment/toolchain mismatch")
+        if (baseline.get("fixtureHash") != fingerprint["fixture"]["hash"] or
+                baseline.get("fixtureVersion") != fingerprint["fixture"]["version"]):
+            raise ComparatorError("fixture-mismatch", "baseline fixture mismatch")
+        baseline_samples = _finite_samples(baseline.get("samples"), "baseline.samples")
+        baseline_counts = baseline.get("requestCounts")
+        if (len(baseline_samples) < minimum or not isinstance(baseline_counts, list) or
+                len(baseline_counts) != len(baseline_samples) or any(
+                    isinstance(c, bool) or not isinstance(c, int) or c < contract["minimumRequests"] for c in baseline_counts)):
+            result.update(decision="insufficient-data", reasonCode="insufficient-baseline-samples")
+            return result
+        if "ceiling" in metric_policy and max(baseline_samples) > metric_policy["ceiling"]:
+            result.update(decision="regression", reasonCode="baseline-hard-ceiling-exceeded")
+            return result
+        baseline_summary = summarize(baseline_samples)
+        bkind, bvar, blimit = _variability(metric, metric_policy["unit"], baseline_summary, policy)
+        baseline_summary.update(variabilityKind=bkind, variabilityValue=bvar, variabilityLimit=blimit)
+        current_value = float(summary["median"])
+        baseline_value = float(baseline_summary["median"])
+        delta = current_value - baseline_value
+        relative = delta / baseline_value if baseline_value else None
+        result.update(baselineSha=baseline_sha, baseline={"sampleCount": len(baseline_samples), "summary": baseline_summary},
+                      baselineValue=baseline_value, absoluteDelta=delta, relativeDelta=relative)
+        if variability > limit or bvar > blimit:
+            result.update(decision="unstable", reasonCode="high-variability")
+            return result
+        if "maxIncreasePercent" in metric_policy or "maxDecreasePercent" in metric_policy:
+            result["gate"] = "relative-regression"
+            if baseline_value <= 0:
+                raise ComparatorError("zero-baseline-relative-comparison", "relative API comparison requires a positive baseline")
+            increase = ("maxIncreasePercent" in metric_policy and
+                        relative * 100 > metric_policy["maxIncreasePercent"] and
+                        delta > metric_policy["minimumAbsoluteIncrease"])
+            decrease = ("maxDecreasePercent" in metric_policy and
+                        relative * 100 < -metric_policy["maxDecreasePercent"])
+            if increase or decrease:
+                result.update(decision="regression", reasonCode="relative-budget-exceeded")
+                return result
+        result.update(decision="pass", reasonCode="api-comparison-satisfied")
+        return result
+    except (ComparatorError, KeyError, TypeError, ValueError) as exc:
+        result.update(decision="invalid", reasonCode=getattr(exc, "reason_code", "invalid-api-contract"), message=str(exc))
+        return result
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
