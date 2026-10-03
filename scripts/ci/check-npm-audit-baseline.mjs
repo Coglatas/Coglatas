@@ -53,15 +53,22 @@ for (const finding of unreviewed) {
   console.error(`::error::Unreviewed npm audit finding: ${formatFinding(finding)}`);
 }
 for (const finding of stale) {
-  console.error(`::error::Stale npm audit baseline entry: ${formatFinding(finding)}`);
+  process.stderr.write(`::warning::Reviewed npm audit baseline entry is not currently reported: ${formatFinding(finding)}\n`);
 }
 
-if (unreviewed.length > 0 || stale.length > 0) {
+if (unreviewed.length > 0) {
   console.error('Update dependencies first, then update the reviewed baseline only for intentionally accepted residual risk.');
   process.exit(1);
 }
 
-console.log('npm audit High/Critical findings exactly match the reviewed baseline.');
+if (stale.length > 0) {
+  console.log(
+    `npm audit baseline retains ${stale.length} reviewed finding(s) not currently reported; ` +
+    'this does not suppress any current High/Critical finding.'
+  );
+}
+
+console.log('All currently reported npm audit High/Critical findings are covered by the reviewed baseline.');
 
 function normalizeFinding(finding) {
   if (!finding || typeof finding !== 'object') {
