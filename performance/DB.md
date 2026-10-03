@@ -56,9 +56,10 @@ are uploaded. Unknown capture fields fail before aggregation.
 
 The canonical full-entity Task ID lookup is inspected on the deterministic medium fixture
 with at least 3,000 Task rows, after ANALYZE. `EXPLAIN (FORMAT JSON)` must retain
-the Task primary-key index (`PK_task_items`). Index Scan, Index Only Scan and
-the corresponding bitmap path satisfy the semantic invariant. Costs, text,
-minor-version details and unrelated Seq Scans are not asserted. Only a
+an index equality lookup on the Task `Id` key. Index Scan, Index Only Scan and
+the corresponding bitmap path satisfy the invariant when their index
+condition constrains that key. Equivalent physical index names are accepted.
+Costs, text, minor-version details and unrelated Seq Scans are not asserted. Only a
 boolean result, check ID, allowlisted node types and table cardinality are retained. The planner is
 not forced with `enable_seqscan=off`, and the check is not run on a small table.
 
@@ -169,12 +170,28 @@ open and PR #1046 remains draft/unmerged. Product query/authorization/paging
 remediation is outside this CI-only slice; neither budgets nor scenarios are
 exempted to suppress the failures.
 
+PostgreSQL 18 evidence on candidate `86aaf5a5b0fcd43b54a97e3c3b78562d3e83ce72`
+confirmed the following median command counts for first-page requests:
+
+| Scenario | Small, page 5 | Medium, page 5 | Medium, page 10 | Confirmed failure |
+| --- | ---: | ---: | ---: | --- |
+| Project list | 36 | 44 | 84 | Application paging, query growth/hard ceiling |
+| Task list | 1,452 | 6,252 | 6,252 | Full-project materialization, cardinality growth |
+| Conversation list | 50 | 79 | 119 | Cardinality/page-size growth, hard ceiling |
+| Notification list | 4 | 9 | 9 | Oversized candidate materialization, cardinality growth |
+| Announcement list | 11 | 11 | 16 | Page-size query growth |
+
+Workspace, My Tasks, Files and Message list scenarios passed the structural
+checks. Both collectors completed with fixture version 2. These observations
+are regression evidence, not approved duration baselines or budget relaxations.
+
 ## Validation
 
-Fixture version 2 supplies Workspace-owned Attachment rows for the Files API
+The DB opt-in selects fixture version 2, supplying Workspace-owned Attachment rows for the Files API
 and distinct deterministic Message cursor timestamps after EF's creation-time
 stamping. The version participates in the fixture hash; version-1 baselines
-are incompatible. The host creates the capture directory before starting the
+are incompatible with DB evidence. The base PERF-02/API fixture retains
+version 1 and its established hash when DB capture is disabled. The host creates the capture directory before starting the
 app container so the collector can remove its evidence files.
 
 ```bash

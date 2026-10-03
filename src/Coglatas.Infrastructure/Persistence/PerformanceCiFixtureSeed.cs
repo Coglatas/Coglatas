@@ -16,7 +16,8 @@ namespace Coglatas.Infrastructure.Persistence;
 /// </summary>
 public static class PerformanceCiFixtureSeed
 {
-    public const int FixtureVersion = 2;
+    public const int FixtureVersion = 1;
+    public const int DbFixtureVersion = 2;
     public const string DatabaseName = "coglatas_performance";
     public const string TenantSlugPrefix = "perf-";
     private const int BatchSize = 2_000;
@@ -36,6 +37,7 @@ public static class PerformanceCiFixtureSeed
         string profileName,
         string password,
         string evidencePath,
+        bool dbScenarioFixture = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
@@ -68,7 +70,7 @@ public static class PerformanceCiFixtureSeed
                 $"PERF-02 database is not at migration head. Pending: {string.Join(", ", pendingMigrations)}");
         }
 
-        var profile = await LoadProfileAsync(manifestPath, profileName, cancellationToken);
+        var profile = await LoadProfileAsync(manifestPath, profileName, dbScenarioFixture ? DbFixtureVersion : FixtureVersion, cancellationToken);
         ValidateProfile(profile);
 
         await ResetDedicatedDatabaseAsync(dbContext, cancellationToken);
@@ -80,7 +82,7 @@ public static class PerformanceCiFixtureSeed
         await SeedTasksAsync(dbContext, profile, plan, cancellationToken);
         await SeedDependenciesAsync(dbContext, profile, plan, cancellationToken);
         await SeedConversationsAndMessagesAsync(dbContext, profile, plan, cancellationToken);
-        await StampMessageCursorKeysAsync(dbContext, plan.TenantId, cancellationToken);
+        if (dbScenarioFixture) await StampMessageCursorKeysAsync(dbContext, plan.TenantId, cancellationToken);
         await SeedNotificationsAsync(dbContext, profile, plan, cancellationToken);
         await SeedAnnouncementsAsync(dbContext, profile, plan, cancellationToken);
         await SeedFilesAsync(dbContext, profile, plan, cancellationToken);
@@ -589,7 +591,7 @@ public static class PerformanceCiFixtureSeed
                 SharingVersion = 1,
                 Status = FileObjectStatus.Active
             }, fileId);
-            if (inFocusWorkspace)
+            if (inFocusWorkspace && profile.SelectedFixtureVersion == DbFixtureVersion)
             {
                 AddWithId(dbContext, new Attachment
                 {
@@ -614,12 +616,15 @@ public static class PerformanceCiFixtureSeed
             await FlushIfNeededAsync(dbContext, index + 1, cancellationToken);
         }
         await SaveAndClearAsync(dbContext, cancellationToken);
-        await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
+        if (profile.SelectedFixtureVersion == DbFixtureVersion)
+        {
+            await dbContext.Database.ExecuteSqlInterpolatedAsync($"""
             UPDATE file_objects AS f SET "CreatedAt" = {StableEpoch} + ranked.ordinal * interval '1 millisecond'
             FROM (SELECT "Id", row_number() OVER (ORDER BY "Id") AS ordinal
                   FROM file_objects WHERE "TenantId" = {plan.TenantId}) AS ranked
             WHERE f."Id" = ranked."Id"
             """, cancellationToken);
+        }
     }
 
     private static async Task VerifyFixtureAsync(
@@ -683,13 +688,16 @@ public static class PerformanceCiFixtureSeed
             profile.Focus["workspaceFiles"],
             dbContext.FileObjects.IgnoreQueryFilters().CountAsync(
                 file => file.WorkspaceId == plan.FocusWorkspaceId, cancellationToken));
-        await AssertCountAsync(
+        if (profile.SelectedFixtureVersion == DbFixtureVersion)
+        {
+            await AssertCountAsync(
             "workspaceAttachments",
             profile.Focus["workspaceFiles"],
             dbContext.Attachments.IgnoreQueryFilters().CountAsync(
                 attachment => attachment.WorkspaceId == plan.FocusWorkspaceId &&
                               attachment.OwnerType == AttachmentOwnerType.Workspace &&
                               attachment.OwnerId == plan.FocusWorkspaceId, cancellationToken));
+        }
         await AssertCountAsync(
             "conversations",
             profile.Focus["conversations"],
@@ -700,10 +708,13 @@ public static class PerformanceCiFixtureSeed
             profile.Focus["conversationMessages"],
             dbContext.Messages.IgnoreQueryFilters().CountAsync(
                 message => message.ConversationId == plan.FocusConversationId, cancellationToken));
-        await AssertCountAsync(
+        if (profile.SelectedFixtureVersion == DbFixtureVersion)
+        {
+            await AssertCountAsync(
             "distinctMessageCursorKeys",
             profile.Counts["messages"],
             dbContext.Messages.IgnoreQueryFilters().Select(message => message.CreatedAt).Distinct().CountAsync(cancellationToken));
+        }
         await AssertCountAsync(
             "userNotifications",
             profile.Focus["userNotifications"],
@@ -753,7 +764,7 @@ public static class PerformanceCiFixtureSeed
         var evidence = new
         {
             schemaVersion = 1,
-            fixtureVersion = FixtureVersion,
+            fixtureVersion = profile.SelectedFixtureVersion,
             seedManifestVersion = profile.SeedManifestVersion,
             profile = profile.Name,
             seed = profile.Seed,
@@ -801,6 +812,7 @@ public static class PerformanceCiFixtureSeed
     private static async Task<DatasetProfile> LoadProfileAsync(
         string manifestPath,
         string profileName,
+        int fixtureVersion,
         CancellationToken cancellationToken)
     {
         if (profileName is not ("small" or "medium" or "large"))
@@ -829,7 +841,7 @@ public static class PerformanceCiFixtureSeed
         var focus = ReadIntMap(profileElement.GetProperty("focus"));
         var manifestSha = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
         var canonical = string.Concat(
-            $"fixtureVersion={FixtureVersion}\n",
+            $"fixtureVersion={fixtureVersion}\n",
             $"manifestSha256={manifestSha}\n",
             $"profile={profileName}\n",
             $"seed={seed}\n");
@@ -839,6 +851,7 @@ public static class PerformanceCiFixtureSeed
         return new DatasetProfile(
             profileName,
             seed,
+            fixtureVersion,
             seedManifestVersion,
             fixtureHash,
             counts,
@@ -979,6 +992,7 @@ public static class PerformanceCiFixtureSeed
     private sealed record DatasetProfile(
         string Name,
         int Seed,
+        int SelectedFixtureVersion,
         int SeedManifestVersion,
         string FixtureHash,
         Dictionary<string, int> Counts,

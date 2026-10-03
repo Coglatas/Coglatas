@@ -9,14 +9,14 @@ import re
 import sys
 from pathlib import Path
 
-from common import PerformanceContractError, load_json, repository_root, write_json_atomic, fixture_hash, FIXTURE_VERSION
+from common import PerformanceContractError, load_json, repository_root, write_json_atomic, fixture_hash, DB_FIXTURE_VERSION
 from db_gate import capture_failures, growth_failures, validate_contract
 from compare import compare_documents, summarize, environment_compatibility_key
 
 
 def evaluate(small, medium, contract, expected_sha=None):
     for profile, expected in ((small, "small"), (medium, "medium")):
-        if profile.get("schemaVersion") != 1 or profile.get("fixtureVersion") != FIXTURE_VERSION or profile.get("fixtureHash") != fixture_hash(expected):
+        if profile.get("schemaVersion") != 1 or profile.get("fixtureVersion") != DB_FIXTURE_VERSION or profile.get("fixtureHash") != fixture_hash(expected, fixture_version=DB_FIXTURE_VERSION):
             raise PerformanceContractError("incompatible fixture/schema identity")
         if not re.fullmatch(r"[0-9a-f]{40}", profile.get("headSha", "")):
             raise PerformanceContractError("invalid head identity")
@@ -50,10 +50,10 @@ def evaluate(small, medium, contract, expected_sha=None):
         results.append({"scenario": scenario["id"], "metric": "db.query_growth", "failures": growth, "decision": "regression" if growth else "pass"})
     for check in contract["planChecks"]:
         matches = [p for p in medium["plans"] if p["id"] == check["id"]]
-        if len(matches) != 1 or matches[0]["tableRows"] < check["minimumTableRows"] or type(matches[0]["requiredIndexPresent"]) is not bool:
+        if len(matches) != 1 or matches[0]["tableRows"] < check["minimumTableRows"] or type(matches[0]["requiredKeyLookupPresent"]) is not bool:
             raise PerformanceContractError("missing/invalid selected plan invariant")
-        satisfied = matches[0]["requiredIndexPresent"]
-        results.append({"scenario": check["id"], "metric": "db.plan_invariant", "decision": "pass" if satisfied else "regression", "failures": [] if satisfied else ["required-index-missing"]})
+        satisfied = matches[0]["requiredKeyLookupPresent"]
+        results.append({"scenario": check["id"], "metric": "db.plan_invariant", "decision": "pass" if satisfied else "regression", "failures": [] if satisfied else ["required-key-index-lookup-missing"]})
     return {"schemaVersion": 1, "headSha": small["headSha"], "decision": "regression" if any(r["decision"] != "pass" for r in results) else "pass", "results": results}
 
 

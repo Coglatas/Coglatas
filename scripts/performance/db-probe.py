@@ -73,7 +73,7 @@ EXPLAIN (FORMAT JSON) SELECT * FROM task_items WHERE "Id" = '{task_id}'::uuid;''
     if count < check["minimumTableRows"]:
         raise PerformanceContractError("selected plan fixture is too small")
     plan = json.loads(plan_text)
-    satisfied = plan_invariant(plan, check["relation"], check["requiredIndex"])
+    satisfied = plan_invariant(plan, check["relation"], check["keyColumn"])
     # Do not save query text, conditions, planner literals, or the full plan.
     def node_types(value):
         if isinstance(value, list):
@@ -83,7 +83,7 @@ EXPLAIN (FORMAT JSON) SELECT * FROM task_items WHERE "Id" = '{task_id}'::uuid;''
         allowed = {"Index Scan", "Index Only Scan", "Bitmap Index Scan", "Bitmap Heap Scan", "Seq Scan", "Result", "Gather"}
         own = {value["Node Type"]} if value.get("Node Type") in allowed else set()
         return own | set().union(*(node_types(item) for key, item in value.items() if key in {"Plan", "Plans"}))
-    return {"id": check["id"], "tableRows": count, "requiredIndexPresent": satisfied, "observedNodeTypes": sorted(node_types(plan)), "decision": "pass" if satisfied else "regression"}
+    return {"id": check["id"], "tableRows": count, "requiredKeyLookupPresent": satisfied, "observedNodeTypes": sorted(node_types(plan)), "decision": "pass" if satisfied else "regression"}
 
 
 def collect(args, contract):

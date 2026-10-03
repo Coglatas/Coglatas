@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-FIXTURE_VERSION = 2
+FIXTURE_VERSION = 1
+DB_FIXTURE_VERSION = 2
 SAFE_TARGET_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "performance-app", "coglatas-performance"})
 REQUIRED_COUNTS = frozenset({
     "tenants", "workspaces", "projects", "tasks", "workItems", "milestones",
@@ -74,12 +75,16 @@ def load_profile(profile_name: str, manifest_path: Path | None = None) -> tuple[
     return document, profile
 
 
-def fixture_hash(profile_name: str, manifest_path: Path | None = None) -> str:
+def active_fixture_version() -> int:
+    return DB_FIXTURE_VERSION if os.environ.get("COGLATAS_PERFORMANCE_DB_CAPTURE_ENABLED", "false").lower() == "true" else FIXTURE_VERSION
+
+
+def fixture_hash(profile_name: str, manifest_path: Path | None = None, *, fixture_version: int | None = None) -> str:
     path = manifest_path or repository_root() / "performance" / "datasets.json"
     _, profile = load_profile(profile_name, path)
     manifest_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
     canonical = (
-        f"fixtureVersion={FIXTURE_VERSION}\n"
+        f"fixtureVersion={active_fixture_version() if fixture_version is None else fixture_version}\n"
         f"manifestSha256={manifest_sha256}\n"
         f"profile={profile_name}\n"
         f"seed={profile['seed']}\n"
@@ -114,7 +119,7 @@ def validate_fixture_evidence(
     expected_hash = fixture_hash(profile_name, manifest_path)
     required = {
         "schemaVersion": 1,
-        "fixtureVersion": FIXTURE_VERSION,
+        "fixtureVersion": active_fixture_version(),
         "seedManifestVersion": document["seedManifestVersion"],
         "profile": profile_name,
         "seed": profile["seed"],

@@ -34,5 +34,22 @@
     "regressionOnlyCauseForbidden": true
   },
   "baselineUpdates": [],
-  "budgetRelaxations": []
+  "budgetRelaxations": [
+    {
+      "budgetId": "perf04.task.list.api.latency.p50_ms.ceiling",
+      "scenarioId": "task.list",
+      "metric": "api.latency.p50_ms",
+      "reason": "The initial one-second default is below the unchanged main task-list latency. Calibrate only this route to a coarse two-second hard ceiling. Keep the exact baseline SHA, all other ceilings, 50 percent relative regression, 100 ms noise floor, zero error/timeout budgets, five independent trials, and variability policy unchanged. A new real benchmark run is required for acceptance.",
+      "cause": "contract-recalibration",
+      "beforeEvidence": [
+        "performance/evidence/perf04-task-list-calibration.json#/before",
+        "https://github.com/NYGsatoshi/Coglatas/actions/runs/37131685778/artifacts/11276968542"
+      ],
+      "afterEvidence": [
+        "performance/evidence/perf04-task-list-calibration.json#/afterPolicyReplay"
+      ],
+      "oldValue": 1000,
+      "newValue": 2000
+    }
+  ]
 }

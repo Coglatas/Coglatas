@@ -60,6 +60,12 @@ function realBackendPlaywrightRunArgs() {
   if (composeEnv.COGLATAS_REAL_BACKEND_P0_SETUP === '1') {
     args.push('--env', 'COGLATAS_REAL_BACKEND_P0_SETUP=1');
   }
+  if (composeEnv.COGLATAS_FUNCTIONAL_FILES_GATE) {
+    if (!['functional-fast', 'functional-full'].includes(composeEnv.COGLATAS_FUNCTIONAL_FILES_GATE)) {
+      throw new Error('Invalid FCI-05 Files owner gate.');
+    }
+    args.push('--env', `COGLATAS_FUNCTIONAL_FILES_GATE=${composeEnv.COGLATAS_FUNCTIONAL_FILES_GATE}`);
+  }
   args.push('real-backend-playwright');
   return args;
 }

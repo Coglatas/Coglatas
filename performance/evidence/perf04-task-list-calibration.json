@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Initial task.list p50 contract calibration; policy replay of original evidence, not a new benchmark run.",
+  "sourceRunUrl": "https://github.com/NYGsatoshi/Coglatas/actions/runs/37131685778",
+  "sourceArtifactId": 11276968542,
+  "artifactSha256": "70a7096362e65c4643619be9389b67f61989749ad493357a9b0b447f50970285",
+  "headSha": "fc4aa85eccf84f29f105d033d0e2c3e6a9e7901e",
+  "baselineSha": "bb6d04351a55a954b01e5e732add3ba8a366cdb9",
+  "contractHashAtMeasurement": "0105c73e2b54cf11473f7d136144e30363c15184caf6df9b59428e673fc477ae",
+  "fixtureHash": "38068f866e6661482054dd84b6f210dd4f6abbf62898c6bfd79ebf78cb84cc66",
+  "environmentCompatibilityKey": "c240c54476bc76655339f91c78f879989d924c9df8b577eadb5e728325b35348",
+  "scenario": "task.list",
+  "metric": "api.latency.p50_ms",
+  "unit": "ms",
+  "profile": {
+    "fixture": "small",
+    "vus": 1,
+    "iterations": 20,
+    "warmupIterations": 2,
+    "maxDuration": "120s",
+    "requestTimeout": "10s"
+  },
+  "baselineSamples": [
+    1191.658024,
+    1187.3336825000001,
+    1242.9929084999999,
+    1211.0768805,
+    1241.746488
+  ],
+  "currentSamples": [
+    1186.2861025000002,
+    1199.804463,
+    1187.6916945,
+    1205.581228,
+    1202.0022695
+  ],
+  "before": {
+    "ceiling": 1000,
+    "decision": "regression",
+    "reasonCode": "hard-ceiling-exceeded",
+    "passingMetricCount": 77,
+    "totalMetricCount": 78
+  },
+  "afterPolicyReplay": {
+    "ceiling": 2000,
+    "decision": "pass",
+    "passingMetricCount": 78,
+    "totalMetricCount": 78,
+    "taskListResult": {
+      "schemaVersion": 1,
+      "scenario": "task.list",
+      "metric": "api.latency.p50_ms",
+      "gate": "relative-regression",
+      "unit": "ms",
+      "headSha": "fc4aa85eccf84f29f105d033d0e2c3e6a9e7901e",
+      "baselineSha": "bb6d04351a55a954b01e5e732add3ba8a366cdb9",
+      "sampleCount": 5,
+      "summary": {
+        "min": 1186.2861025000002,
+        "max": 1205.581228,
+        "median": 1199.804463,
+        "p50": 1199.804463,
+        "p95": 1204.8654363,
+        "p99": 1205.43806966,
+        "mad": 5.7767650000000685,
+        "cv": 0.006532197056144075,
+        "relativeMad": 0.0048147553856866,
+        "range": 19.295125499999813,
+        "variabilityKind": "relative-mad",
+        "variabilityValue": 0.0048147553856866,
+        "variabilityLimit": 0.2
+      },
+      "baseline": {
+        "sampleCount": 5,
+        "summary": {
+          "min": 1187.3336825000001,
+          "max": 1242.9929084999999,
+          "median": 1211.0768805,
+          "p50": 1211.0768805,
+          "p95": 1242.7436244,
+          "p99": 1242.9430516799998,
+          "mad": 23.743197999999893,
+          "cv": 0.01956291369008906,
+          "relativeMad": 0.019605029525621345,
+          "range": 55.65922599999976,
+          "variabilityKind": "relative-mad",
+          "variabilityValue": 0.019605029525621345,
+          "variabilityLimit": 0.2
+        }
+      },
+      "currentValue": 1199.804463,
+      "baselineValue": 1211.0768805,
+      "absoluteDelta": -11.272417500000074,
+      "relativeDelta": -0.009307763760915156,
+      "budget": {
+        "unit": "ms",
+        "ceiling": 2000,
+        "maxIncreasePercent": 50,
+        "minimumAbsoluteIncrease": 100
+      },
+      "decision": "pass",
+      "reasonCode": "api-comparison-satisfied",
+      "message": null,
+      "attempt": 1,
+      "rerun": {
+        "allowed": false,
+        "maxReruns": 1,
+        "remaining": 0,
+        "preserveAttempts": true
+      },
+      "environmentCompatibilityKey": "c240c54476bc76655339f91c78f879989d924c9df8b577eadb5e728325b35348",
+      "fixture": {
+        "profile": "small",
+        "hash": "38068f866e6661482054dd84b6f210dd4f6abbf62898c6bfd79ebf78cb84cc66",
+        "version": 1
+      }
+    }
+  },
+  "reason": "The initial one-second default is below the unchanged main task-list latency. Calibrate only this route to a coarse two-second hard ceiling. Keep the exact baseline SHA, all other ceilings, 50 percent relative regression, 100 ms noise floor, zero error/timeout budgets, five independent trials, and variability policy unchanged. A new real benchmark run is required for acceptance."
+}

@@ -1,6 +1,6 @@
 # Performance CI contract and environment (PERF-01 / PERF-02)
 
-This directory is the versioned contract for Performance CI. It defines what is measured, the deterministic workload shapes, the metrics collected, and which results may block CI. PERF-02 adds the isolated execution foundation; k6/Lighthouse scenario implementation and product-code performance changes remain separate work.
+This directory is the versioned contract for Performance CI. It defines what is measured, the deterministic workload shapes, the metrics collected, and which results may block CI. PERF-02 adds the isolated execution foundation; PERF-04 adds the pinned API k6 harness documented in [API-K6.md](API-K6.md). Lighthouse scenarios and product-code performance changes remain separate work.
 
 JSON is used so validation can run with the Python standard library already available in CI. The parser rejects non-standard numeric constants such as `Infinity` and `NaN` and produces a deterministic summary.
 
@@ -44,7 +44,7 @@ Gate classes are:
 - `trend-only`: record but do not block while variance/baselines mature;
 - `extended-only`: collect only in nightly or explicitly requested runs.
 
-The initial contract does not invent millisecond SLOs. Latency and DB/runtime values remain trend/extended-only until repeatable measurements establish baselines. The only initial hard ceiling is the existing Angular production initial-bundle `maximumError` of `1.02MB` from `frontend/angular.json`.
+The initial contract does not invent millisecond SLOs. Latency and DB/runtime values remain trend/extended-only until repeatable measurements establish baselines. PERF-04 later adds coarse API regression budgets in `api-k6.json` and the shared PERF-03 comparator; see [API-K6.md](API-K6.md). The only initial hard ceiling was the existing Angular production initial-bundle `maximumError` of `1.02MB` from `frontend/angular.json`.
 
 A relative-regression budget is invalid unless it names an approved baseline identity, SHA, date, evidence, and comparison rule. A budget without rationale/baseline metadata is invalid. `Infinity`, `NaN`, missing samples, timeouts, effectively-disabled thresholds, and average-only latency gates are forbidden by policy. Tiny GitHub-hosted runner deltas are not blocking until a stable relative envelope is explicitly approved.
 

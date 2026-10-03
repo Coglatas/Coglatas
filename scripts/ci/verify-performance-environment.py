@@ -41,7 +41,11 @@ def main() -> int:
 
     environment = json.loads(environment_path.read_text(encoding="utf-8"))
     if environment.get("schemaVersion") != 1 or environment.get("fixtureVersion") != common.FIXTURE_VERSION:
-        fail("environment schema/fixture version must match the current PERF-02 contract")
+        fail("environment schemaVersion/fixtureVersion must match the current fixture contract")
+    require_text(seed_path.read_text(encoding="utf-8"), f"public const int FixtureVersion = {common.FIXTURE_VERSION};", str(seed_path.relative_to(ROOT)))
+    if environment.get("dbFixtureVersion") != common.DB_FIXTURE_VERSION:
+        fail("DB fixture version must match the current DB scenario contract")
+    require_text(seed_path.read_text(encoding="utf-8"), f"public const int DbFixtureVersion = {common.DB_FIXTURE_VERSION};", str(seed_path.relative_to(ROOT)))
     target = environment.get("target")
     if not isinstance(target, dict):
         fail("target contract is missing")

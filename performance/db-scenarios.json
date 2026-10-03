@@ -23,5 +23,5 @@
     {"id":"notification.list","path":"/api/notifications","focus":"userNotifications","paged":true,"rootTable":"notifications","paginationParameter":"pageSize","currentDebt":"DbNotificationService checks current target visibility in batches with per-item resolution."},
     {"id":"announcement.list","path":"/api/announcements","focus":"visibleAnnouncements","paged":true,"rootTable":"announcements","paginationParameter":"pageSize","currentDebt":"AnnouncementService.ListAsync reads confirmation state per Announcement."}
   ],
-  "planChecks": [{"id":"task.primary-key-lookup","profile":"medium","minimumTableRows":3000,"relation":"task_items","requiredIndex":"PK_task_items","rationale":"The canonical Task detail/authorization lookup by Task ID must retain its primary-key index on the deterministic medium fixture; no blanket Seq Scan ban or exact plan comparison."}]
+  "planChecks": [{"id":"task.id-index-lookup","profile":"medium","minimumTableRows":3000,"relation":"task_items","keyColumn":"Id","rationale":"The canonical Task detail/authorization lookup by Task ID must retain an index equality lookup on its ID on the deterministic medium fixture; equivalent index names are accepted; no blanket Seq Scan ban or exact plan comparison."}]
 }

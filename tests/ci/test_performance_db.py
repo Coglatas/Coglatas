@@ -88,15 +88,18 @@ class PerformanceDbGateTests(unittest.TestCase):
             validate_capture(invalid)
 
     def test_selected_plan_semantics_ignore_costs_minor_versions_and_unrelated_seq_scan(self):
-        index = {"Node Type": "Index Scan", "Relation Name": "task_items", "Index Name": "PK_task_items", "Total Cost": 99, "Filter": "protected"}
+        index = {"Node Type": "Index Scan", "Relation Name": "task_items", "Index Name": "PK_task_items", "Index Cond": '("Id" = protected)', "Total Cost": 99, "Filter": "protected"}
         plan = [{"Plan": {"Node Type": "Nested Loop", "Plans": [index, {"Node Type": "Seq Scan", "Relation Name": "small_table"}]}}]
-        self.assertTrue(plan_invariant(plan, "task_items", "PK_task_items"))
+        self.assertTrue(plan_invariant(plan, "task_items", "Id"))
         index["Total Cost"] = 999
-        self.assertTrue(plan_invariant(plan, "task_items", "PK_task_items"))
-        index["Index Name"] = "wrong_index"
-        self.assertFalse(plan_invariant(plan, "task_items", "PK_task_items"))
-        bitmap = {"Node Type": "Bitmap Heap Scan", "Relation Name": "task_items", "Plans": [{"Node Type": "Bitmap Index Scan", "Index Name": "PK_task_items"}]}
-        self.assertTrue(plan_invariant(bitmap, "task_items", "PK_task_items"))
+        self.assertTrue(plan_invariant(plan, "task_items", "Id"))
+        index["Index Name"] = "equivalent_index"
+        self.assertTrue(plan_invariant(plan, "task_items", "Id"))
+        index["Index Cond"] = '("TenantId" = protected)'
+        self.assertFalse(plan_invariant(plan, "task_items", "Id"))
+        bitmap = {"Node Type": "Bitmap Heap Scan", "Relation Name": "task_items", "Plans": [{"Node Type": "Bitmap Index Scan", "Index Name": "equivalent_index", "Index Cond": '("Id" = protected)'}]}
+        self.assertTrue(plan_invariant(bitmap, "task_items", "Id"))
+        self.assertFalse(plan_invariant([{"Plan": {"Node Type": "Seq Scan", "Relation Name": "task_items"}}], "task_items", "Id"))
 
     def test_high_baseline_outlier_cannot_hide_repeated_n_plus_one(self):
         small = self.profile(60, {5: 4, 10: 4})

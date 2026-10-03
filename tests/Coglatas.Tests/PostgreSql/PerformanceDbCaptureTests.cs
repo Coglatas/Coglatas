@@ -57,9 +57,9 @@ public sealed class PerformanceDbCaptureTests
     public async Task ConcurrentExecutionContextsHaveIndependentMeasurements()
     {
         using var capture = new PerformanceDbCapture();
-        static Task<int> ObserveAsync(PerformanceDbCapture capture) => Task.Run(async () =>
+        static async Task<int> MeasureAsync(PerformanceDbCapture observer)
         {
-            using var measurement = capture.Begin();
+            using var measurement = observer.Begin();
             await Task.Yield();
             using var source = new ActivitySource("Npgsql");
             using (var activity = source.StartActivity())
@@ -68,12 +68,9 @@ public sealed class PerformanceDbCaptureTests
                 activity.SetTag("db.query.text", "SELECT 1");
             }
             return measurement.Snapshot().Count;
-        });
-        var tasks = new List<Task<int>>();
-        for (var index = 0; index < 5; index++)
-        {
-            tasks.Add(ObserveAsync(capture));
         }
+        var tasks = new List<Task<int>>();
+        for (var index = 0; index < 5; index++) tasks.Add(MeasureAsync(capture));
         Assert.All(await Task.WhenAll(tasks), count => Assert.Equal(1, count));
     }
 
@@ -87,12 +84,12 @@ public sealed class PerformanceDbCaptureTests
         {
             await setup.ExecuteNonQueryAsync();
         }
-        static async Task<int> CountAsync(PerformanceDbCapture capture, NpgsqlConnection connection, int cardinality, bool batched)
+        static async Task<int> CountAsync(PerformanceDbCapture observer, NpgsqlConnection dbConnection, int cardinality, bool batched)
         {
-            using var measurement = capture.Begin();
+            using var measurement = observer.Begin();
             if (batched)
             {
-                await using var command = new NpgsqlCommand("SELECT id FROM perf05_rows WHERE id <= @count ORDER BY id", connection);
+                await using var command = new NpgsqlCommand("SELECT id FROM perf05_rows WHERE id <= @count ORDER BY id", dbConnection);
                 command.Parameters.AddWithValue("count", cardinality);
                 await using var reader = await command.ExecuteReaderAsync();
                 while (await reader.ReadAsync()) { }
@@ -101,7 +98,7 @@ public sealed class PerformanceDbCaptureTests
             {
                 for (var id = 1; id <= cardinality; id++)
                 {
-                    await using var command = new NpgsqlCommand("SELECT id FROM perf05_rows WHERE id = @id", connection);
+                    await using var command = new NpgsqlCommand("SELECT id FROM perf05_rows WHERE id = @id", dbConnection);
                     command.Parameters.AddWithValue("id", id);
                     await command.ExecuteScalarAsync();
                 }

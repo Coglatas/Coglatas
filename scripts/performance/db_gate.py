@@ -52,6 +52,9 @@ def validate_contract(contract: dict, inventory: dict) -> None:
             raise PerformanceContractError("invalid pagination contract")
     if not contract["planChecks"]:
         raise PerformanceContractError("missing selected plan invariant")
+    for check in contract["planChecks"]:
+        if check["profile"] != "medium" or check["relation"] != "task_items" or check["keyColumn"] != "Id" or check["minimumTableRows"] < 3000:
+            raise PerformanceContractError("invalid selected key-lookup invariant")
 
 
 def validate_capture(raw: dict) -> dict:
@@ -132,17 +135,21 @@ def growth_failures(small: dict, medium: dict, policy: dict) -> list[str]:
     return sorted(set(failures))
 
 
-def plan_invariant(plan: Any, relation: str, required_index: str) -> bool:
+def plan_invariant(plan: Any, relation: str, key_column: str) -> bool:
     if isinstance(plan, list):
-        return any(plan_invariant(item, relation, required_index) for item in plan)
+        return any(plan_invariant(item, relation, key_column) for item in plan)
     if not isinstance(plan, dict):
         return False
-    if plan.get("Relation Name") == relation and plan.get("Index Name") == required_index and plan.get("Node Type") in {"Index Scan", "Index Only Scan", "Bitmap Index Scan"}:
+    # Require a selective equality lookup on the expected key. The planner may
+    # choose any equivalent index; its physical name is not a semantic invariant.
+    condition = plan.get("Index Cond", "")
+    key_lookup = isinstance(condition, str) and re.search(r'(?:"' + re.escape(key_column) + r'"|\b' + re.escape(key_column) + r'\b)\s*=', condition) is not None
+    if plan.get("Relation Name") == relation and key_lookup and plan.get("Node Type") in {"Index Scan", "Index Only Scan"}:
         return True
     # Bitmap Index Scan omits the relation, which is supplied by its heap parent.
     if plan.get("Relation Name") == relation and plan.get("Node Type") == "Bitmap Heap Scan":
-        return any(child.get("Node Type") == "Bitmap Index Scan" and child.get("Index Name") == required_index for child in plan.get("Plans", []))
-    return any(plan_invariant(value, relation, required_index) for key, value in plan.items() if key in {"Plan", "Plans"})
+        return any(child.get("Node Type") == "Bitmap Index Scan" and plan_invariant(child | {"Relation Name": relation, "Node Type": "Index Scan"}, relation, key_column) for child in plan.get("Plans", []))
+    return any(plan_invariant(value, relation, key_column) for key, value in plan.items() if key in {"Plan", "Plans"})
 
 
 def fingerprint_counts(capture: dict) -> dict[str, int]:

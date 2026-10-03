@@ -119,7 +119,8 @@ internal sealed class PerformanceCiFixtureHostedService(
             profile,
             password,
             evidencePath,
-            cancellationToken);
+            dbScenarioFixture: configuration.GetValue<bool>("COGLATAS_PERFORMANCE_DB_CAPTURE_ENABLED"),
+            cancellationToken: cancellationToken);
 
         _seeded = true;
     }
