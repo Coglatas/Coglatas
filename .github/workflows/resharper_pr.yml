@@ -67,6 +67,10 @@ jobs:
               name = Path(path).name.lower()
               return (
                   lower.endswith((".cs", ".csproj", ".fsproj", ".vbproj", ".props", ".targets", ".sln", ".slnx", ".dotsettings"))
+                  or path in {
+                      ".github/workflows/resharper_pr.yml",
+                      "scripts/quality/check-resharper-pr-sarif.py",
+                  }
                   or name in {
                       ".editorconfig",
                       "global.json",
