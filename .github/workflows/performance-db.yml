@@ -11,6 +11,9 @@ on:
       producer_run_id:
         type: string
         default: ""
+      producer_result:
+        type: string
+        default: ""
       target_sha:
         type: string
         default: ""
@@ -58,10 +61,15 @@ jobs:
         env:
           REUSE_MAIN_ARTIFACTS: ${{ inputs.reuse_main_artifacts && 'true' || 'false' }}
           REQUESTED_RUN_ID: ${{ inputs.producer_run_id }}
+          PRODUCER_RESULT: ${{ inputs.producer_result }}
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
         run: |
           if [[ "$REUSE_MAIN_ARTIFACTS" == true ]]; then
+            [[ "$PRODUCER_RESULT" == success ]] || {
+              echo "Required main runtime artifact producer did not succeed." >&2
+              exit 1
+            }
             run_id="${REQUESTED_RUN_ID:-$GITHUB_RUN_ID}"
             [[ "$run_id" =~ ^[0-9]+$ ]]
           else

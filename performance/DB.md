@@ -115,6 +115,10 @@ main push at the exact target SHA, requires the runtime assembler job to have
 succeeded and its artifact to remain available, then verifies the source and
 .NET stamps during restoration. Missing artifacts fail; they never trigger
 an implicit licensed rebuild. No build credential is needed by this lane.
+The main caller runs even when its producer failed or skipped: an explicit
+unrelated route still yields not-applicable, while required reuse first
+requires the producer result to be success. A failed producer's leftover
+artifact cannot satisfy the required lane.
 
 Collectors, fingerprints, routing, and aggregation must all match the tested
 workflow SHA. For PRs this is GitHub's tested merge revision, which differs
@@ -146,9 +150,9 @@ claim of full Issue acceptance or green CI may be based on local unit tests.
 
 ### Latest executed evidence and remaining blockers
 
-Draft head `8ee0bf8bc2a4d8c555b3b77a77f628b3bca469d0` tested merge SHA
-`51df14775292e54b41d99a88f76ce46db6cdd529`. Both collectors succeeded in
-[run 37137018988](https://github.com/NYGsatoshi/Coglatas/actions/runs/37137018988);
+Draft head `3636c378831e00243858239ce34d8c1b81e2ec7e` tested merge SHA
+`d1ea51ce1edbd7428b10c72701ca1088f79db6b2`. Routing and both collectors succeeded in
+[run 37161098932](https://github.com/NYGsatoshi/Coglatas/actions/runs/37161098932);
 the aggregate reported twelve failed product checks:
 
 - Project lists lacked ordered DB paging; the medium profile also exceeded
@@ -166,8 +170,10 @@ The selected `task.id-index-lookup` semantic invariant passed in that run.
 The earlier head `86aaf5a5b0fcd43b54a97e3c3b78562d3e83ce72` had failed a
 physical-index-name assertion despite using an Index Scan. The updated invariant
 requires a selective indexed equality on Task `Id` and now has executed proof;
-no product index or planner setting was changed. Index category diagnostics
-are introduced by this repair and still require a new executed candidate.
+no product index or planner setting was changed. The medium diagnostic reported
+only `task-project-key`, with an Index Scan on 3,000 rows. The persisted route,
+structural result and final gate all match the tested merge SHA and workflow
+run/attempt. The final aggregate remains `regression`.
 
 These results belong to the previously executed candidate. The CI-only
 repair of routing, source binding, image reuse, fixture metadata and static
