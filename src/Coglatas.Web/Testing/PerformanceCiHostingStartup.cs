@@ -2,7 +2,6 @@ using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
 using Coglatas.Domain.Enums;
 using Coglatas.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 [assembly: HostingStartup(typeof(Coglatas.Web.Testing.PerformanceCiHostingStartup))]
 
@@ -120,7 +119,8 @@ internal sealed class PerformanceCiFixtureHostedService(
             profile,
             password,
             evidencePath,
-            cancellationToken);
+            dbScenarioFixture: configuration.GetValue<bool>("COGLATAS_PERFORMANCE_DB_CAPTURE_ENABLED"),
+            cancellationToken: cancellationToken);
 
         _seeded = true;
     }

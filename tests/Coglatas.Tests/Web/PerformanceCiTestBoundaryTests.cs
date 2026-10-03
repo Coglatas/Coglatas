@@ -82,7 +82,7 @@ public sealed class PerformanceCiTestBoundaryTests
             filter.Configure(pipeline => pipeline.Run(context =>
             {
                 using var source = new ActivitySource("Npgsql");
-                using (var activity = source.StartActivity("query"))
+                using (var activity = source.StartActivity())
                 {
                     Assert.NotNull(activity);
                     activity.SetTag("db.query.text", "SELECT 'protected-body' FROM task_items LIMIT 5");
