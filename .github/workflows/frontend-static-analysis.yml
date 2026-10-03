@@ -7,6 +7,12 @@ on:
       - ".github/workflows/frontend-static-analysis.yml"
       - "package.json"
       - "package-lock.json"
+      # Match the repository-wide JavaScript and stylesheet inspection targets.
+      - "**/*.js"
+      - "**/*.mjs"
+      - "**/*.cjs"
+      - "**/*.css"
+      - "**/*.scss"
       - "frontend/**"
       - "tests/**/*.ts"
       - "*.ts"
