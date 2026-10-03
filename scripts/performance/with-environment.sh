@@ -65,6 +65,12 @@ fi
 
 mkdir -p "$EVIDENCE_DIR"
 EVIDENCE_DIR="$(cd "$EVIDENCE_DIR" && pwd)"
+# The host collector must be able to unlink files written by the app container.
+# Create the capture directory here so it remains owned by the runner.
+if [[ "${COGLATAS_PERFORMANCE_DB_CAPTURE_ENABLED:-false}" == "true" ]]; then
+  mkdir -p "$EVIDENCE_DIR/db-captures"
+  rm -f "$EVIDENCE_DIR/db-captures/"*.json "$EVIDENCE_DIR/db-captures/"*.tmp
+fi
 export COGLATAS_PERFORMANCE_PROFILE="$PROFILE"
 export COGLATAS_PERFORMANCE_PORT="$PORT"
 export COGLATAS_PERFORMANCE_EVIDENCE_DIR="$EVIDENCE_DIR"
