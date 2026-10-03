@@ -7,7 +7,11 @@
     "allowEffectivelyDisabledThresholds": false,
     "allowAverageOnlyLatencyGate": false,
     "githubHostedRunnerTinyDeltaBlocking": false,
-    "budgetRelaxationRequires": ["reason", "beforeEvidence", "afterEvidence"]
+    "budgetRelaxationRequires": [
+      "reason",
+      "beforeEvidence",
+      "afterEvidence"
+    ]
   },
   "budgets": [
     {
@@ -15,16 +19,24 @@
       "scenarioId": "auth.session-bootstrap",
       "metric": "build.initial_bundle_size",
       "gate": "hard-ceiling",
-      "limit": {"value": 1.02, "unit": "MB"},
+      "limit": {
+        "value": 1.02,
+        "unit": "MB"
+      },
       "rationale": "Mirrors the existing Angular production maximumError budget instead of inventing an unmeasured latency SLO.",
       "baseline": {
         "identity": "main@79efe27722e3b9c2ddc2d6d5eed5010299e4df32",
         "sha": "79efe27722e3b9c2ddc2d6d5eed5010299e4df32",
         "date": "2026-09-04",
         "sourceKind": "existing-product-contract",
-        "evidence": ["frontend/angular.json"]
+        "evidence": [
+          "frontend/angular.json"
+        ]
       }
     }
   ],
-  "relativeRegressionBaselines": []
+  "relativeRegressionBaselines": [],
+  "adapterBudgetContracts": {
+    "api": "performance/api-k6.json"
+  }
 }

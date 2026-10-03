@@ -98,7 +98,10 @@ export function normalizeExitCode(code) {
  * one invocation silently discovers no migrated owner tests.
  */
 // eslint-disable-next-line func-style -- Keep this public helper consistent with the module's existing exported function declarations while preventing new lint debt.
-export function buildRealBackendPlaywrightPlan(userArgs = [], focusedGrep = '') {
+export function buildRealBackendPlaywrightPlan(userArgs = [], focusedGrep = '', filesGate = '') {
+  if (filesGate && !['functional-fast', 'functional-full'].includes(filesGate)) {
+    throw new Error('Files owner gate must be functional-fast or functional-full.');
+  }
   const grepArgs = [];
   if (focusedGrep.trim()) {
     grepArgs.push('--grep', focusedGrep.trim());
@@ -108,15 +111,22 @@ export function buildRealBackendPlaywrightPlan(userArgs = [], focusedGrep = '') 
   }
 
   if (grepArgs.length) {
-    return [{
+    const legacyRun = {
       name: 'focused legacy real-backend suite',
       args: [...DEFAULT_LEGACY_PLAYWRIGHT_ARGS, ...grepArgs]
-    }];
+    };
+    return filesGate ? [{
+      name: 'FCI-05 Files owner',
+      functionalGate: filesGate,
+      args: ['--config', 'playwright.functional.config.ts', 'files/files-fast-journey.spec.ts',
+        '--project=functional-chromium', '--retries=0', '--workers=1'],
+    }, legacyRun] : [legacyRun];
   }
 
   return [
     {
       name: 'Functional real-backend owners',
+      functionalGate: 'functional-full',
       args: [...DEFAULT_FUNCTIONAL_PLAYWRIGHT_ARGS]
     },
     {

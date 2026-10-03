@@ -4,6 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 4173);
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
+const skipFrontendBuild = process.env.PLAYWRIGHT_SKIP_BUILD === "1";
 const publicHttpsSmoke = process.env.COGLATAS_PUBLIC_HTTPS_SMOKE === "1";
 const expectTimeout = publicHttpsSmoke || process.env.COGLATAS_REAL_BACKEND_SMOKE === "1" ? 15_000 : 5_000;
 const snapshotPathTemplate = process.env.CI
@@ -124,7 +125,9 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
-        command: `npm --prefix frontend run build && node tests/ui/serve-static.mjs --port ${port}`,
+        command: skipFrontendBuild
+          ? `node tests/ui/serve-static.mjs --port ${port}`
+          : `npm --prefix frontend run build && node tests/ui/serve-static.mjs --port ${port}`,
         url: `${baseURL}/health`,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
