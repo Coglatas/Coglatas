@@ -120,14 +120,43 @@ public sealed class PerformanceDbCapture : DbCommandInterceptor, IDisposable
         public static SqlShape Inspect(string sql)
         {
             var canonical = new StringBuilder();
-            var outer = new List<string>();
-            var depth = 0;
+            var tokens = new List<string>();
             foreach (Match match in Tokens.Matches(sql))
             {
                 var token = match.Value;
                 if (token.StartsWith("--", StringComparison.Ordinal) || token.StartsWith("/*", StringComparison.Ordinal)) continue;
                 if (token.StartsWith('\'') || token.StartsWith("E'", StringComparison.OrdinalIgnoreCase) || token.StartsWith('$') || token.StartsWith('@') || char.IsDigit(token[0])) token = "?";
                 canonical.Append(token.ToLowerInvariant()).Append(' ');
+                tokens.Add(token);
+            }
+            var (rootTable, bounded, ordered) = InspectQuery(tokens);
+            var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString()))).ToLowerInvariant();
+            return new SqlShape(fingerprint, rootTable, bounded, ordered);
+        }
+
+        private static (string? RootTable, bool Bounded, bool Ordered) InspectQuery(List<string> tokens)
+        {
+            var outer = new List<string>();
+            List<string>? derived = null;
+            var depth = 0;
+            for (var index = 0; index < tokens.Count; index++)
+            {
+                var token = tokens[index];
+                // EF pages the collection inside a derived FROM before joining
+                // related rows. Only this root source can supply page clauses;
+                // predicates, scalar subqueries and JOIN sources cannot.
+                if (depth == 0 && token == "(" && outer.LastOrDefault()?.Equals("FROM", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    var end = index + 1;
+                    var nesting = 1;
+                    while (end < tokens.Count && nesting > 0)
+                    {
+                        if (tokens[end] == "(") nesting++;
+                        if (tokens[end] == ")") nesting--;
+                        end++;
+                    }
+                    if (nesting == 0) derived = tokens.GetRange(index + 1, end - index - 2);
+                }
                 if (token == ")") depth--;
                 if (depth == 0) outer.Add(token);
                 if (token == "(") depth++;
@@ -137,8 +166,14 @@ public sealed class PerformanceDbCapture : DbCommandInterceptor, IDisposable
             var rootTable = table is not null && Tables.Contains(table) ? table : null;
             var bounded = outer.Any(token => token.Equals("LIMIT", StringComparison.OrdinalIgnoreCase));
             var ordered = outer.Zip(outer.Skip(1)).Any(pair => pair.First.Equals("ORDER", StringComparison.OrdinalIgnoreCase) && pair.Second.Equals("BY", StringComparison.OrdinalIgnoreCase));
-            var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString()))).ToLowerInvariant();
-            return new SqlShape(fingerprint, rootTable, bounded, ordered);
+            if (derived is not null)
+            {
+                var source = InspectQuery(derived);
+                rootTable = source.RootTable;
+                bounded |= source.Bounded;
+                ordered |= source.Ordered;
+            }
+            return (rootTable, bounded, ordered);
         }
     }
 }

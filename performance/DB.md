@@ -40,7 +40,8 @@ exception descriptions, SQL text and parameter values are never serialized.
 EF supplies `readOperations` where available. This is a safe upper bound on
 rows consumed: it includes the final false Read attempt and is not called an
 exact returned-row count. Direct Npgsql commands have null row evidence.
-Nested LIMIT/ORDER clauses cannot masquerade as outer-page clauses. The gate
+Nested predicate/JOIN LIMIT/ORDER clauses cannot masquerade as page clauses.
+An EF derived root source can supply its bounded ordered collection page. The gate
 requires a bounded ordered reader of the expected collection and rejects
 oversized reads, including unbounded collection reads preceding an apparent
 paged query. Batched related-table reads are not confused with page readers.
@@ -53,12 +54,12 @@ are uploaded. Unknown capture fields fail before aggregation.
 
 ## Selected plan invariant
 
-The canonical Task ID lookup is inspected on the deterministic medium fixture
+The canonical full-entity Task ID lookup is inspected on the deterministic medium fixture
 with at least 3,000 Task rows, after ANALYZE. `EXPLAIN (FORMAT JSON)` must retain
 the Task primary-key index (`PK_task_items`). Index Scan, Index Only Scan and
 the corresponding bitmap path satisfy the semantic invariant. Costs, text,
 minor-version details and unrelated Seq Scans are not asserted. Only a
-boolean result, check ID and table cardinality are retained. The planner is
+boolean result, check ID, allowlisted node types and table cardinality are retained. The planner is
 not forced with `enable_seqscan=off`, and the check is not run on a small table.
 
 ## Duration adapter
@@ -97,6 +98,12 @@ unmerged until separately authorized product remediation is available. No
 claim of full Issue acceptance or green CI may be based on local unit tests.
 
 ## Validation
+
+Fixture version 2 supplies Workspace-owned Attachment rows for the Files API
+and distinct deterministic Message cursor timestamps after EF's creation-time
+stamping. The version participates in the fixture hash; version-1 baselines
+are incompatible. The host creates the capture directory before starting the
+app container so the collector can remove its evidence files.
 
 ```bash
 python3 -m unittest discover -s tests/ci -p 'test_performance_db.py'

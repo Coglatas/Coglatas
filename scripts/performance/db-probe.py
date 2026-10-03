@@ -64,7 +64,7 @@ def plan_check(check, fixture, command):
     # Relation/query are fixed source-owned hot paths, not incoming SQL/identifiers.
     sql = f'''ANALYZE task_items;
 SELECT count(*) FROM task_items;
-EXPLAIN (FORMAT JSON) SELECT "Id" FROM task_items WHERE "Id" = '{task_id}'::uuid;'''
+EXPLAIN (FORMAT JSON) SELECT * FROM task_items WHERE "Id" = '{task_id}'::uuid;'''
     result = subprocess.run(command + ["-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1"], input=sql, text=True, capture_output=True, timeout=60)
     if result.returncode:
         raise PerformanceContractError("selected EXPLAIN command failed")
@@ -75,7 +75,15 @@ EXPLAIN (FORMAT JSON) SELECT "Id" FROM task_items WHERE "Id" = '{task_id}'::uuid
     plan = json.loads(plan_text)
     satisfied = plan_invariant(plan, check["relation"], check["requiredIndex"])
     # Do not save query text, conditions, planner literals, or the full plan.
-    return {"id": check["id"], "tableRows": count, "requiredIndexPresent": satisfied, "decision": "pass" if satisfied else "regression"}
+    def node_types(value):
+        if isinstance(value, list):
+            return set().union(*(node_types(item) for item in value))
+        if not isinstance(value, dict):
+            return set()
+        allowed = {"Index Scan", "Index Only Scan", "Bitmap Index Scan", "Bitmap Heap Scan", "Seq Scan", "Result", "Gather"}
+        own = {value["Node Type"]} if value.get("Node Type") in allowed else set()
+        return own | set().union(*(node_types(item) for key, item in value.items() if key in {"Plan", "Plans"}))
+    return {"id": check["id"], "tableRows": count, "requiredIndexPresent": satisfied, "observedNodeTypes": sorted(node_types(plan)), "decision": "pass" if satisfied else "regression"}
 
 
 def collect(args, contract):

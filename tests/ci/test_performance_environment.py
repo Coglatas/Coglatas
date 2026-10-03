@@ -49,7 +49,7 @@ class PerformanceEnvironmentContractTests(unittest.TestCase):
         _, profile = common.load_profile("small")
         evidence = {
             "schemaVersion": 1,
-            "fixtureVersion": 1,
+            "fixtureVersion": common.FIXTURE_VERSION,
             "seedManifestVersion": 1,
             "profile": "small",
             "seed": profile["seed"],

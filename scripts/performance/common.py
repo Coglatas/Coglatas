@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-FIXTURE_VERSION = 1
+FIXTURE_VERSION = 2
 SAFE_TARGET_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "performance-app", "coglatas-performance"})
 REQUIRED_COUNTS = frozenset({
     "tenants", "workspaces", "projects", "tasks", "workItems", "milestones",

@@ -4,6 +4,7 @@ import copy
 import importlib.util
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -11,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/performance"))
 from common import PerformanceContractError, load_json
 from db_gate import capture_failures, growth_failures, plan_invariant, validate_capture, validate_contract
+from test_performance_comparator import fingerprint, measurement, approved_baseline
 
 spec = importlib.util.spec_from_file_location("perf05_compare", ROOT / "scripts/performance/db-compare.py")
 module = importlib.util.module_from_spec(spec)
@@ -120,6 +122,33 @@ class PerformanceDbGateTests(unittest.TestCase):
         medium["samples"].pop()
         with self.assertRaises(PerformanceContractError):
             growth_failures(small, medium, self.policy)
+
+    def test_duration_adapter_compares_repeated_samples_with_approved_main_baseline(self):
+        fp = fingerprint()
+        stream = measurement([10, 10, 10, 10, 10], metric="db.total_time_ms")
+        stream["pageSize"] = 0
+        profile = {"headSha": stream["headSha"], "fixtureHash": fp["fixture"]["hash"], "profile": "medium", "measurements": [stream]}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "medium").mkdir()
+            (root / "medium/workspace.list.json").write_text(json.dumps(approved_baseline([8, 8, 8, 8, 8], metric="db.total_time_ms")))
+            results = module.duration_results(profile, fp, ROOT, root)
+        self.assertEqual("trend-recorded", results[0]["reasonCode"])
+        self.assertEqual(5, results[0]["sampleCount"])
+        self.assertEqual(2, results[0]["absoluteDelta"])
+
+    def test_duration_adapter_keeps_missing_baseline_invalid_and_page_sizes_separate(self):
+        fp = fingerprint()
+        stream = measurement([10, 10, 10, 10, 10], metric="db.total_time_ms")
+        stream["pageSize"] = 5
+        other = copy.deepcopy(stream)
+        other["pageSize"] = 10
+        other["samples"] = [999] * 5
+        profile = {"headSha": stream["headSha"], "fixtureHash": fp["fixture"]["hash"], "profile": "medium", "measurements": [stream, other]}
+        results = module.duration_results(profile, fp, ROOT)
+        self.assertEqual(1, len(results))
+        self.assertEqual("invalid", results[0]["decision"])
+        self.assertEqual(5, results[0]["sampleCount"])
 
 
 if __name__ == "__main__":

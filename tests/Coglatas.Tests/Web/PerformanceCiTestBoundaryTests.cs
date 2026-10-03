@@ -49,7 +49,7 @@ public sealed class PerformanceCiTestBoundaryTests
             }))
             .ConfigureWebHost(builder =>
             {
-                builder.UseKestrel().Configure(_ => { });
+                builder.UseEnvironment(environmentName).UseKestrel().Configure(_ => { });
                 new PerformanceCiHostingStartup().Configure(builder);
             })
             .Build();

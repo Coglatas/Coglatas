@@ -27,6 +27,19 @@ public sealed class PerformanceDbCaptureTests
     }
 
     [Fact]
+    public void DerivedRootPageIsRecognizedWithoutAcceptingPagedJoins()
+    {
+        var paged = PerformanceDbCapture.SqlShape.Inspect("SELECT t.* FROM (SELECT * FROM task_items ORDER BY \"Id\" LIMIT @page) AS t LEFT JOIN projects p ON p.\"Id\" = t.\"ProjectId\" ORDER BY t.\"Id\"");
+        Assert.Equal("task_items", paged.RootTable);
+        Assert.True(paged.Bounded);
+        Assert.True(paged.Ordered);
+        var joined = PerformanceDbCapture.SqlShape.Inspect("SELECT t.* FROM task_items t LEFT JOIN (SELECT * FROM projects ORDER BY \"Id\" LIMIT 5) p ON p.\"Id\" = t.\"ProjectId\"");
+        Assert.Equal("task_items", joined.RootTable);
+        Assert.False(joined.Bounded);
+        Assert.False(joined.Ordered);
+    }
+
+    [Fact]
     public void EvidenceCannotSerializeSensitiveSqlParametersOrErrors()
     {
         using var capture = new PerformanceDbCapture();
