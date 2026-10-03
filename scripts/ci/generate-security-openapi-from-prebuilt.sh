@@ -34,6 +34,7 @@ rm -f "$spec" "$cache"
 # boundary as the normal SEC-01 generator.
 export ASPNETCORE_ENVIRONMENT=Test
 export DOTNET_ENVIRONMENT=Test
+export ASPNETCORE_CONTENTROOT="$repo_root/src/Coglatas.Web"
 export ConnectionStrings__DefaultConnection="Host=127.0.0.1;Port=1;Database=sec01_openapi;Username=unused;Password=unused;Timeout=1;Command Timeout=1"
 export Tenancy__AppMode=SaaS
 export Tenancy__SeedOnStartup=false
