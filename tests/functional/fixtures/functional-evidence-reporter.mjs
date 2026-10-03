@@ -47,7 +47,9 @@ export default class FunctionalEvidenceReporter {
       const real = matches.length === 1 && matches[0].annotations.some((annotation) =>
         annotation.type === 'backend' && annotation.description === 'real');
       const outcome = real ? ownerResult(matches[0]) : { status: 'BLOCKED', attempts: 0, durationMs: 0 };
-      if (quarantine.some((entry) => entry.journeyId === journeyId)) outcome.status = 'QUARANTINED';
+      if (quarantine.some((entry) => entry.journeyId === journeyId)) {
+        outcome.status = 'QUARANTINED';
+      }
       return { journeyId, ...outcome };
     });
     const completedAt = new Date();
