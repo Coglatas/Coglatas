@@ -27,6 +27,7 @@
 }
 
 .coglatas-gantt__visual {
+  position: relative;
   overflow: hidden;
   border: 1px solid var(--coglatas-color-border-default);
   border-radius: var(--coglatas-radius-lg);
