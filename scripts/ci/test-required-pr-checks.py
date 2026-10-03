@@ -23,6 +23,16 @@ OLD_HEAD = "b" * 40
 NOW = dt.datetime(2026, 9, 4, 5, 30, tzinfo=dt.timezone.utc)
 
 
+def registry_for_contexts(*contexts: str) -> dict[str, Any]:
+    result = copy.deepcopy(REGISTRY)
+    wanted = set(contexts)
+    result["checks"] = [item for item in result["checks"] if item["context"] in wanted]
+    return result
+
+
+BUILD_REGISTRY = registry_for_contexts("build-test")
+
+
 def dual_registry(context: str = "build-test-v2") -> dict[str, Any]:
     result = copy.deepcopy(REGISTRY)
     build = next(item for item in result["checks"] if item["gate_id"] == "GOV-GATE-BUILD-001")
@@ -135,7 +145,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
 """
-        errors = guard.required_check_errors(".github/workflows/ci.yml", text, REGISTRY)
+        errors = guard.required_check_errors(".github/workflows/ci.yml", text, BUILD_REGISTRY)
         self.assertEqual([], errors)
 
     def test_declared_prerequisite_may_depend_on_unconditional_preflight(self) -> None:
@@ -156,7 +166,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
 """
-        errors = guard.required_check_errors(".github/workflows/ci.yml", text, REGISTRY)
+        errors = guard.required_check_errors(".github/workflows/ci.yml", text, BUILD_REGISTRY)
         self.assertEqual([], errors)
 
     def test_transitive_preflight_with_job_if_is_rejected(self) -> None:
@@ -178,8 +188,54 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
 """
-        errors = guard.required_check_errors(".github/workflows/ci.yml", text, REGISTRY)
+        errors = guard.required_check_errors(".github/workflows/ci.yml", text, BUILD_REGISTRY)
         self.assertTrue(any("prerequisite job 'changes' must not use job-level if" in error for error in errors))
+
+    def test_block_sequence_prerequisite_is_traversed(self) -> None:
+        text = """
+on:
+  pull_request:
+jobs:
+  changes:
+    name: CI preflight + route
+    if: github.actor != 'x'
+    runs-on: ubuntu-latest
+  dotnet-build:
+    name: .NET build producer
+    needs:
+      - changes
+    runs-on: ubuntu-latest
+  build-test:
+    name: build-test
+    needs: dotnet-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+"""
+        errors = guard.required_check_errors(".github/workflows/ci.yml", text, BUILD_REGISTRY)
+        self.assertTrue(any("prerequisite job 'changes' must not use job-level if" in error for error in errors))
+
+    def test_duplicate_prerequisite_needs_key_is_rejected(self) -> None:
+        text = """
+on:
+  pull_request:
+jobs:
+  changes:
+    name: CI preflight + route
+    runs-on: ubuntu-latest
+  dotnet-build:
+    name: .NET build producer
+    needs: changes
+    needs:
+      - changes
+    runs-on: ubuntu-latest
+  build-test:
+    name: build-test
+    needs: dotnet-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+"""
+        errors = guard.required_check_errors(".github/workflows/ci.yml", text, BUILD_REGISTRY)
+        self.assertTrue(any("duplicate job keys" in error or "invalid needs" in error for error in errors))
 
     def test_declared_prerequisite_with_job_if_is_rejected(self) -> None:
         text = """
@@ -196,7 +252,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
 """
-        errors = guard.required_check_errors(".github/workflows/ci.yml", text, REGISTRY)
+        errors = guard.required_check_errors(".github/workflows/ci.yml", text, BUILD_REGISTRY)
         self.assertTrue(any("prerequisite job 'dotnet-build' must not use job-level if" in error for error in errors))
 
     def test_continue_on_error_is_rejected(self) -> None:
