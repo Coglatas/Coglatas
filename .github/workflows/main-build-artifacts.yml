@@ -99,7 +99,10 @@ jobs:
           npm --prefix frontend run build:licensed
           test -f frontend/dist/coglatas-web/index.html
           test -f frontend/dist/coglatas-web/angular-app.marker
-          ! grep -R -F -q -- "$SYNCFUSION_LICENSE" frontend/dist/coglatas-web
+          if grep -R -F -q -- "$SYNCFUSION_LICENSE" frontend/dist/coglatas-web; then
+            echo "::error::Syncfusion license material was found in frontend build output."
+            exit 1
+          fi
 
           rm -rf artifacts/main-runtime/frontend
           mkdir -p artifacts/main-runtime/frontend
