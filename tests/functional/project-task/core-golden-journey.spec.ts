@@ -503,17 +503,10 @@ async function runFullNavigation(
   projectId: string,
   taskId: string,
 ): Promise<Record<string, unknown>> {
-  const primaryProjectsResponsePromise = waitForApiResponse(
-    page,
-    'GET',
-    '/api/projects',
-    (url) => url.searchParams.get('workspaceId') === workspaceId,
-  );
   await page.getByRole('link', { name: 'Projects' }).first().click();
-  const primaryProjectsResponse = await primaryProjectsResponsePromise;
-  expect(primaryProjectsResponse.status(), await primaryProjectsResponse.text()).toBe(200);
   await expect(page).toHaveURL(/\/app\/projects$/);
   await expect(page.getByTestId('projects-overview-page')).toBeVisible();
+  await assertFreshProjectScope(page, workspaceId, smokeProjectTitle);
   const primaryProjectCard = page.getByTestId('project-summary-card').filter({ hasText: smokeProjectTitle }).first();
   await expect(primaryProjectCard).toBeVisible();
 
@@ -521,15 +514,8 @@ async function runFullNavigation(
   await workspaceSwitcher.selectOption(secondWorkspaceId);
   await expect(page).toHaveURL(/\/app\/workspaces$/);
   await expect(workspaceSwitcher).toHaveValue(secondWorkspaceId);
-  const secondProjectsResponsePromise = waitForApiResponse(
-    page,
-    'GET',
-    '/api/projects',
-    (url) => url.searchParams.get('workspaceId') === secondWorkspaceId,
-  );
   await page.getByRole('link', { name: 'Projects' }).first().click();
-  const secondProjectsResponse = await secondProjectsResponsePromise;
-  expect(secondProjectsResponse.status(), await secondProjectsResponse.text()).toBe(200);
+  await assertFreshProjectScope(page, secondWorkspaceId, smokeSecondProjectTitle);
   await expect(workspaceSwitcher).toHaveValue(secondWorkspaceId);
   await expect(page.getByTestId('project-summary-card').filter({ hasText: smokeSecondProjectTitle }).first()).toBeVisible();
   await expect(page.getByTestId('project-summary-card').filter({ hasText: smokeProjectTitle })).toHaveCount(0);
@@ -542,15 +528,8 @@ async function runFullNavigation(
   await workspaceSwitcher.selectOption(workspaceId);
   await expect(page).toHaveURL(/\/app\/workspaces$/);
   await expect(workspaceSwitcher).toHaveValue(workspaceId);
-  const restoredProjectsResponsePromise = waitForApiResponse(
-    page,
-    'GET',
-    '/api/projects',
-    (url) => url.searchParams.get('workspaceId') === workspaceId,
-  );
   await page.getByRole('link', { name: 'Projects' }).first().click();
-  const restoredProjectsResponse = await restoredProjectsResponsePromise;
-  expect(restoredProjectsResponse.status(), await restoredProjectsResponse.text()).toBe(200);
+  await assertFreshProjectScope(page, workspaceId, smokeProjectTitle);
   await expect(workspaceSwitcher).toHaveValue(workspaceId);
   await expect(primaryProjectCard).toBeVisible();
 
@@ -592,6 +571,22 @@ async function runFullNavigation(
     taskListToDetail: true,
     myTasksDiscovery: true,
   };
+}
+
+async function assertFreshProjectScope(page: Page, workspaceId: string, expectedTitle: string): Promise<void> {
+  // ProjectsFacade loads when Workspace authority changes, before navigation.
+  // Re-entering its page may reuse that authorized projection; prove the UI
+  // against a fresh real read without requiring a redundant navigation request.
+  const projects = await expectJsonOk(
+    page,
+    `/api/projects?workspaceId=${encodeURIComponent(workspaceId)}&page=1&pageSize=100`,
+  );
+  expect(projects.items).toEqual(expect.arrayContaining([
+    expect.objectContaining({ title: expectedTitle, workspaceId }),
+  ]));
+  for (const project of projects.items) {
+    expect(project.workspaceId, 'fresh Project list retains the selected Workspace scope').toBe(workspaceId);
+  }
 }
 
 async function clickTaskOpenDetail(page: Page, taskRow: Locator): Promise<void> {
