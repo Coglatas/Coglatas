@@ -11,6 +11,11 @@ process.env.COGLATAS_REAL_BACKEND_SMOKE_GREP = await buildPlaywrightGrep(manifes
 });
 process.env.COGLATAS_REAL_BACKEND_SMOKE_SCOPE = 'PR P0 required set';
 process.env.COGLATAS_REAL_BACKEND_P0_SETUP = '1';
+// Keep the existing serialized acceptance runner. PRs execute the bounded
+// Owner; trusted main/manual acceptance executes its full lifecycle expansion.
+process.env.COGLATAS_FUNCTIONAL_FILES_GATE = process.env.GITHUB_EVENT_NAME === 'pull_request'
+  ? 'functional-fast'
+  : 'functional-full';
 process.env.COGLATAS_FCI04_GATES = fci04P0Gates(process.env.COGLATAS_FCI04_GATES);
 
 await import('./run-real-backend-smoke-compose.mjs');

@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "k6Version": "1.0.0",
+  "k6Image": "grafana/k6:1.0.0",
+  "profile": {
+    "fixture": "small",
+    "vus": 1,
+    "iterations": 20,
+    "warmupIterations": 2,
+    "maxDuration": "120s",
+    "requestTimeout": "10s"
+  },
+  "minimumRequests": 20,
+  "mainRuns": 5,
+  "baseline": {
+    "sha": "bb6d04351a55a954b01e5e732add3ba8a366cdb9",
+    "sourceRef": "refs/heads/main",
+    "reason": "Initial PERF-04 paired baseline uses the exact reviewed main revision captured on 2026-10-03. Measure this source on the same runner; never promote a failing candidate or relax budgets automatically."
+  },
+  "metrics": {
+    "api.latency.p50_ms": {
+      "unit": "ms",
+      "ceiling": 1000,
+      "maxIncreasePercent": 50,
+      "minimumAbsoluteIncrease": 100
+    },
+    "api.latency.p95_ms": {
+      "unit": "ms",
+      "ceiling": 2000,
+      "maxIncreasePercent": 50,
+      "minimumAbsoluteIncrease": 200
+    },
+    "api.latency.p99_ms": {
+      "unit": "ms",
+      "ceiling": 3000,
+      "maxIncreasePercent": 50,
+      "minimumAbsoluteIncrease": 300
+    },
+    "api.error_rate": {
+      "unit": "ratio",
+      "ceiling": 0
+    },
+    "api.timeout_rate": {
+      "unit": "ratio",
+      "ceiling": 0
+    },
+    "api.throughput_rps": {
+      "unit": "rps",
+      "maxDecreasePercent": 40
+    }
+  },
+  "scenarios": [
+    {
+      "id": "auth.session-bootstrap",
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "id": "workspace.list",
+      "method": "GET",
+      "path": "/api/workspaces"
+    },
+    {
+      "id": "workspace.detail",
+      "method": "GET",
+      "path": "/api/workspaces/{workspaceId}"
+    },
+    {
+      "id": "project.list",
+      "method": "GET",
+      "path": "/api/projects?workspaceId={workspaceId}&page=1&pageSize=50"
+    },
+    {
+      "id": "project.detail",
+      "method": "GET",
+      "path": "/api/projects/{taskListProjectId}"
+    },
+    {
+      "id": "task.list",
+      "method": "GET",
+      "path": "/api/projects/{taskListProjectId}/tasks?page=1&pageSize=50",
+      "metricOverrides": {
+        "api.latency.p50_ms": { "ceiling": 2000 }
+      }
+    },
+    {
+      "id": "task.detail",
+      "method": "GET",
+      "path": "/api/tasks/{taskId}"
+    },
+    {
+      "id": "task.my-tasks",
+      "method": "GET",
+      "path": "/api/me/tasks?workspaceId={workspaceId}&page=1&pageSize=50"
+    },
+    {
+      "id": "project.kanban-load",
+      "method": "GET",
+      "path": "/api/projects/{kanbanProjectId}/kanban?maxCards=300"
+    },
+    {
+      "id": "project.gantt-load",
+      "method": "GET",
+      "path": "/api/projects/{ganttProjectId}/gantt"
+    },
+    {
+      "id": "conversation.list",
+      "method": "GET",
+      "path": "/api/conversations?page=1&pageSize=20"
+    },
+    {
+      "id": "notification.list",
+      "method": "GET",
+      "path": "/api/notifications?page=1&pageSize=20"
+    },
+    {
+      "id": "mutation.kanban-move",
+      "method": "POST",
+      "path": "/api/tasks/{taskId}/kanban-move"
+    }
+  ]
+}
