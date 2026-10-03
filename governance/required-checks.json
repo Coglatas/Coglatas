@@ -70,7 +70,9 @@
         "previous_job": null,
         "migration_issue": null
       },
-      "prerequisites": []
+      "prerequisites": [
+        "frontend-build"
+      ]
     },
     {
       "gate_id": "GOV-GATE-SECURITY-001",
@@ -101,7 +103,9 @@
         "previous_job": null,
         "migration_issue": null
       },
-      "prerequisites": []
+      "prerequisites": [
+        "dotnet-build"
+      ]
     },
     {
       "gate_id": "GOV-GATE-PUBLICATION-001",
