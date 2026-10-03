@@ -68,7 +68,7 @@ before/after evidence; raising a baseline to hide a regression is prohibited.
 `performance-fast` check. Source/backend-test, runtime/toolchain, performance,
 and workflow changes require the API child job; explicit non-applicable routes
 may skip it. Required missing/skipped/cancelled child jobs fail the aggregate.
-The workflow runs the fast mode on PRs and regression mode on main/dispatch.
+The workflow runs the fast mode on ordinary PRs and regression mode on main/dispatch. PRs changing the harness/contracts additionally run the five-trial main comparison to verify the integration before merge.
 Branch protection registration and the cross-lane `ci/performance` aggregate
 remain PERF-11 ownership.
 

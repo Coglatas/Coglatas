@@ -24,6 +24,8 @@ ROOT = repository_root()
 def load_contract() -> dict:
     contract = load_json(ROOT / 'performance/api-k6.json')
     inventory = load_json(ROOT / 'performance/scenarios.json')
+    if load_json(ROOT / 'performance/budgets.json').get('adapterBudgetContracts', {}).get('api') != 'performance/api-k6.json':
+        raise PerformanceContractError('PERF-01 must name the API supplemental budget contract')
     routes = {s['id']: next((v for v in s['surfaces'] if v['kind'] == 'api'), None) for s in inventory['scenarios']}
     if contract.get('schemaVersion') != 1 or contract.get('k6Image') != f"grafana/k6:{contract.get('k6Version')}":
         raise PerformanceContractError('invalid pinned k6 contract')
@@ -237,6 +239,12 @@ def validate_governance(base_ref: str) -> None:
     print('PERF-04 baseline/budget governance valid: ' + json.dumps(summary, sort_keys=True))
 
 
+def harness_path(path: str) -> bool:
+    return (path.startswith(('scripts/performance/', 'performance/', 'infra/compose/performance/',
+                             'tests/ci/test_performance_api', 'tests/ci/performance-api-k6')) or
+            path == '.github/workflows/performance-api.yml')
+
+
 def relevant_path(path: str) -> bool:
     return (path.startswith(('src/', 'tests/Coglatas.Tests/', 'scripts/performance/', 'performance/',
                              'infra/compose/performance/', '.github/workflows/')) or
@@ -247,7 +255,7 @@ def relevant_path(path: str) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=('collect', 'evaluate', 'validate', 'route', 'governance'))
+    parser.add_argument('command', choices=('collect', 'evaluate', 'validate', 'route', 'governance', 'harness-route'))
     parser.add_argument('--base')
     parser.add_argument('--current', nargs='+', type=Path)
     parser.add_argument('--baseline', nargs='+', type=Path, default=[])
@@ -255,9 +263,10 @@ def main() -> int:
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
     try:
-        if args.command == 'route':
+        if args.command in ('route', 'harness-route'):
             changed = subprocess.run(['git', 'diff', '--name-only', args.base, 'HEAD'], check=True, capture_output=True, text=True).stdout.splitlines()
-            relevant = any(relevant_path(p) for p in changed)
+            matcher = relevant_path if args.command == 'route' else harness_path
+            relevant = any(matcher(p) for p in changed)
             print('true' if relevant else 'false')
         elif args.command == 'governance':
             validate_governance(args.base)
