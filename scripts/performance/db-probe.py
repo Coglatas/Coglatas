@@ -17,7 +17,7 @@ import uuid
 from pathlib import Path
 
 from common import PerformanceContractError, load_json, validate_fixture_evidence, validate_target, write_json_atomic, repository_root
-from db_gate import capture_failures, fingerprint_counts, plan_invariant, validate_capture, validate_contract
+from db_gate import capture_failures, fingerprint_counts, index_kinds, plan_invariant, validate_capture, validate_contract
 
 
 def request(opener, base, route, headers, data=None):
@@ -83,7 +83,7 @@ EXPLAIN (FORMAT JSON) SELECT * FROM task_items WHERE "Id" = '{task_id}'::uuid;''
         allowed = {"Index Scan", "Index Only Scan", "Bitmap Index Scan", "Bitmap Heap Scan", "Seq Scan", "Result", "Gather"}
         own = {value["Node Type"]} if value.get("Node Type") in allowed else set()
         return own | set().union(*(node_types(item) for key, item in value.items() if key in {"Plan", "Plans"}))
-    return {"id": check["id"], "tableRows": count, "requiredKeyLookupPresent": satisfied, "observedNodeTypes": sorted(node_types(plan)), "decision": "pass" if satisfied else "regression"}
+    return {"id": check["id"], "tableRows": count, "requiredKeyLookupPresent": satisfied, "observedNodeTypes": sorted(node_types(plan)), "observedIndexKinds": index_kinds(plan, check["relation"]), "decision": "pass" if satisfied else "regression"}
 
 
 def collect(args, contract):

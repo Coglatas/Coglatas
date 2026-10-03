@@ -154,3 +154,20 @@ def plan_invariant(plan: Any, relation: str, key_column: str) -> bool:
 
 def fingerprint_counts(capture: dict) -> dict[str, int]:
     return dict(sorted(Counter(c["fingerprint"] for c in capture["commands"]).items()))
+
+
+def index_kinds(plan: Any, relation: str, inherited_relation: str | None = None) -> list[str]:
+    """Export source-owned categories only; index names and conditions stay in memory."""
+    if isinstance(plan, list):
+        return sorted({kind for item in plan for kind in index_kinds(item, relation, inherited_relation)})
+    if not isinstance(plan, dict):
+        return []
+    own_relation = plan.get("Relation Name", inherited_relation)
+    kinds = set()
+    if own_relation == relation and plan.get("Node Type") in {"Index Scan", "Index Only Scan", "Bitmap Index Scan"}:
+        names = {"PK_task_items": "primary-key", "AK_task_items_Id_ProjectId": "task-project-key"}
+        kinds.add(names.get(plan.get("Index Name"), "other"))
+    for key in ("Plan", "Plans"):
+        if key in plan:
+            kinds.update(index_kinds(plan[key], relation, own_relation))
+    return sorted(kinds)

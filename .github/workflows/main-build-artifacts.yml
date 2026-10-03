@@ -479,6 +479,17 @@ jobs:
       profile: small
       reuse_main_artifacts: true
 
+  performance-db:
+    name: PostgreSQL performance from main artifacts
+    needs: main-build-artifacts
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/performance-db.yml
+    with:
+      reuse_main_artifacts: true
+      target_sha: ${{ github.sha }}
+
   licensed-real-backend:
     name: Real-backend E2E from main artifacts
     needs: main-build-artifacts

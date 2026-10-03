@@ -60,7 +60,10 @@ an index equality lookup on the Task `Id` key. Index Scan, Index Only Scan and
 the corresponding bitmap path satisfy the invariant when their index
 condition constrains that key. Equivalent physical index names are accepted.
 Costs, text, minor-version details and unrelated Seq Scans are not asserted. Only a
-boolean result, check ID, allowlisted node types and table cardinality are retained. The planner is
+boolean result, check ID, allowlisted node types, table cardinality and sanitized
+index categories (`primary-key`, `task-project-key`, or `other`) are retained.
+Index names and conditions remain in memory; the categories do not change the
+blocking key-lookup invariant. The planner is
 not forced with `enable_seqscan=off`, and the check is not run on a small table.
 
 ## Duration adapter
@@ -143,10 +146,10 @@ claim of full Issue acceptance or green CI may be based on local unit tests.
 
 ### Latest executed evidence and remaining blockers
 
-The latest draft-head run at `86aaf5a5b0fcd43b54a97e3c3b78562d3e83ce72`
-tested merge SHA `27658472a7546f6dd9572d5033e5bff4ee4f9240`. Both collectors
-succeeded in [run 37134574811](https://github.com/NYGsatoshi/Coglatas/actions/runs/37134574811);
-the aggregate reported thirteen failed checks:
+Draft head `8ee0bf8bc2a4d8c555b3b77a77f628b3bca469d0` tested merge SHA
+`51df14775292e54b41d99a88f76ce46db6cdd529`. Both collectors succeeded in
+[run 37137018988](https://github.com/NYGsatoshi/Coglatas/actions/runs/37137018988);
+the aggregate reported twelve failed product checks:
 
 - Project lists lacked ordered DB paging; the medium profile also exceeded
   the command ceiling and materialized an unbounded collection. Both dataset
@@ -158,14 +161,19 @@ the aggregate reported thirteen failed checks:
 - Notifications over-materialized both page profiles and increased from four
   to nine commands with dataset cardinality.
 - Announcements failed page-size query growth.
-- The selected Task lookup used an Index Scan on 3,000 rows, but its observed
-  index did not satisfy the named `PK_task_items` invariant. Further plan
-  diagnosis is required; the current evidence does not establish a Seq Scan
-  or a missing physical primary key. The failure remains blocking.
+
+The selected `task.id-index-lookup` semantic invariant passed in that run.
+The earlier head `86aaf5a5b0fcd43b54a97e3c3b78562d3e83ce72` had failed a
+physical-index-name assertion despite using an Index Scan. The updated invariant
+requires a selective indexed equality on Task `Id` and now has executed proof;
+no product index or planner setting was changed. Index category diagnostics
+are introduced by this repair and still require a new executed candidate.
 
 These results belong to the previously executed candidate. The CI-only
 repair of routing, source binding, image reuse, fixture metadata and static
-analysis must be re-executed before any new runtime claim. Issue #606 remains
+analysis must be re-executed before any new runtime claim. PR CI and API
+Performance passed on `8ee0bf8b`; the DB fixture version 2 remains isolated from
+the unchanged API fixture version 1. Issue #606 remains
 open and PR #1046 remains draft/unmerged. Product query/authorization/paging
 remediation is outside this CI-only slice; neither budgets nor scenarios are
 exempted to suppress the failures.

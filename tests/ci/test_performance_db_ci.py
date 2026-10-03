@@ -10,7 +10,8 @@ from unittest.mock import Mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/performance"))
-from common import PerformanceContractError, FIXTURE_VERSION, fixture_hash, load_json
+from common import PerformanceContractError, DB_FIXTURE_VERSION, fixture_hash, load_json
+from db_gate import index_kinds
 from test_performance_db import capture, module as comparison
 
 spec = importlib.util.spec_from_file_location("performance_db_ci", ROOT / "scripts/performance/db-ci.py")
@@ -107,7 +108,7 @@ class PerformanceDbBuildResolverTests(unittest.TestCase):
 
 class PerformanceDbComparisonIdentityTests(unittest.TestCase):
     def profile(self, name, contract):
-        data = {"schemaVersion": 1, "fixtureVersion": FIXTURE_VERSION, "fixtureHash": fixture_hash(name),
+        data = {"schemaVersion": 1, "fixtureVersion": DB_FIXTURE_VERSION, "fixtureHash": fixture_hash(name, fixture_version=DB_FIXTURE_VERSION),
                 "profile": name, "headSha": HEAD, "collectionComplete": True, "warmupSamplesExcluded": True,
                 "scenarios": [], "plans": []}
         for scenario in contract["scenarios"]:
@@ -123,7 +124,7 @@ class PerformanceDbComparisonIdentityTests(unittest.TestCase):
                         samples.append({"pageSize": size, "page": page, "iteration": iteration, "capture": evidence})
             data["scenarios"].append({"id": scenario["id"], "cardinality": 60 if name == "small" else 260, "failures": [], "samples": samples})
         if name == "medium":
-            data["plans"] = [{"id": "task.primary-key-lookup", "tableRows": 3000, "requiredIndexPresent": True}]
+            data["plans"] = [{"id": "task.id-index-lookup", "tableRows": 3000, "requiredKeyLookupPresent": True}]
         return data
 
     def test_same_wrong_sha_pair_cannot_satisfy_target(self):
@@ -145,6 +146,17 @@ class PerformanceDbComparisonIdentityTests(unittest.TestCase):
         for invalid in (measurements[:-1], measurements + [measurements[0]], measurements[:-1] + [measurements[-1] | {"pageSize": 10}]):
             with self.assertRaises(PerformanceContractError):
                 comparison.validate_duration_inventory({"measurements": invalid}, contract)
+
+    def test_index_diagnostics_never_export_names_conditions_or_unrelated_indexes(self):
+        plan = {"Plan": {"Node Type": "Nested Loop", "Plans": [
+            {"Node Type": "Index Scan", "Relation Name": "task_items", "Index Name": "PK_task_items", "Index Cond": "protected-id"},
+            {"Node Type": "Bitmap Heap Scan", "Relation Name": "task_items", "Plans": [
+                {"Node Type": "Bitmap Index Scan", "Index Name": "AK_task_items_Id_ProjectId", "Index Cond": "protected-id"}]},
+            {"Node Type": "Index Only Scan", "Relation Name": "task_items", "Index Name": "protected-name"},
+            {"Node Type": "Index Scan", "Relation Name": "unrelated", "Index Name": "protected-name"}]}}
+        self.assertEqual(["other", "primary-key", "task-project-key"], index_kinds(plan, "task_items"))
+        self.assertNotIn("protected", json.dumps(index_kinds(plan, "task_items")))
+        self.assertEqual([], index_kinds({"Node Type": "Seq Scan", "Relation Name": "task_items"}, "task_items"))
 
 
 if __name__ == "__main__":
