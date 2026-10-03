@@ -35,9 +35,10 @@ test('COMPAT-01 main matrix isolates every engine and uses one critical profile'
     assert.match(workflow, entry);
   }
 
+  assert.match(workflow, /workflow_call:[\s\S]*reuse_main_frontend_artifact:/u);
   assert.match(
     workflow,
-    /compat-browser-engine:\s+if: github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/u
+    /compat-browser-engine:\s+if: inputs\.reuse_main_frontend_artifact == true/u
   );
   assert.match(workflow, /fail-fast: false/u);
   assert.match(workflow, /name: compat-\$\{\{ matrix\.engine \}\}/u);
@@ -45,6 +46,15 @@ test('COMPAT-01 main matrix isolates every engine and uses one critical profile'
     workflow,
     /npm run test:ui:compat-critical -- --profile browser-engine -- --project=\$\{\{ matrix\.project \}\}/u
   );
+  assert.match(workflow, /name: main-frontend-build/u);
+  assert.match(workflow, /restore-main-frontend-build\.sh/u);
+  assert.match(workflow, /PLAYWRIGHT_SKIP_BUILD: "1"/u);
+  assert.doesNotMatch(
+    workflow,
+    /compat-browser-engine:[\s\S]*npm --prefix frontend ci/u
+  );
+  assert.match(config, /skipFrontendBuild = process\.env\.PLAYWRIGHT_SKIP_BUILD === "1"/u);
+  assert.match(config, /skipFrontendBuild[\s\S]*node tests\/ui\/serve-static\.mjs/u);
   assert.doesNotMatch(workflow, /continue-on-error:/u);
 });
 
@@ -65,9 +75,10 @@ test('COMPAT-01 remains secretless, retry-free, and emits engine-scoped evidence
   assert.match(runner, /COGLATAS_COMPAT_CRITICAL: '1'/u);
 });
 
-test('browser-facing changes trigger the compatibility matrix', () => {
-  assert.match(workflow, /- "frontend\/\*\*"/u);
+test('pull requests still preflight browser-facing changes while main execution is delegated', () => {
+  assert.match(workflow, /pull_request:[\s\S]*- "frontend\/\*\*"/u);
   assert.match(workflow, /- "tests\/ui\/\*\*"/u);
   assert.match(workflow, /- "playwright\.config\.ts"/u);
   assert.match(workflow, /- "scripts\/ci\/compat-critical\*"/u);
+  assert.doesNotMatch(workflow, /\n\s{2}push:\n/u);
 });

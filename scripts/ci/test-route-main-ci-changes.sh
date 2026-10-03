@@ -257,6 +257,23 @@ for config_input in .editorconfig Coglatas.slnx.DotSettings nested/rules.dotsett
   assert_eq full "$(value_of "$output" backend_test_scope)" "ReSharper config full scope $config_input"
 done
 
+# Main browser artifact workflow changes must keep the browser matrix enabled.
+for workflow_input in \
+  .github/workflows/main-build-artifacts.yml \
+  .github/workflows/compat-critical-preflight.yml \
+  .github/workflows/mobile-compatibility.yml; do
+  slug="${workflow_input//\//-}"
+  repo="$tmp_root/browser-workflow-${slug//./-}"
+  init_repo "$repo"
+  printf 'base\n' > "$repo/README.md"
+  base="$(commit_all "$repo" base)"
+  mkdir -p "$(dirname "$repo/$workflow_input")"
+  printf 'changed\n' > "$repo/$workflow_input"
+  head="$(commit_all "$repo" head)"
+  output="$(route_repo "$repo" "$base" "$head")"
+  assert_eq true "$(value_of "$output" frontend_playwright)" "browser workflow route $workflow_input"
+done
+
 # Cross-cutting Common changes intentionally fail safe to the full backend suite.
 repo="$tmp_root/common"
 init_repo "$repo" Announcements
