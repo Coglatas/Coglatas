@@ -106,7 +106,7 @@ def load_required_check_registry(registry_path: Path = REGISTRY_PATH, policy_pat
     checks = registry["checks"]
     if not isinstance(checks, list) or not checks:
         raise RuntimeError("required-check registry checks must be non-empty")
-    fields = {"gate_id", "kind", "workflow", "job", "context", "scope", "trigger", "producer", "ruleset_integration_id", "allowed_conclusions", "timeout_minutes", "staleness_policy", "rename"}
+    fields = {"gate_id", "kind", "workflow", "job", "context", "scope", "trigger", "producer", "ruleset_integration_id", "allowed_conclusions", "timeout_minutes", "staleness_policy", "prerequisites", "rename"}
     ids, contexts, projection = set(), set(), []
     for i, item in enumerate(checks):
         label = f"registry checks[{i}]"
@@ -122,6 +122,17 @@ def load_required_check_registry(registry_path: Path = REGISTRY_PATH, policy_pat
             raise RuntimeError(f"{label} kind/scope/context is invalid or duplicate")
         contexts.add(item["context"])
         _validate_trigger(item, label)
+        prerequisites = item["prerequisites"]
+        if (
+            not isinstance(prerequisites, list)
+            or len(prerequisites) != len(set(prerequisites))
+            or any(not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_.-]+", value) for value in prerequisites)
+        ):
+            raise RuntimeError(f"{label}.prerequisites is invalid")
+        if item["kind"] != "workflow-job" and prerequisites:
+            raise RuntimeError(f"{label}: commit-status checks cannot declare job prerequisites")
+        if item["job"] in prerequisites:
+            raise RuntimeError(f"{label}: check job cannot depend on itself")
         _validate_rename(item["rename"], f"{label}.rename")
         producer, integration = item["producer"], item["ruleset_integration_id"]
         if item["kind"] == "workflow-job":
@@ -330,7 +341,39 @@ def required_check_errors(relative: str, text: str, registry: dict[str, Any] | N
                 errors.append(f"{relative}: required check job '{item['job']}' must keep name {item['context']!r}")
             if _field(text, block, "if") is not None:
                 errors.append(f"{relative}: required check job '{item['job']}' must not use job-level if")
-            if _field(text, block, "needs") is not None:
+            actual_needs = _field(text, block, "needs")
+            expected_needs = item.get("prerequisites", [])
+            if expected_needs:
+                accepted = {
+                    expected_needs[0] if len(expected_needs) == 1 else "",
+                    "[" + ", ".join(expected_needs) + "]",
+                    "[" + ",".join(expected_needs) + "]",
+                }
+                if actual_needs not in accepted:
+                    errors.append(
+                        f"{relative}: required check job '{item['job']}' must depend exactly on "
+                        f"{expected_needs!r}"
+                    )
+                for prerequisite in expected_needs:
+                    prerequisite_block = jobs.get(prerequisite)
+                    if prerequisite_block is None:
+                        errors.append(
+                            f"{relative}: required check prerequisite job '{prerequisite}' is missing"
+                        )
+                        continue
+                    if _field(text, prerequisite_block, "if") is not None:
+                        errors.append(
+                            f"{relative}: required check prerequisite job '{prerequisite}' must not use job-level if"
+                        )
+                    if _field(text, prerequisite_block, "needs") is not None:
+                        errors.append(
+                            f"{relative}: required check prerequisite job '{prerequisite}' must not depend on another job"
+                        )
+                    if _field(text, prerequisite_block, "continue-on-error") is not None:
+                        errors.append(
+                            f"{relative}: required check prerequisite job '{prerequisite}' must not use continue-on-error"
+                        )
+            elif actual_needs is not None:
                 errors.append(f"{relative}: required check job '{item['job']}' must not depend on another job")
         if _field(text, block, "continue-on-error") is not None:
             errors.append(f"{relative}: required check job '{item['job']}' must not use continue-on-error")
