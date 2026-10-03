@@ -158,17 +158,6 @@ jobs:
     with:
       reuse_main_artifacts: true
 
-  qodana-cloud:
-    name: Qodana Cloud from main artifacts
-    needs: main-build-artifacts
-    permissions:
-      contents: read
-      security-events: write
-    uses: ./.github/workflows/qodana_cloud_quality.yml
-    with:
-      reuse_main_artifacts: true
-    secrets: inherit
-
   performance-environment:
     name: Performance from main artifacts
     needs: main-build-artifacts
