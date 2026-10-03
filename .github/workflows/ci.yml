@@ -72,51 +72,6 @@ jobs:
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: bash scripts/ci/route-main-ci-changes.sh
 
-      - name: Download redistributed .NET build for security contract
-        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: dotnet-release-build
-          path: ${{ runner.temp }}/security-dotnet-build
-
-      - name: Restore redistributed .NET build for security contract
-        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          archive="$RUNNER_TEMP/security-dotnet-build/dotnet-release-build.tar"
-          test -f "$archive"
-          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
-          expected="$(git rev-parse HEAD)"
-          actual="$(tr -d '\r\n' < artifacts/ci/dotnet-build-sha)"
-          if [[ "$actual" != "$expected" ]]; then
-            echo "::error::Security .NET build artifact SHA $actual does not match analyzed revision $expected."
-            exit 1
-          fi
-
-      - name: Download redistributed security OpenAPI build
-        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: security-openapi-build
-          path: ${{ runner.temp }}/security-openapi-build
-
-      - name: Restore redistributed security OpenAPI build
-        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          archive="$RUNNER_TEMP/security-openapi-build/security-openapi-build.tar"
-          test -f "$archive"
-          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
-          expected="$(git rev-parse HEAD)"
-          actual="$(tr -d '\r\n' < artifacts/ci/security-openapi-sha)"
-          if [[ "$actual" != "$expected" ]]; then
-            echo "::error::Security OpenAPI artifact SHA $actual does not match analyzed revision $expected."
-            exit 1
-          fi
-          test -f artifacts/openapi/coglatas-openapi.json
-
       - name: Resolve shared build requirement
         id: scope
         shell: bash
@@ -660,6 +615,50 @@ jobs:
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: bash scripts/ci/route-main-ci-changes.sh
 
+      - name: Download redistributed .NET build for security contract
+        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dotnet-release-build
+          path: ${{ runner.temp }}/security-dotnet-build
+
+      - name: Restore redistributed .NET build for security contract
+        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/security-dotnet-build/dotnet-release-build.tar"
+          test -f "$archive"
+          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
+          expected="$(git rev-parse HEAD)"
+          actual="$(tr -d '\r\n' < artifacts/ci/dotnet-build-sha)"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Security .NET build artifact SHA $actual does not match analyzed revision $expected."
+            exit 1
+          fi
+
+      - name: Download redistributed security OpenAPI build
+        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: security-openapi-build
+          path: ${{ runner.temp }}/security-openapi-build
+
+      - name: Restore redistributed security OpenAPI build
+        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/security-openapi-build/security-openapi-build.tar"
+          test -f "$archive"
+          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
+          expected="$(git rev-parse HEAD)"
+          actual="$(tr -d '\r\n' < artifacts/ci/security-openapi-sha)"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Security OpenAPI artifact SHA $actual does not match analyzed revision $expected."
+            exit 1
+          fi
+          test -f artifacts/openapi/coglatas-openapi.json
       - name: Create masked SEC-03 synthetic credential
         if: github.event_name != 'pull_request' || steps.route.outputs.security == 'true'
         shell: bash
