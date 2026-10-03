@@ -62,6 +62,7 @@ interface TaskExecutionScope {
   canManage?: unknown;
   origin?: unknown;
   taskOverridePolicy?: {
+    policyV2?: unknown;
     projectFilesEnabled: boolean;
     webEnabled: boolean;
   };
@@ -138,6 +139,7 @@ test.describe('FCI-04 core real-backend golden journey', () => {
       let idempotencyKey = '';
       let acceptedRunId = '';
       let durableContentSha256 = 'never-match';
+      let durableReportBody = '';
       const cleanupState: CleanupState = {
         originalTaskDetail: null,
         originalTaskScope: null,
@@ -263,25 +265,29 @@ test.describe('FCI-04 core real-backend golden journey', () => {
 
         await test.step('FUNC-TASK-001 / STEP-06 configure the authorized Project File source', async () => {
           const scopePanel = page.getByTestId('task-execution-scope');
-          const taskScopeGroup = scopePanel.getByRole('group', { name: 'Task source setting' });
+          const taskScopeGroup = scopePanel.getByRole('group', { name: 'Task source policy' });
           await expect(taskScopeGroup).toBeVisible();
           await taskScopeGroup.getByRole('radio', { name: /Use a complete Task override/ }).check();
 
-          const webCheckbox = taskScopeGroup.getByRole('checkbox', { name: /Allow Web as a future source/ });
-          const filesCheckbox = taskScopeGroup.getByRole('checkbox', { name: /Allow authorized Project files as a future source/ });
-          await expect(webCheckbox).toBeVisible();
-          await expect(filesCheckbox).toBeVisible();
-          if (await webCheckbox.isChecked()) { await webCheckbox.uncheck(); }
-          if (!await filesCheckbox.isChecked()) { await filesCheckbox.check(); }
+          for (const kind of ['Web', 'WebSite', 'ConnectedApp']) {
+            await taskScopeGroup.getByRole('combobox', { name: `Task override ${kind} policy`, exact: true }).selectOption('Exclude');
+          }
+          await taskScopeGroup.getByRole('combobox', { name: 'Task override ProjectFile policy', exact: true }).selectOption('Allow');
 
           const saveResponsePromise = waitForApiResponse(page, 'PUT', `/api/tasks/${taskId}/execution-scope-override`);
-          await taskScopeGroup.getByRole('button', { name: 'Save Task source setting' }).click();
+          await taskScopeGroup.getByRole('button', { name: 'Save Task source policy' }).click();
           const saveResponse = await saveResponsePromise;
           const saveText = await saveResponse.text();
           expect(saveResponse.status(), `Task scope save response: ${saveText}`).toBe(200);
           expect(saveResponse.request().postDataJSON()).toMatchObject({
             webEnabled: false,
             projectFilesEnabled: true,
+            policyV2: {
+              web: 'Exclude',
+              projectFile: 'Allow',
+              webSite: 'Exclude',
+              connectedApp: 'Exclude',
+            },
           });
           expect(saveResponse.request().headers()['x-csrf-token'], 'Task scope save uses the Angular CSRF interceptor').toBeTruthy();
 
@@ -351,9 +357,9 @@ test.describe('FCI-04 core real-backend golden journey', () => {
           expect(durableResult.report?.title).toBe('Project Files Analysis Report');
           expect(durableResult.report?.bodyMarkdown).toMatch(/Authorized sources consumed: [1-9]/);
           expect(durableResult.report?.bodyMarkdown).not.toContain(smokeTaskFileName);
-          if (typeof durableResult.report?.contentSha256 === 'string') {
-            durableContentSha256 = durableResult.report.contentSha256;
-          }
+          expect(durableResult.report?.contentSha256, 'persisted result content hash').toMatch(/^[0-9a-f]{64}$/i);
+          durableContentSha256 = String(durableResult.report?.contentSha256);
+          durableReportBody = String(durableResult.report?.bodyMarkdown);
           evidence.durableResult = durableResult;
 
           const replay = await requestWithCsrf(
@@ -368,6 +374,11 @@ test.describe('FCI-04 core real-backend golden journey', () => {
           const replayedRun = parseJson(replay.text) as TaskExecutionRun;
           expect(replayedRun.id).toBe(runId);
           expect(replayedRun.status).toBe('Succeeded');
+          const replayScope = await expectJsonOk(page, `/api/tasks/${taskId}/execution-scope`);
+          expect(replayScope.latestRun.id, 'retry leaves the same logical execution as the latest persisted run').toBe(runId);
+          const replayResult = await expectJsonOk(page, `/api/tasks/${taskId}/execution-result`);
+          expect(replayResult.runId).toBe(runId);
+          expect(replayResult.report.contentSha256).toBe(durableContentSha256);
           evidence.replayedRun = replayedRun;
         });
 
@@ -383,6 +394,8 @@ test.describe('FCI-04 core real-backend golden journey', () => {
           );
           expect(reloadedResult.runId).toBe(acceptedRunId);
           expect(reloadedResult.status).toBe('Succeeded');
+          expect(reloadedResult.report.contentSha256).toBe(durableContentSha256);
+          expect(reloadedResult.report.bodyMarkdown).toBe(durableReportBody);
 
           const { originalTaskScope } = cleanupState;
           if (!originalTaskScope) {
@@ -414,6 +427,9 @@ test.describe('FCI-04 core real-backend golden journey', () => {
           expect(deniedText).not.toContain(smokeTaskFileName);
           expect(deniedText).not.toContain('Project Files Analysis Report');
           expect(deniedText).not.toContain(durableContentSha256);
+          await page.goto(`/app/projects/${projectId}/tasks/${taskId}`);
+          await expect(page.getByTestId('login-page')).toBeVisible();
+          await expect(page.getByTestId('task-execution-report')).toHaveCount(0);
           evidence.unauthorizedStatuses = { read: deniedRead.status, start: deniedStart.status };
         });
 
@@ -427,6 +443,17 @@ test.describe('FCI-04 core real-backend golden journey', () => {
           const reauthorizedResult = parseJson(reauthorizedRead.text) as Record<string, unknown>;
           expect(reauthorizedResult.runId).toBe(acceptedRunId);
           expect(reauthorizedResult.status).toBe('Succeeded');
+          const report = reauthorizedResult.report as TaskExecutionResult['report'];
+          expect(report?.contentSha256).toBe(durableContentSha256);
+          expect(report?.bodyMarkdown).toBe(durableReportBody);
+          await page.goto(`/app/projects/${projectId}/tasks/${taskId}`);
+          await expect(page.getByTestId('task-execution-report-body')).toContainText(/Authorized sources consumed: [1-9]/);
+          await page.reload();
+          await expect(page.getByTestId('task-detail-page')).toBeVisible();
+          const sessionResult = await expectJsonOk(page, `/api/tasks/${taskId}/execution-result`);
+          expect(sessionResult.runId).toBe(acceptedRunId);
+          expect(sessionResult.report.contentSha256).toBe(durableContentSha256);
+          expect(sessionResult.report.bodyMarkdown).toBe(durableReportBody);
           evidence.reauthorizedResult = reauthorizedResult;
         });
       } finally {
@@ -491,26 +518,37 @@ async function runFullNavigation(
   await expect(primaryProjectCard).toBeVisible();
 
   const workspaceSwitcher = page.getByTestId('workspace-switcher');
+  await workspaceSwitcher.selectOption(secondWorkspaceId);
+  await expect(page).toHaveURL(/\/app\/workspaces$/);
+  await expect(workspaceSwitcher).toHaveValue(secondWorkspaceId);
   const secondProjectsResponsePromise = waitForApiResponse(
     page,
     'GET',
     '/api/projects',
     (url) => url.searchParams.get('workspaceId') === secondWorkspaceId,
   );
-  await workspaceSwitcher.selectOption(secondWorkspaceId);
+  await page.getByRole('link', { name: 'Projects' }).first().click();
   const secondProjectsResponse = await secondProjectsResponsePromise;
   expect(secondProjectsResponse.status(), await secondProjectsResponse.text()).toBe(200);
   await expect(workspaceSwitcher).toHaveValue(secondWorkspaceId);
   await expect(page.getByTestId('project-summary-card').filter({ hasText: smokeSecondProjectTitle }).first()).toBeVisible();
   await expect(page.getByTestId('project-summary-card').filter({ hasText: smokeProjectTitle })).toHaveCount(0);
 
+  await page.reload();
+  await expect(workspaceSwitcher).toHaveValue(secondWorkspaceId);
+  await expect(page.getByTestId('project-summary-card').filter({ hasText: smokeSecondProjectTitle }).first()).toBeVisible();
+  await expect(page.getByTestId('project-summary-card').filter({ hasText: smokeProjectTitle })).toHaveCount(0);
+
+  await workspaceSwitcher.selectOption(workspaceId);
+  await expect(page).toHaveURL(/\/app\/workspaces$/);
+  await expect(workspaceSwitcher).toHaveValue(workspaceId);
   const restoredProjectsResponsePromise = waitForApiResponse(
     page,
     'GET',
     '/api/projects',
     (url) => url.searchParams.get('workspaceId') === workspaceId,
   );
-  await workspaceSwitcher.selectOption(workspaceId);
+  await page.getByRole('link', { name: 'Projects' }).first().click();
   const restoredProjectsResponse = await restoredProjectsResponsePromise;
   expect(restoredProjectsResponse.status(), await restoredProjectsResponse.text()).toBe(200);
   await expect(workspaceSwitcher).toHaveValue(workspaceId);
@@ -647,6 +685,7 @@ async function restoreTaskScope(
     {
       webEnabled: originalPolicy.webEnabled,
       projectFilesEnabled: originalPolicy.projectFilesEnabled,
+      ...(originalPolicy.policyV2 ? { policyV2: originalPolicy.policyV2 } : {}),
       expectedVersion: current.taskOverrideVersion ?? 0,
     },
   );
@@ -669,7 +708,7 @@ async function expectJsonOk(page: Page, path: string): Promise<any> {
 
 async function fetchFromPage(page: Page, path: string): Promise<{ status: number; text: string }> {
   return page.evaluate(async (url) => {
-    const response = await fetch(url, { credentials: 'include' });
+    const response = await fetch(url, { credentials: 'include', cache: 'no-store' });
     return { status: response.status, text: await response.text() };
   }, path);
 }
