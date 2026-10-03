@@ -1,0 +1,239 @@
+name: ReSharper PR Analysis
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  resharper-inspectcode:
+    name: ReSharper InspectCode / PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      RESHARPER_VERSION: "2026.2.2"
+
+    steps:
+      - name: Checkout analyzed revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Download authoritative .NET build artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dotnet-release-build
+          path: ${{ runner.temp }}/dotnet-build-artifact
+
+      - name: Restore authoritative build outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/dotnet-build-artifact/dotnet-release-build.tar"
+          [[ -f "$archive" ]] || {
+            echo "::error::Shared .NET build artifact is missing its archive."
+            exit 1
+          }
+
+          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
+
+          stamp="artifacts/ci/dotnet-build-sha"
+          [[ -f "$stamp" ]] || {
+            echo "::error::Shared .NET build artifact is missing its SHA stamp."
+            exit 1
+          }
+
+          expected="$(git rev-parse HEAD)"
+          actual="$(tr -d '\r\n' < "$stamp")"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Shared .NET build artifact SHA $actual does not match analyzed revision $expected."
+            exit 1
+          fi
+
+      - name: Classify ReSharper project scope
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$RUNNER_TEMP/resharper"
+          changed_files="$report_dir/changed-files.nul"
+          projects_file="$report_dir/projects.txt"
+          mkdir -p "$report_dir"
+
+          git diff --name-only --diff-filter=ACMRT -z "$BASE_SHA...$HEAD_SHA" > "$changed_files"
+
+          CHANGED_FILES_PATH="$changed_files" \
+          PROJECTS_FILE="$projects_file" \
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
+          from pathlib import Path
+
+          root = Path.cwd().resolve()
+          changed_path = Path(os.environ["CHANGED_FILES_PATH"])
+          projects_path = Path(os.environ["PROJECTS_FILE"])
+
+          paths = [
+              item.decode("utf-8", errors="surrogateescape").replace("\\", "/")
+              for item in changed_path.read_bytes().split(b"\0")
+              if item
+          ]
+
+          self_test_paths = {
+              ".github/workflows/ci.yml",
+              ".github/workflows/resharper_pr.yml",
+              "scripts/ci/route-main-ci-changes.sh",
+              "scripts/quality/check-resharper-pr-sarif.py",
+          }
+          global_names = {
+              ".editorconfig",
+              "global.json",
+              "nuget.config",
+              "directory.build.props",
+              "directory.build.targets",
+              "directory.packages.props",
+          }
+
+          def is_global_input(path: str) -> bool:
+              p = Path(path)
+              lower = path.lower()
+              return (
+                  path == "Coglatas.slnx"
+                  or p.name.lower() in global_names
+                  or lower.endswith((".props", ".targets", ".dotsettings", ".sln", ".slnx"))
+              )
+
+          def is_dotnet_input(path: str) -> bool:
+              lower = path.lower()
+              return (
+                  lower.endswith((".cs", ".csproj", ".fsproj", ".vbproj"))
+                  or is_global_input(path)
+                  or path in self_test_paths
+              )
+
+          def owning_csproj(path: str) -> Path | None:
+              candidate = (root / path).resolve()
+              if candidate.suffix.lower() == ".csproj":
+                  return candidate if candidate.is_file() else None
+
+              directory = candidate.parent
+              while directory == root or root in directory.parents:
+                  matches = sorted(directory.glob("*.csproj"))
+                  if len(matches) == 1:
+                      return matches[0]
+                  if len(matches) > 1:
+                      return None
+                  if directory == root:
+                      break
+                  directory = directory.parent
+              return None
+
+          relevant = [path for path in paths if is_dotnet_input(path)]
+          full_solution = any(is_global_input(path) for path in relevant)
+
+          selected: dict[str, Path] = {}
+          if not full_solution:
+              for path in relevant:
+                  if path in self_test_paths:
+                      continue
+                  project = owning_csproj(path)
+                  if project is None:
+                      full_solution = True
+                      selected.clear()
+                      break
+                  selected[project.stem] = project.relative_to(root)
+
+          # Pipeline-only changes still exercise a real but bounded inspection.
+          if not full_solution and not selected:
+              representative = Path("src/Coglatas.Domain/Coglatas.Domain.csproj")
+              selected[representative.stem] = representative
+
+          if full_solution:
+              projects_path.write_text("", encoding="utf-8")
+          else:
+              projects_path.write_text(
+                  "".join(f"{name}\n" for name in sorted(selected)),
+                  encoding="utf-8",
+              )
+
+          print(f"full_solution={'true' if full_solution else 'false'}")
+          print(f"changed_files_path={changed_path}")
+          print(f"projects_path={projects_path}")
+          PY
+
+      - name: Restore NuGet packages for ReSharper project model
+        shell: bash
+        run: dotnet restore Coglatas.slnx --disable-parallel --verbosity minimal
+
+      - name: Install ReSharper command-line tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_dir="$RUNNER_TEMP/resharper-tools"
+          dotnet tool install JetBrains.ReSharper.GlobalTools \
+            --version "$RESHARPER_VERSION" \
+            --tool-path "$tool_dir"
+          echo "RESHARPER_JB=$tool_dir/jb" >> "$GITHUB_ENV"
+
+      - name: Run ReSharper InspectCode against shared build outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          sarif="$RUNNER_TEMP/resharper/inspectcode.sarif.json"
+
+          args=(
+            inspectcode
+            Coglatas.slnx
+            --output="$sarif"
+            --severity=WARNING
+            --no-swea
+            --no-build
+            --no-updates
+            --properties:Configuration=Release
+            --properties:RunAnalyzers=false
+            --verbosity=WARN
+          )
+
+          while IFS= read -r project; do
+            [[ -n "$project" ]] || continue
+            args+=(--project="$project")
+          done < "${{ steps.scope.outputs.projects_path }}"
+
+          echo "ReSharper scope:"
+          if [[ -s "${{ steps.scope.outputs.projects_path }}" ]]; then
+            cat "${{ steps.scope.outputs.projects_path }}"
+          else
+            echo "full solution"
+          fi
+
+          "$RESHARPER_JB" "${args[@]}"
+
+      - name: Gate changed files on ReSharper findings
+        shell: bash
+        run: |
+          python3 scripts/quality/check-resharper-pr-sarif.py \
+            "$RUNNER_TEMP/resharper/inspectcode.sarif.json" \
+            "${{ steps.scope.outputs.changed_files_path }}"
+
+      - name: Upload ReSharper report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: resharper-pr-sarif
+          path: ${{ runner.temp }}/resharper/inspectcode.sarif.json
+          if-no-files-found: warn
+          retention-days: 7

@@ -106,7 +106,7 @@ def load_required_check_registry(registry_path: Path = REGISTRY_PATH, policy_pat
     checks = registry["checks"]
     if not isinstance(checks, list) or not checks:
         raise RuntimeError("required-check registry checks must be non-empty")
-    fields = {"gate_id", "kind", "workflow", "job", "context", "scope", "trigger", "producer", "ruleset_integration_id", "allowed_conclusions", "timeout_minutes", "staleness_policy", "rename"}
+    fields = {"gate_id", "kind", "workflow", "job", "context", "scope", "trigger", "producer", "ruleset_integration_id", "allowed_conclusions", "timeout_minutes", "staleness_policy", "prerequisites", "rename"}
     ids, contexts, projection = set(), set(), []
     for i, item in enumerate(checks):
         label = f"registry checks[{i}]"
@@ -122,6 +122,17 @@ def load_required_check_registry(registry_path: Path = REGISTRY_PATH, policy_pat
             raise RuntimeError(f"{label} kind/scope/context is invalid or duplicate")
         contexts.add(item["context"])
         _validate_trigger(item, label)
+        prerequisites = item["prerequisites"]
+        if (
+            not isinstance(prerequisites, list)
+            or len(prerequisites) != len(set(prerequisites))
+            or any(not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_.-]+", value) for value in prerequisites)
+        ):
+            raise RuntimeError(f"{label}.prerequisites is invalid")
+        if item["kind"] != "workflow-job" and prerequisites:
+            raise RuntimeError(f"{label}: commit-status checks cannot declare job prerequisites")
+        if item["job"] in prerequisites:
+            raise RuntimeError(f"{label}: check job cannot depend on itself")
         _validate_rename(item["rename"], f"{label}.rename")
         producer, integration = item["producer"], item["ruleset_integration_id"]
         if item["kind"] == "workflow-job":
@@ -295,6 +306,32 @@ def _jobs(text: str) -> dict[str, tuple[int, int, int]]:
     return {job: (start, starts[n + 1][0] if n + 1 < len(starts) else len(lines), ind) for n, (start, job) in enumerate(starts)}
 
 
+def _duplicate_job_ids(text: str) -> set[str]:
+    lines = _lines(text)
+    jobs_index = next((i for i, line in enumerate(lines) if re.match(r"^jobs\s*:\s*$", line)), None)
+    if jobs_index is None:
+        return set()
+    base = _indent(lines[jobs_index])
+    nested = []
+    for i in range(jobs_index + 1, len(lines)):
+        if not lines[i].strip():
+            continue
+        if _indent(lines[i]) <= base:
+            break
+        nested.append(i)
+    if not nested:
+        return set()
+    job_indent = min(_indent(lines[i]) for i in nested)
+    counts: dict[str, int] = {}
+    for i in nested:
+        if _indent(lines[i]) != job_indent:
+            continue
+        match = re.match(r"^([A-Za-z0-9_.-]+)\s*:\s*$", lines[i].strip())
+        if match:
+            counts[match.group(1)] = counts.get(match.group(1), 0) + 1
+    return {job for job, count in counts.items() if count > 1}
+
+
 def _field(text: str, block: tuple[int, int, int], key: str) -> str | None:
     lines = _lines(text)
     start, end, ji = block
@@ -310,12 +347,130 @@ def _field(text: str, block: tuple[int, int, int], key: str) -> str | None:
     return None
 
 
+def _direct_job_fields(text: str, block: tuple[int, int, int]) -> dict[str, list[tuple[int, str]]]:
+    lines = _lines(text)
+    start, end, ji = block
+    children = [i for i in range(start + 1, end) if lines[i].strip() and _indent(lines[i]) > ji]
+    if not children:
+        return {}
+    field_indent = min(_indent(lines[i]) for i in children)
+    fields: dict[str, list[tuple[int, str]]] = {}
+    for i in children:
+        if _indent(lines[i]) != field_indent:
+            continue
+        match = re.match(r"^([A-Za-z0-9_.-]+)\s*:\s*(.*)$", lines[i].strip())
+        if match:
+            fields.setdefault(match.group(1), []).append((i, match.group(2).strip()))
+    return fields
+
+
+def _duplicate_job_fields(text: str, block: tuple[int, int, int]) -> set[str]:
+    return {key for key, entries in _direct_job_fields(text, block).items() if len(entries) > 1}
+
+
+def _needs_list(text: str, block: tuple[int, int, int]) -> list[str]:
+    lines = _lines(text)
+    fields = _direct_job_fields(text, block)
+    entries = fields.get("needs", [])
+    if not entries:
+        return []
+    if len(entries) != 1:
+        raise ValueError("duplicate needs keys")
+
+    line_index, raw = entries[0]
+    value = raw.strip()
+    if value:
+        if value.startswith("[") and value.endswith("]"):
+            inner = value[1:-1].strip()
+            values = [] if not inner else [item.strip().strip("'\"") for item in inner.split(",") if item.strip()]
+        else:
+            values = [value.strip("'\"")]
+    else:
+        parent_indent = _indent(lines[line_index])
+        items: list[str] = []
+        for i in range(line_index + 1, block[1]):
+            line = lines[i]
+            if not line.strip():
+                continue
+            indent = _indent(line)
+            if indent <= parent_indent:
+                break
+            stripped = line.strip()
+            match = re.match(r"^-\s*([A-Za-z0-9_.-]+)\s*$", stripped)
+            if not match:
+                raise ValueError("needs block must be a sequence of job identifiers")
+            items.append(match.group(1))
+        values = items
+
+    if len(values) != len(set(values)) or any(not re.fullmatch(r"[A-Za-z0-9_.-]+", item) for item in values):
+        raise ValueError("needs contains invalid or duplicate job identifiers")
+    return values
+
+
+def _prerequisite_chain_errors(
+    relative: str,
+    text: str,
+    jobs: dict[str, tuple[int, int, int]],
+    prerequisite: str,
+    stack: tuple[str, ...] = (),
+) -> list[str]:
+    errors: list[str] = []
+    if prerequisite in stack:
+        cycle = " -> ".join((*stack, prerequisite))
+        return [f"{relative}: required check prerequisite dependency cycle detected: {cycle}"]
+
+    block = jobs.get(prerequisite)
+    if block is None:
+        return [f"{relative}: required check prerequisite job '{prerequisite}' is missing"]
+
+    duplicates = _duplicate_job_fields(text, block)
+    if duplicates:
+        errors.append(
+            f"{relative}: required check prerequisite job '{prerequisite}' has duplicate job keys: "
+            + ", ".join(sorted(duplicates))
+        )
+
+    if _field(text, block, "if") is not None:
+        errors.append(
+            f"{relative}: required check prerequisite job '{prerequisite}' must not use job-level if"
+        )
+    if _field(text, block, "continue-on-error") is not None:
+        errors.append(
+            f"{relative}: required check prerequisite job '{prerequisite}' must not use continue-on-error"
+        )
+
+    try:
+        upstream_jobs = _needs_list(text, block)
+    except ValueError as exc:
+        errors.append(
+            f"{relative}: required check prerequisite job '{prerequisite}' has invalid needs: {exc}"
+        )
+        upstream_jobs = []
+
+    for upstream in upstream_jobs:
+        errors.extend(
+            _prerequisite_chain_errors(
+                relative,
+                text,
+                jobs,
+                upstream,
+                (*stack, prerequisite),
+            )
+        )
+    return errors
+
+
 def required_check_errors(relative: str, text: str, registry: dict[str, Any] | None = None) -> list[str]:
     registry = registry or load_required_check_registry()
     entries = [c for c in expanded_checks(registry) if c["workflow"] == relative]
     if not entries:
         return []
     errors = []
+    duplicate_jobs = _duplicate_job_ids(text)
+    if duplicate_jobs:
+        errors.append(
+            f"{relative}: workflow has duplicate job identifiers: " + ", ".join(sorted(duplicate_jobs))
+        )
     jobs = _jobs(text)
     if any(c["kind"] == "workflow-job" and c["scope"] == "all-pr" for c in entries) and not has_unfiltered_event(text, "pull_request"):
         errors.append(f"{relative}: required workflow must use an unfiltered pull_request trigger")
@@ -325,12 +480,35 @@ def required_check_errors(relative: str, text: str, registry: dict[str, Any] | N
             errors.append(f"{relative}: required check job '{item['job']}' is missing")
             continue
         if item["kind"] == "workflow-job":
+            duplicates = _duplicate_job_fields(text, block)
+            if duplicates:
+                errors.append(
+                    f"{relative}: required check job '{item['job']}' has duplicate job keys: "
+                    + ", ".join(sorted(duplicates))
+                )
             name = _field(text, block, "name")
             if name not in {item["context"], f'"{item["context"]}"', f"'{item['context']}'"}:
                 errors.append(f"{relative}: required check job '{item['job']}' must keep name {item['context']!r}")
             if _field(text, block, "if") is not None:
                 errors.append(f"{relative}: required check job '{item['job']}' must not use job-level if")
-            if _field(text, block, "needs") is not None:
+            actual_needs = _field(text, block, "needs")
+            expected_needs = item.get("prerequisites", [])
+            if expected_needs:
+                accepted = {
+                    expected_needs[0] if len(expected_needs) == 1 else "",
+                    "[" + ", ".join(expected_needs) + "]",
+                    "[" + ",".join(expected_needs) + "]",
+                }
+                if actual_needs not in accepted:
+                    errors.append(
+                        f"{relative}: required check job '{item['job']}' must depend exactly on "
+                        f"{expected_needs!r}"
+                    )
+                for prerequisite in expected_needs:
+                    errors.extend(
+                        _prerequisite_chain_errors(relative, text, jobs, prerequisite)
+                    )
+            elif actual_needs is not None:
                 errors.append(f"{relative}: required check job '{item['job']}' must not depend on another job")
         if _field(text, block, "continue-on-error") is not None:
             errors.append(f"{relative}: required check job '{item['job']}' must not use continue-on-error")

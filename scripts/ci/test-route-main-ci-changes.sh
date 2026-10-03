@@ -240,6 +240,23 @@ assert_eq true "$(value_of "$output" avmig_contract)" "CI infrastructure AV-MIG 
 assert_eq true "$(value_of "$output" avmig_selftests)" "CI infrastructure AV-MIG self-tests"
 assert_eq full "$(value_of "$output" backend_test_scope)" "CI infrastructure backend full suite"
 
+# ReSharper/editor configuration changes must route through the shared .NET
+# build so the PR ReSharper lane cannot be bypassed by config-only changes.
+for config_input in .editorconfig Coglatas.slnx.DotSettings nested/rules.dotsettings; do
+  slug="${config_input//\//-}"
+  repo="$tmp_root/resharper-config-${slug//./-}"
+  init_repo "$repo"
+  printf 'base\n' > "$repo/README.md"
+  base="$(commit_all "$repo" base)"
+  mkdir -p "$(dirname "$repo/$config_input")"
+  printf 'changed\n' > "$repo/$config_input"
+  head="$(commit_all "$repo" head)"
+  output="$(route_repo "$repo" "$base" "$head")"
+  assert_eq true "$(value_of "$output" backend)" "ReSharper config backend $config_input"
+  assert_eq true "$(value_of "$output" backend_tests)" "ReSharper config tests $config_input"
+  assert_eq full "$(value_of "$output" backend_test_scope)" "ReSharper config full scope $config_input"
+done
+
 # Cross-cutting Common changes intentionally fail safe to the full backend suite.
 repo="$tmp_root/common"
 init_repo "$repo" Announcements

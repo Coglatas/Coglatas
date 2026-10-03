@@ -30,6 +30,7 @@ services:
       ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=coglatas_performance;Username=coglatas_performance;Password=coglatas_performance_password
       NUGET_PACKAGES: /root/.nuget/packages
       Tenancy__SeedOnStartup: "false"
+      COGLATAS_REUSE_PREBUILT_DOTNET_BUILD: ${COGLATAS_REUSE_PREBUILT_DOTNET_BUILD:-false}
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,9 +38,14 @@ services:
       bash -lc "mkdir -p /src/src/Coglatas.Web/wwwroot &&
       dotnet tool restore &&
       dotnet restore src/Coglatas.Web/Coglatas.Web.csproj /p:RestoreFallbackFolders= &&
-      dotnet ef database update --project src/Coglatas.Infrastructure --startup-project src/Coglatas.Web"
+      if [ "$COGLATAS_REUSE_PREBUILT_DOTNET_BUILD" = "true" ]; then
+        dotnet ef database update --project src/Coglatas.Infrastructure --startup-project src/Coglatas.Web --configuration Release --no-build;
+      else
+        dotnet ef database update --project src/Coglatas.Infrastructure --startup-project src/Coglatas.Web --configuration Release;
+      fi"
 
   app:
+    image: ${COGLATAS_APP_IMAGE:-coglatas-performance-app:local}
     build:
       context: ../../..
       dockerfile: Dockerfile
@@ -103,11 +109,11 @@ services:
       start_period: 20s
 
   performance-browser:
-    build:
-      context: ../../..
-      dockerfile: infra/docker/playwright.Dockerfile
+    image: mcr.microsoft.com/playwright:v1.63.0-noble
     profiles: ["tooling"]
     working_dir: /work
+    environment:
+      CI: "true"
     volumes:
       - ../../../:/work
     command: ["bash"]

@@ -18,9 +18,34 @@ permissions:
 
 jobs:
   changes:
-    name: CI change routing
+    name: CI preflight + route
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      backend: ${{ steps.route.outputs.backend }}
+      backend_ef: ${{ steps.route.outputs.backend_ef }}
+      backend_tests: ${{ steps.route.outputs.backend_tests }}
+      backend_pr07b: ${{ steps.route.outputs.backend_pr07b }}
+      backend_pr07c: ${{ steps.route.outputs.backend_pr07c }}
+      backend_pr07d: ${{ steps.route.outputs.backend_pr07d }}
+      backend_test_scope: ${{ steps.route.outputs.backend_test_scope }}
+      backend_test_filter: ${{ steps.route.outputs.backend_test_filter }}
+      frontend: ${{ steps.route.outputs.frontend }}
+      frontend_build: ${{ steps.route.outputs.frontend_build }}
+      frontend_unit: ${{ steps.route.outputs.frontend_unit }}
+      frontend_unit_scope: ${{ steps.route.outputs.frontend_unit_scope }}
+      frontend_unit_features: ${{ steps.route.outputs.frontend_unit_features }}
+      frontend_architecture: ${{ steps.route.outputs.frontend_architecture }}
+      frontend_license_guard: ${{ steps.route.outputs.frontend_license_guard }}
+      frontend_storybook: ${{ steps.route.outputs.frontend_storybook }}
+      frontend_playwright: ${{ steps.route.outputs.frontend_playwright }}
+      avmig_contract: ${{ steps.route.outputs.avmig_contract }}
+      avmig_selftests: ${{ steps.route.outputs.avmig_selftests }}
+      security: ${{ steps.route.outputs.security }}
+      security_dotnet: ${{ steps.route.outputs.security_dotnet }}
+      security_compose: ${{ steps.route.outputs.security_compose }}
+      security_migration: ${{ steps.route.outputs.security_migration }}
+      security_image: ${{ steps.route.outputs.security_image }}
 
     steps:
       - name: Checkout
@@ -35,17 +60,182 @@ jobs:
       - name: Enforce required PR check topology
         run: python3 scripts/ci/check-required-pr-checks.py
 
-      - name: Validate parallel CI helper syntax
+      - name: Test required-check topology parser
+        run: python3 scripts/ci/test-required-pr-checks.py
+
+      - name: Test ReSharper SARIF changed-path normalization
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import importlib.util
+          import tempfile
+          from pathlib import Path
+
+          module_path = Path("scripts/quality/check-resharper-pr-sarif.py")
+          spec = importlib.util.spec_from_file_location("resharper_sarif_gate", module_path)
+          assert spec is not None and spec.loader is not None
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+
+          with tempfile.TemporaryDirectory() as directory:
+              changed = Path(directory) / "changed.nul"
+              changed.write_bytes(b".config/Foo.cs\0./src/Bar.cs\0")
+              assert module.read_changed_files(changed) == {".config/Foo.cs", "src/Bar.cs"}
+          PY
+
+      - name: Validate CI helper syntax
         run: |
           bash -n scripts/ci/parallel-lane-lib.sh
           bash -n scripts/ci/run-frontend-parallel.sh
           bash -n scripts/ci/run-security-runtime-parallel.sh
+          bash -n scripts/ci/restore-main-build-artifacts.sh
+          bash -n scripts/performance/with-environment.sh
+          node --check tests/ui/run-real-backend-smoke-compose.mjs
 
       - name: Enforce Coglatas rename completion
         run: python3 scripts/ci/check-coglatas-rename.py
 
+      - name: Route changed files once
+        id: route
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || (github.event_name == 'push' && github.event.before || '') }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/ci/route-main-ci-changes.sh
+
+  dotnet-build:
+    name: .NET build producer
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      built: ${{ steps.scope.outputs.built }}
+      backend: ${{ needs.changes.outputs.backend }}
+      backend_ef: ${{ needs.changes.outputs.backend_ef }}
+      backend_tests: ${{ needs.changes.outputs.backend_tests }}
+      backend_test_scope: ${{ needs.changes.outputs.backend_test_scope }}
+      backend_test_filter: ${{ needs.changes.outputs.backend_test_filter }}
+      avmig_contract: ${{ needs.changes.outputs.avmig_contract }}
+      avmig_selftests: ${{ needs.changes.outputs.avmig_selftests }}
+      security: ${{ needs.changes.outputs.security }}
+      security_dotnet: ${{ needs.changes.outputs.security_dotnet }}
+      security_compose: ${{ needs.changes.outputs.security_compose }}
+      security_migration: ${{ needs.changes.outputs.security_migration }}
+      security_image: ${{ needs.changes.outputs.security_image }}
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      DOTNET_MULTILEVEL_LOOKUP: "0"
+      DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve shared build requirement
+        id: scope
+        shell: bash
+        env:
+          ROUTE_BACKEND: ${{ needs.changes.outputs.backend }}
+          ROUTE_AVMIG_CONTRACT: ${{ needs.changes.outputs.avmig_contract }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" != "pull_request" || "$ROUTE_BACKEND" == "true" || "$ROUTE_AVMIG_CONTRACT" == "true" ]]; then
+            echo "built=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "built=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip shared .NET build for unrelated PR
+        if: steps.scope.outputs.built != 'true'
+        run: echo "No backend-relevant changes detected; shared .NET build is not required."
+
+      - name: Set up .NET SDK
+        if: steps.scope.outputs.built == 'true'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore authoritative .NET graph
+        if: steps.scope.outputs.built == 'true'
+        run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
+
+      - name: Build authoritative .NET graph
+        if: steps.scope.outputs.built == 'true'
+        run: dotnet build Coglatas.slnx --configuration Release --no-restore --disable-build-servers -m:1
+
+      - name: Package shared .NET build outputs
+        if: steps.scope.outputs.built == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ci
+          git rev-parse HEAD > artifacts/ci/dotnet-build-sha
+
+          mapfile -d '' build_dirs < <(
+            find src tests -type d \
+              \( -path '*/bin/Release' -o -name obj \) \
+              -print0
+          )
+          if [[ "${#build_dirs[@]}" -eq 0 ]]; then
+            echo "::error::Authoritative build completed without reusable bin/obj outputs."
+            exit 1
+          fi
+
+          tar -cf "$RUNNER_TEMP/dotnet-release-build.tar" \
+            artifacts/ci/dotnet-build-sha \
+            "${build_dirs[@]}"
+
+          du -h "$RUNNER_TEMP/dotnet-release-build.tar"
+
+      - name: Publish shared .NET build artifact
+        if: steps.scope.outputs.built == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dotnet-release-build
+          path: ${{ runner.temp }}/dotnet-release-build.tar
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+      - name: Generate PR security OpenAPI build output
+        if: github.event_name == 'pull_request' && needs.changes.outputs.avmig_contract == 'true'
+        shell: bash
+        env:
+          COGLATAS_SECURITY_OPENAPI_GENERATE_ONLY: "1"
+          COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS: "1"
+          COGLATAS_SECURITY_AVMIG_SELFTESTS: "0"
+        run: bash scripts/ci/generate-security-openapi-contract.sh
+
+      - name: Package PR security OpenAPI build output
+        if: github.event_name == 'pull_request' && needs.changes.outputs.avmig_contract == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/openapi/coglatas-openapi.json
+          mkdir -p artifacts/ci
+          git rev-parse HEAD > artifacts/ci/security-openapi-sha
+          tar -cf "$RUNNER_TEMP/security-openapi-build.tar" \
+            artifacts/ci/security-openapi-sha \
+            artifacts/openapi/coglatas-openapi.json
+          du -h "$RUNNER_TEMP/security-openapi-build.tar"
+
+      - name: Publish PR security OpenAPI build artifact
+        if: github.event_name == 'pull_request' && needs.changes.outputs.avmig_contract == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: security-openapi-build
+          path: ${{ runner.temp }}/security-openapi-build.tar
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
   build-test:
     name: build-test
+    needs: dotnet-build
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -83,57 +273,78 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Route pull request changes
-        id: route
-        shell: bash
-        env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
-          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-        run: bash scripts/ci/route-main-ci-changes.sh
-
       - name: Skip backend checks for unrelated PR
-        if: github.event_name == 'pull_request' && steps.route.outputs.backend != 'true'
+        if: github.event_name == 'pull_request' && needs.dotnet-build.outputs.backend != 'true'
         run: echo "No backend-relevant changes detected; build-test passes without running the backend suite."
 
       - name: Set up .NET SDK
-        if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.backend == 'true'
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
 
-      - name: Restore
-        if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
-        run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
+      - name: Download shared .NET build artifact
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.backend == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dotnet-release-build
+          path: ${{ runner.temp }}/dotnet-build-artifact
 
-      - name: Build
-        if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
-        run: dotnet build Coglatas.slnx --configuration Release --no-restore --disable-build-servers -m:1
+      - name: Restore shared .NET build outputs
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.backend == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/dotnet-build-artifact/dotnet-release-build.tar"
+          [[ -f "$archive" ]] || {
+            echo "::error::Shared .NET build artifact is missing."
+            exit 1
+          }
+
+          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
+
+          expected="$(git rev-parse HEAD)"
+          stamp="artifacts/ci/dotnet-build-sha"
+          [[ -f "$stamp" ]] || {
+            echo "::error::Shared .NET build artifact is missing its SHA stamp."
+            exit 1
+          }
+          actual="$(tr -d '\r\n' < "$stamp")"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Shared .NET build artifact SHA $actual does not match test revision $expected."
+            exit 1
+          fi
+
+      - name: Restore NuGet packages for consumer tools
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.backend == 'true'
+        run: dotnet restore Coglatas.slnx --disable-parallel --verbosity minimal
 
       - name: Restore .NET tools
         # PR tests no longer collect coverage. Tools are needed on PR only for EF;
         # main/manual still need ReportGenerator for the full coverage artifact.
-        if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.backend_ef == 'true'
         run: dotnet tool restore
 
       - name: Apply PostgreSQL migrations
-        if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.backend_ef == 'true'
         run: dotnet ef database update --project src/Coglatas.Infrastructure --startup-project src/Coglatas.Web --configuration Release --no-build
 
       - name: Reject pending EF Core model changes
-        if: github.event_name != 'pull_request' || steps.route.outputs.backend_ef == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.backend_ef == 'true'
         run: dotnet ef migrations has-pending-model-changes --project src/Coglatas.Infrastructure --startup-project src/Coglatas.Web --configuration Release --no-build
 
       - name: Test
-        if: github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.backend_tests == 'true'
         shell: bash
         env:
-          BACKEND_TEST_SCOPE: ${{ steps.route.outputs.backend_test_scope }}
-          BACKEND_TEST_FILTER: ${{ steps.route.outputs.backend_test_filter }}
+          BACKEND_TEST_SCOPE: ${{ needs.dotnet-build.outputs.backend_test_scope }}
+          BACKEND_TEST_FILTER: ${{ needs.dotnet-build.outputs.backend_test_filter }}
         run: |
           set -euo pipefail
           common_args=(
             --configuration Release
             --no-build
+            --no-restore
             --disable-build-servers
             -m:1
             --verbosity normal
@@ -171,10 +382,10 @@ jobs:
           fi
 
       - name: Verify backend TRX evidence
-        if: github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.backend_tests == 'true'
         shell: bash
         env:
-          BACKEND_TEST_SCOPE: ${{ steps.route.outputs.backend_test_scope }}
+          BACKEND_TEST_SCOPE: ${{ needs.dotnet-build.outputs.backend_test_scope }}
         run: |
           set -euo pipefail
           bash scripts/ci/verify-trx-results.sh \
@@ -210,7 +421,7 @@ jobs:
           retention-days: 7
 
       - name: Upload backend results on failure
-        if: failure() && (github.event_name != 'pull_request' || steps.route.outputs.backend_tests == 'true')
+        if: failure() && (github.event_name != 'pull_request' || needs.dotnet-build.outputs.backend_tests == 'true')
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -219,8 +430,100 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  resharper-pr:
+    name: ReSharper PR fast lane
+    needs: dotnet-build
+    if: ${{ github.event_name == 'pull_request' && needs.dotnet-build.outputs.built == 'true' }}
+    uses: ./.github/workflows/resharper_pr.yml
+
+  frontend-build:
+    name: Frontend build producer
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      frontend: ${{ needs.changes.outputs.frontend }}
+      frontend_build: ${{ needs.changes.outputs.frontend_build }}
+      frontend_unit: ${{ needs.changes.outputs.frontend_unit }}
+      frontend_unit_scope: ${{ needs.changes.outputs.frontend_unit_scope }}
+      frontend_unit_features: ${{ needs.changes.outputs.frontend_unit_features }}
+      frontend_architecture: ${{ needs.changes.outputs.frontend_architecture }}
+      frontend_license_guard: ${{ needs.changes.outputs.frontend_license_guard }}
+      frontend_storybook: ${{ needs.changes.outputs.frontend_storybook }}
+      frontend_playwright: ${{ needs.changes.outputs.frontend_playwright }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Skip frontend build producer for unrelated changes
+        if: needs.changes.outputs.frontend != 'true'
+        run: echo "No frontend-relevant changes detected; no frontend artifact is required."
+
+      - name: Set up Node.js
+        if: needs.changes.outputs.frontend == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+
+      - name: Use repository npm version without lifecycle scripts
+        if: needs.changes.outputs.frontend == 'true'
+        run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+
+      - name: Install Angular dependencies with reviewed lifecycle policy
+        if: needs.changes.outputs.frontend == 'true'
+        run: bash scripts/ci/npm-ci-retry.sh frontend
+
+      - name: Build production Angular artifact
+        if: needs.changes.outputs.frontend_build == 'true' || needs.changes.outputs.frontend_playwright == 'true'
+        run: npm --prefix frontend run build
+
+      - name: Build Storybook artifact
+        if: needs.changes.outputs.frontend_storybook == 'true'
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm --prefix frontend run build-storybook
+
+      - name: Package frontend build artifacts
+        if: needs.changes.outputs.frontend_build == 'true' || needs.changes.outputs.frontend_playwright == 'true' || needs.changes.outputs.frontend_storybook == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ci
+          git rev-parse HEAD > artifacts/ci/frontend-build-sha
+
+          outputs=(artifacts/ci/frontend-build-sha)
+          if [[ -d frontend/dist/coglatas-web ]]; then
+            outputs+=(frontend/dist/coglatas-web)
+          fi
+          if [[ -d frontend/storybook-static ]]; then
+            outputs+=(frontend/storybook-static)
+          fi
+
+          if [[ "${#outputs[@]}" -le 1 ]]; then
+            echo "::error::Frontend build producer completed without reusable output."
+            exit 1
+          fi
+
+          tar -cf "$RUNNER_TEMP/frontend-build-artifacts.tar" "${outputs[@]}"
+          du -h "$RUNNER_TEMP/frontend-build-artifacts.tar"
+
+      - name: Publish frontend build artifacts
+        if: needs.changes.outputs.frontend_build == 'true' || needs.changes.outputs.frontend_playwright == 'true' || needs.changes.outputs.frontend_storybook == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: frontend-build-artifacts
+          path: ${{ runner.temp }}/frontend-build-artifacts.tar
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
   frontend-test:
     name: frontend-test
+    needs: frontend-build
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -231,30 +534,53 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Route pull request changes
-        id: route
+      - name: Download redistributed frontend build artifacts
+        if: needs.frontend-build.outputs.frontend_build == 'true' || needs.frontend-build.outputs.frontend_playwright == 'true' || needs.frontend-build.outputs.frontend_storybook == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: frontend-build-artifacts
+          path: ${{ runner.temp }}/frontend-build-artifact
+
+      - name: Restore redistributed frontend build artifacts
+        if: needs.frontend-build.outputs.frontend_build == 'true' || needs.frontend-build.outputs.frontend_playwright == 'true' || needs.frontend-build.outputs.frontend_storybook == 'true'
         shell: bash
-        env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || (github.event_name == 'push' && github.event.before || '') }}
-          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-        run: bash scripts/ci/route-main-ci-changes.sh
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/frontend-build-artifact/frontend-build-artifacts.tar"
+          test -f "$archive"
+          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
+
+          expected="$(git rev-parse HEAD)"
+          actual="$(tr -d '\r\n' < artifacts/ci/frontend-build-sha)"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Frontend build artifact SHA $actual does not match test revision $expected."
+            exit 1
+          fi
+
+          if [[ "${{ needs.frontend-build.outputs.frontend_build }}" == "true" || "${{ needs.frontend-build.outputs.frontend_playwright }}" == "true" ]]; then
+            test -f frontend/dist/coglatas-web/index.html
+            test -f frontend/dist/coglatas-web/angular-app.marker
+          fi
+          if [[ "${{ needs.frontend-build.outputs.frontend_storybook }}" == "true" ]]; then
+            test -f frontend/storybook-static/index.html
+          fi
 
       - name: Skip frontend checks for unrelated changes
-        if: steps.route.outputs.frontend != 'true'
+        if: needs.frontend-build.outputs.frontend != 'true'
         run: echo "No frontend-relevant changes detected; frontend-test passes without running the frontend suite."
 
       - name: Set up Node.js
-        if: steps.route.outputs.frontend == 'true'
+        if: needs.frontend-build.outputs.frontend == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24"
 
       - name: Use repository npm version without lifecycle scripts
-        if: steps.route.outputs.frontend == 'true'
+        if: needs.frontend-build.outputs.frontend == 'true'
         run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
 
       - name: Validate MVP-A CI helper syntax
-        if: steps.route.outputs.frontend == 'true'
+        if: needs.frontend-build.outputs.frontend == 'true'
         shell: bash
         run: |
           python3 -m py_compile \
@@ -276,31 +602,32 @@ jobs:
           node --check /tmp/mvp-a-authz-boundary-acceptance.mjs
 
       - name: Verify MVP-A accessibility coverage contract
-        if: steps.route.outputs.frontend == 'true'
+        if: needs.frontend-build.outputs.frontend == 'true'
         run: python3 scripts/ci/verify-mvp-a-required-a11y-tests.py
 
       - name: Install UI runner dependencies with reviewed lifecycle policy
-        if: steps.route.outputs.frontend == 'true'
+        if: needs.frontend-build.outputs.frontend == 'true'
         run: bash scripts/ci/npm-ci-retry.sh .
 
       - name: Install Angular dependencies with reviewed lifecycle policy
-        if: steps.route.outputs.frontend == 'true'
+        if: needs.frontend-build.outputs.frontend == 'true'
         run: bash scripts/ci/npm-ci-retry.sh frontend
 
       - name: Run frontend checks in parallel
-        if: steps.route.outputs.frontend == 'true'
+        if: needs.frontend-build.outputs.frontend == 'true'
         shell: bash
         env:
-          FRONTEND_BUILD: ${{ steps.route.outputs.frontend_build }}
-          FRONTEND_UNIT: ${{ steps.route.outputs.frontend_unit }}
-          FRONTEND_ARCHITECTURE: ${{ steps.route.outputs.frontend_architecture }}
-          FRONTEND_LICENSE_GUARD: ${{ steps.route.outputs.frontend_license_guard }}
-          FRONTEND_STORYBOOK: ${{ steps.route.outputs.frontend_storybook }}
-          FRONTEND_PLAYWRIGHT: ${{ steps.route.outputs.frontend_playwright }}
+          FRONTEND_BUILD: "false"
+          FRONTEND_UNIT: ${{ needs.frontend-build.outputs.frontend_unit }}
+          FRONTEND_ARCHITECTURE: ${{ needs.frontend-build.outputs.frontend_architecture }}
+          FRONTEND_LICENSE_GUARD: ${{ needs.frontend-build.outputs.frontend_license_guard }}
+          FRONTEND_STORYBOOK: "false"
+          FRONTEND_PLAYWRIGHT: ${{ needs.frontend-build.outputs.frontend_playwright }}
+          COGLATAS_PLAYWRIGHT_REUSE_HOST_BUILD: "true"
         run: bash scripts/ci/run-frontend-parallel.sh
 
       - name: Upload browser artifacts on failure
-        if: failure() && steps.route.outputs.frontend_playwright == 'true'
+        if: failure() && needs.frontend-build.outputs.frontend_playwright == 'true'
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -313,6 +640,7 @@ jobs:
 
   security-scan:
     name: security-scan
+    needs: dotnet-build
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -330,16 +658,52 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Route pull request changes
-        id: route
-        shell: bash
-        env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
-          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-        run: bash scripts/ci/route-main-ci-changes.sh
+      - name: Download redistributed .NET build for security contract
+        if: github.event_name == 'pull_request' && needs.dotnet-build.outputs.avmig_contract == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dotnet-release-build
+          path: ${{ runner.temp }}/security-dotnet-build
 
+      - name: Restore redistributed .NET build for security contract
+        if: github.event_name == 'pull_request' && needs.dotnet-build.outputs.avmig_contract == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/security-dotnet-build/dotnet-release-build.tar"
+          test -f "$archive"
+          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
+          expected="$(git rev-parse HEAD)"
+          actual="$(tr -d '\r\n' < artifacts/ci/dotnet-build-sha)"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Security .NET build artifact SHA $actual does not match analyzed revision $expected."
+            exit 1
+          fi
+
+      - name: Download redistributed security OpenAPI build
+        if: github.event_name == 'pull_request' && needs.dotnet-build.outputs.avmig_contract == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: security-openapi-build
+          path: ${{ runner.temp }}/security-openapi-build
+
+      - name: Restore redistributed security OpenAPI build
+        if: github.event_name == 'pull_request' && needs.dotnet-build.outputs.avmig_contract == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/security-openapi-build/security-openapi-build.tar"
+          test -f "$archive"
+          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
+          expected="$(git rev-parse HEAD)"
+          actual="$(tr -d '\r\n' < artifacts/ci/security-openapi-sha)"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Security OpenAPI artifact SHA $actual does not match analyzed revision $expected."
+            exit 1
+          fi
+          test -f artifacts/openapi/coglatas-openapi.json
       - name: Create masked SEC-03 synthetic credential
-        if: github.event_name != 'pull_request' || steps.route.outputs.security == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.security == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -352,17 +716,17 @@ jobs:
           printf 'COGLATAS_SECURITY_CI_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
 
       - name: Set up .NET SDK
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true' || steps.route.outputs.avmig_contract == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.security_dotnet == 'true' || needs.dotnet-build.outputs.avmig_contract == 'true'
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
 
       - name: Restore
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true' || steps.route.outputs.avmig_contract == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.security_dotnet == 'true' || needs.dotnet-build.outputs.avmig_contract == 'true'
         run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
 
       - name: Reject vulnerable NuGet packages
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_dotnet == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.security_dotnet == 'true'
         shell: bash
         run: |
           set +e
@@ -376,18 +740,19 @@ jobs:
           exit "$status"
 
       - name: Generate and verify SEC-01 / AV-MIG contract
-        if: github.event_name != 'pull_request' || steps.route.outputs.avmig_contract == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.avmig_contract == 'true'
         shell: bash
         env:
           # PRs verify the generated contract once; main/manual repeat generation.
           COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS: ${{ github.event_name == 'pull_request' && '1' || '2' }}
+          COGLATAS_SECURITY_REUSE_PREBUILT_OPENAPI: ${{ github.event_name == 'pull_request' && '1' || '0' }}
           # Verifier mutation suites run on PR only when verifier/policy/toolchain
           # or their concrete Program/AppHub mutation targets changed.
-          COGLATAS_SECURITY_AVMIG_SELFTESTS: ${{ github.event_name != 'pull_request' && '1' || (steps.route.outputs.avmig_selftests == 'true' && '1' || '0') }}
+          COGLATAS_SECURITY_AVMIG_SELFTESTS: ${{ github.event_name != 'pull_request' && '1' || (needs.dotnet-build.outputs.avmig_selftests == 'true' && '1' || '0') }}
         run: bash scripts/ci/generate-security-openapi-contract.sh
 
       - name: Upload OpenAPI 3.1 contract
-        if: github.event_name != 'pull_request' || steps.route.outputs.avmig_contract == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.avmig_contract == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: openapi-3.1-contract
@@ -396,7 +761,7 @@ jobs:
           retention-days: 7
 
       - name: Validate Compose files
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.security_compose == 'true'
         shell: bash
         env:
           # Compose resolves environment-backed build secrets during config validation.
@@ -418,7 +783,7 @@ jobs:
           bash scripts/ci/verify-onprem-proxy-topology.sh
 
       - name: Validate SEC-02 security Compose invariants
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.security_compose == 'true'
         shell: bash
         env:
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
@@ -432,28 +797,28 @@ jobs:
             python3 scripts/ci/verify-security-compose.py
 
       - name: Test SEC-03 scanner harness contract
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.security_compose == 'true'
         shell: bash
         env:
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
         run: bash scripts/security/test-scanner-harness.sh
 
       - name: Test SEC-04 Schemathesis contract
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.security_compose == 'true'
         shell: bash
         env:
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
         run: bash scripts/security/test-schemathesis-contract.sh
 
       - name: Test SEC-06 ZAP contract
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.security_compose == 'true'
         shell: bash
         env:
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
         run: bash scripts/security/test-zap-contract.sh
 
       - name: Test AUD-02 lifecycle contract
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_compose == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.security_compose == 'true'
         shell: bash
         env:
           SYNCFUSION_LICENSE: compose-config-validation-placeholder
@@ -482,7 +847,7 @@ jobs:
         run: bash scripts/ci/run-security-runtime-parallel.sh
 
       - name: Scan repository filesystem with Trivy
-        if: github.event_name != 'pull_request' || steps.route.outputs.security_image == 'true'
+        if: github.event_name != 'pull_request' || needs.dotnet-build.outputs.security_image == 'true'
         shell: bash
         run: |
           set +e

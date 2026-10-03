@@ -53,7 +53,7 @@
     "JetBrains/qodana-action": {
       "sha": "3e8d76ff0e0241618abd808682f426afe84bab3f",
       "version": "v2026.2.2",
-      "purpose": "Pinned Qodana deep analysis in protected PR and trusted Cloud lanes",
+      "purpose": "Pinned Qodana deep analysis in trusted main and Cloud lanes",
       "privilegedAllowed": true
     },
     "advanced-security/component-detection-dependency-submission-action": {

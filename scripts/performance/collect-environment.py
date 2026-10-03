@@ -101,12 +101,58 @@ def image_id(project: str, compose_file: Path, compose_override: Path | None, se
     return run(["docker", "inspect", "--format", "{{.Image}}", first_line(container_id)])
 
 
-def built_compose_image_id(project: str, service: str) -> str:
-    # Compose only lists images for created containers. performance-browser is
-    # deliberately build-only during PERF-02 environment validation, so inspect
-    # Compose's deterministic default image name instead.
-    image_name = f"{project}-{service}"
-    return run(["docker", "image", "inspect", "--format", "{{.Id}}", image_name])
+def configured_compose_image_id(
+    project: str,
+    compose_file: Path,
+    compose_override: Path | None,
+    service: str,
+) -> str:
+    rendered = run(
+        compose_command(
+            project,
+            compose_file,
+            compose_override,
+            "--profile",
+            "tooling",
+            "config",
+            "--format",
+            "json",
+        )
+    )
+    payload = json.loads(rendered)
+    services = payload.get("services") if isinstance(payload, dict) else None
+    service_config = services.get(service) if isinstance(services, dict) else None
+    image_name = service_config.get("image") if isinstance(service_config, dict) else None
+    if isinstance(image_name, str) and image_name:
+        return run(["docker", "image", "inspect", "--format", "{{.Id}}", image_name])
+
+    # Profile-scoped build-only services are not guaranteed to retain an image
+    # name in every Docker Compose config rendering. The performance harness
+    # explicitly builds this service before fingerprinting, so fall back to the
+    # concrete image materialized by Compose rather than failing on metadata
+    # representation drift.
+    built_image = run(
+        compose_command(
+            project,
+            compose_file,
+            compose_override,
+            "--profile",
+            "tooling",
+            "images",
+            "-q",
+            service,
+        )
+    )
+    return run(
+        [
+            "docker",
+            "image",
+            "inspect",
+            "--format",
+            "{{.Id}}",
+            first_line(built_image),
+        ]
+    )
 
 
 def main() -> int:
@@ -155,7 +201,12 @@ def main() -> int:
 
         app_image = image_id(args.compose_project, args.compose_file, args.compose_override, "app")
         postgres_image = image_id(args.compose_project, args.compose_file, args.compose_override, "postgres")
-        browser_image = built_compose_image_id(args.compose_project, "performance-browser")
+        browser_image = configured_compose_image_id(
+            args.compose_project,
+            args.compose_file,
+            args.compose_override,
+            "performance-browser",
+        )
 
         output = {
             "schemaVersion": 1,

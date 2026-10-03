@@ -86,7 +86,7 @@
       "required": [
         "gate_id", "kind", "workflow", "job", "context", "scope", "trigger",
         "producer", "ruleset_integration_id", "allowed_conclusions", "timeout_minutes",
-        "staleness_policy", "rename"
+        "staleness_policy", "prerequisites", "rename"
       ],
       "properties": {
         "gate_id": {"type": "string", "pattern": "^GOV-GATE-[A-Z0-9-]+-[0-9]{3}$"},
@@ -107,6 +107,11 @@
         },
         "timeout_minutes": {"type": "integer", "minimum": 1},
         "staleness_policy": {"const": "exact-head-and-timeout"},
+        "prerequisites": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"}
+        },
         "rename": {"$ref": "#/$defs/rename"}
       }
     },

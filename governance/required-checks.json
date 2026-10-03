@@ -36,7 +36,10 @@
         "previous_workflow": null,
         "previous_job": null,
         "migration_issue": null
-      }
+      },
+      "prerequisites": [
+        "dotnet-build"
+      ]
     },
     {
       "gate_id": "GOV-GATE-FRONTEND-001",
@@ -66,7 +69,10 @@
         "previous_workflow": null,
         "previous_job": null,
         "migration_issue": null
-      }
+      },
+      "prerequisites": [
+        "frontend-build"
+      ]
     },
     {
       "gate_id": "GOV-GATE-SECURITY-001",
@@ -96,7 +102,10 @@
         "previous_workflow": null,
         "previous_job": null,
         "migration_issue": null
-      }
+      },
+      "prerequisites": [
+        "dotnet-build"
+      ]
     },
     {
       "gate_id": "GOV-GATE-PUBLICATION-001",
@@ -126,7 +135,8 @@
         "previous_workflow": null,
         "previous_job": null,
         "migration_issue": null
-      }
+      },
+      "prerequisites": []
     }
   ]
 }
