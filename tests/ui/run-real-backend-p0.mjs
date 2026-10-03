@@ -1,4 +1,5 @@
 import { buildPlaywrightGrep } from '../../scripts/ci/build-playwright-grep.mjs';
+import { fci04P0Gates } from '../functional/fixtures/fci04-owner-plan.mjs';
 import { verifyPlaywrightRequiredTests } from '../../scripts/ci/verify-playwright-required-tests.mjs';
 
 const manifestUrl = new URL('../../scripts/ci/real-backend-pr-p0-required-tests.txt', import.meta.url);
@@ -15,6 +16,7 @@ process.env.COGLATAS_REAL_BACKEND_P0_SETUP = '1';
 process.env.COGLATAS_FUNCTIONAL_FILES_GATE = process.env.GITHUB_EVENT_NAME === 'pull_request'
   ? 'functional-fast'
   : 'functional-full';
+process.env.COGLATAS_FCI04_GATES = fci04P0Gates(process.env.COGLATAS_FCI04_GATES);
 
 await import('./run-real-backend-smoke-compose.mjs');
 
