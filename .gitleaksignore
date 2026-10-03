@@ -14,3 +14,9 @@
 # PERF-04: metric literal api.latency.p95_ms falsely matched generic-api-key.
 # Exact historical commit/path/rule/line only; no real credential is present.
 17dfc1d7d02b2c14db126d617eeb7f346553b0ed:scripts/performance/api_k6.py:generic-api-key:41
+
+# PERF-04: SHA-256 of the public environment compatibility fingerprint,
+# verified against the original sanitized measurement artifact; not a credential.
+# Scope exceptions to the exact historical commit/path/rule/line only.
+794050526eba941a6404ebf87ca3e7beeb7d625b:performance/evidence/perf04-task-list-calibration.json:generic-api-key:11
+794050526eba941a6404ebf87ca3e7beeb7d625b:performance/evidence/perf04-task-list-calibration.json:generic-api-key:111
