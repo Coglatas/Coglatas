@@ -7,6 +7,10 @@ on:
         required: false
         type: string
         default: all
+      reuse_main_artifacts:
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       suite:
@@ -62,14 +66,14 @@ jobs:
           node-version: "24"
 
       - name: Download main build artifacts
-        if: github.event_name == 'workflow_call'
+        if: inputs.reuse_main_artifacts == true
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: main-build-artifacts
           path: ${{ runner.temp }}/main-build-artifacts
 
       - name: Restore main build artifacts
-        if: github.event_name == 'workflow_call'
+        if: inputs.reuse_main_artifacts == true
         shell: bash
         run: bash scripts/ci/restore-main-build-artifacts.sh "$RUNNER_TEMP/main-build-artifacts" "$TARGET_SHA" "$GITHUB_WORKSPACE"
 
@@ -89,7 +93,7 @@ jobs:
         run: docker network prune --force
 
       - name: Run P0 acceptance
-        if: github.event_name == 'workflow_call' || github.event_name == 'push' || inputs.suite == 'p0' || inputs.suite == 'all'
+        if: inputs.reuse_main_artifacts == true || github.event_name == 'push' || inputs.suite == 'p0' || inputs.suite == 'all'
         run: node tests/ui/run-real-backend-p0.mjs
 
       - name: Run Issue 683 fixed-SHA repeated race evidence
@@ -97,15 +101,15 @@ jobs:
         run: node tests/ui/run-issue-683-real-backend-evidence.mjs
 
       - name: Run MVP-A authorization boundary acceptance
-        if: github.event_name == 'workflow_call' || github.event_name == 'push' || inputs.suite == 'authz' || inputs.suite == 'all'
+        if: inputs.reuse_main_artifacts == true || github.event_name == 'push' || inputs.suite == 'authz' || inputs.suite == 'all'
         run: bash scripts/ci/run-mvp-a-authz-boundary-acceptance.sh
 
       - name: Run My Tasks acceptance
-        if: github.event_name == 'workflow_call' || github.event_name == 'push' || inputs.suite == 'my-tasks' || inputs.suite == 'all'
+        if: inputs.reuse_main_artifacts == true || github.event_name == 'push' || inputs.suite == 'my-tasks' || inputs.suite == 'all'
         run: node tests/ui/run-real-backend-my-tasks.mjs
 
       - name: Repair test-results ownership before MBJ-01
-        if: github.event_name == 'workflow_call' || github.event_name == 'push' || inputs.suite == 'mbj01' || inputs.suite == 'all'
+        if: inputs.reuse_main_artifacts == true || github.event_name == 'push' || inputs.suite == 'mbj01' || inputs.suite == 'all'
         shell: bash
         run: |
           mkdir -p test-results
@@ -120,11 +124,11 @@ jobs:
           fi
 
       - name: Run MBJ-01 bootstrap acceptance
-        if: github.event_name == 'workflow_call' || github.event_name == 'push' || inputs.suite == 'mbj01' || inputs.suite == 'all'
+        if: inputs.reuse_main_artifacts == true || github.event_name == 'push' || inputs.suite == 'mbj01' || inputs.suite == 'all'
         run: bash scripts/ci/run-mbj01-bootstrap-acceptance.sh
 
       - name: Repair test-results ownership before MBJ-02
-        if: github.event_name == 'workflow_call' || github.event_name == 'push' || inputs.suite == 'mbj02' || inputs.suite == 'all'
+        if: inputs.reuse_main_artifacts == true || github.event_name == 'push' || inputs.suite == 'mbj02' || inputs.suite == 'all'
         shell: bash
         run: |
           mkdir -p test-results
@@ -139,11 +143,11 @@ jobs:
           fi
 
       - name: Run MBJ-02 invite acceptance
-        if: github.event_name == 'workflow_call' || github.event_name == 'push' || inputs.suite == 'mbj02' || inputs.suite == 'all'
+        if: inputs.reuse_main_artifacts == true || github.event_name == 'push' || inputs.suite == 'mbj02' || inputs.suite == 'all'
         run: bash scripts/ci/run-mbj02-invite-acceptance.sh
 
       - name: Repair test-results ownership before MBJ-03
-        if: github.event_name == 'workflow_call' || github.event_name == 'push' || inputs.suite == 'mbj03' || inputs.suite == 'all'
+        if: inputs.reuse_main_artifacts == true || github.event_name == 'push' || inputs.suite == 'mbj03' || inputs.suite == 'all'
         shell: bash
         run: |
           mkdir -p test-results
@@ -158,7 +162,7 @@ jobs:
           fi
 
       - name: Run MBJ-03 session acceptance
-        if: github.event_name == 'workflow_call' || github.event_name == 'push' || inputs.suite == 'mbj03' || inputs.suite == 'all'
+        if: inputs.reuse_main_artifacts == true || github.event_name == 'push' || inputs.suite == 'mbj03' || inputs.suite == 'all'
         run: bash scripts/ci/run-mbj03-session-acceptance.sh
 
       - name: Upload Issue 683 fixed-SHA evidence
