@@ -7,10 +7,11 @@
 | SonarQube Cloud | Repository-wide quality gate across C#, JavaScript, TypeScript, HTML, CSS and SCSS | Automatic Analysis on every PR update and every push to `main` |
 | ESLint + angular-eslint | JavaScript, TypeScript and Angular template policy | `Frontend Static Analysis` on every PR and `main` push; blocking |
 | Stylelint | CSS and SCSS policy | `Frontend Static Analysis` on every PR and `main` push; blocking |
-| Qodana Community for .NET | JetBrains/ReSharper second-opinion and deep .NET inspection | Every PR, `main`, weekly schedule and manual dispatch; blocking for changed-code findings on PRs, Critical findings, scanner failure and project-model failure |
+| ReSharper InspectCode CLI | Fast JetBrains inspection lane for .NET pull-request feedback | Every PR; runs only when .NET/config inputs changed, reports `WARNING` or higher with solution-wide analysis disabled, and fails on findings in files changed by the PR |
+| Qodana Community for .NET | Deep JetBrains/ReSharper repository inspection and project-model validation | Trusted `main` pushes and manual dispatch; full repository scan with strict Critical/unresolved/project-model guards |
 | CodeQL | Security-oriented semantic/data-flow analysis | Every PR targeting `main`, trusted `main` pushes and weekly schedule |
 
-The tools intentionally overlap at the language level but not at the policy level. SonarQube is the primary cross-stack quality view, ESLint/Stylelint enforce frontend-specific rules, CodeQL owns security analysis, and Qodana supplies an independent JetBrains/ReSharper inspection lane for .NET.
+The tools intentionally overlap at the language level but not at the policy level. SonarQube is the primary cross-stack quality view, ESLint/Stylelint enforce frontend-specific rules, CodeQL owns security analysis, ReSharper InspectCode supplies fast pull-request feedback for .NET, and Qodana supplies the deeper trusted-main JetBrains/ReSharper repository lane.
 
 ## Frontend lint debt baseline
 
@@ -65,15 +66,21 @@ The PR-stage gates include:
 - security scan
 - publication readiness
 - frontend static analysis (`ESLint` + `Stylelint`)
-- Qodana Community / .NET
+- ReSharper InspectCode / PR
 - CodeQL semantic/data-flow analysis
 
 The SonarQube Quality Gate is supplied by the SonarQube Cloud GitHub integration rather than by a secret-bearing workflow in this repository.
+
+## ReSharper pull-request policy
+
+`.github/workflows/resharper_pr.yml` is the fast .NET inspection lane. It runs on every pull request targeting `main`, but skips the expensive analysis when the diff contains no .NET source, project, solution, SDK, NuGet, ReSharper, or MSBuild configuration inputs.
+
+The workflow pins `JetBrains.ReSharper.GlobalTools` to version `2026.2.2` and runs `InspectCode` against `Coglatas.slnx` with `--severity=WARNING`, `--no-swea`, and a Release build. The SARIF guard fails only when a reported issue is located in a file changed by the pull request. This keeps historical debt from making unrelated PRs permanently red while still preventing touched files from carrying Warning-or-higher ReSharper findings forward. The full SARIF report is retained as a short-lived workflow artifact. The lane uses read-only repository permissions and no JetBrains license secret.
 
 ## Qodana policy
 
 Qodana uses the `qodana.recommended` profile and additionally enables all inspections whose default JetBrains severity is `ERROR`, `WARNING`, or `WEAK WARNING`. Generated output, dependency directories, test artifacts, runtime data and the inactive legacy frontend scaffold remain excluded; first-party source and tests remain in scope.
 
-For pull requests, Qodana runs in PR mode and preserves the full inspection inventory. Before the scan, the workflow records the exact `base...HEAD` changed-file set; after a successful scan, the SARIF guard rejects any Qodana problem located in one of those changed files. The native total-problem `--fail-threshold` is not used as the PR gate because, without a stable matching baseline, it also counts the repository's historical findings under the strict profile. The workflow has read-only repository permissions, does not post comments or annotations, does not push fixes, and uses no Qodana token because the Community linter does not require one.
+Qodana is the trusted-main deep lane rather than the pull-request fast lane. `.github/workflows/qodana_code_quality.yml` runs the reusable Community gate on `main` pushes and manual dispatches, while `.github/workflows/qodana_cloud_quality.yml` performs the full trusted Cloud publication on `main`. The temporarily disabled schedules remain disabled.
 
-For `main`, scheduled and manually dispatched full-repository scans, historical non-critical debt remains visible rather than making the lane permanently red. The post-processing guard still fails on any Critical finding, any unresolved-symbol finding, project-model/restore/build/SDK/package-resolution failure, missing SARIF output, or Qodana execution failure.
+Historical non-critical debt remains visible rather than making the lane permanently red. The post-processing guard still fails on any Critical finding, any unresolved-symbol finding, project-model/restore/build/SDK/package-resolution failure, missing SARIF output, or Qodana execution failure.
