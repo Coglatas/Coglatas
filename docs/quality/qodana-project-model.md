@@ -20,9 +20,9 @@ Last updated: 2026-09-27.
 - .NET SDK: `10.0.401`, pinned by `global.json` with roll-forward disabled.
 - Target framework: `net10.0`.
 - Node.js: `24.x` for the SARIF/project-model guard.
-- Qodana action: `JetBrains/qodana-action` v2026.2.1, pinned to commit `10be11607eb323a180e2b76b26c9c5cdceac3e77`.
+- Qodana action: `JetBrains/qodana-action` v2026.2.2, pinned by SHA in the trusted workflows.
 - Community linter image: `jetbrains/qodana-cdnet:2026.2-privileged@sha256:21bbbfeac0e61fe8790cc27d5754b87d57b8032c0c32f84ddeb887027f83ec4f`.
-- Reusable Qodana gate: `.github/workflows/qodana_trusted_gate.yml` pinned through main-reachable commit `e03555c4be3700aa23f6e0bfe86b740b042dd5fa`.
+- Reusable Qodana gate: `.github/workflows/qodana_trusted_gate.yml`, invoked locally by the trusted Community caller.
 
 Qodana Community for .NET is intentionally the .NET lane. Frontend policy is enforced independently by SonarQube Cloud, ESLint/angular-eslint and Stylelint, so the Qodana bootstrap sets `QODANA_SKIP_FRONTEND_BOOTSTRAP=true` in CI instead of spending Community-linter time building an unsupported frontend analysis surface.
 
@@ -65,26 +65,13 @@ Qodana runs `scripts/quality/qodana-bootstrap.sh` before inspections. For the Co
 
 Restore, build, SDK, package-resolution, solution-load and project-model failures are hard failures.
 
-## Pull-request quality gate
+## Trusted Community quality gate
 
-`.github/workflows/qodana_code_quality.yml` is the trusted Community caller for `main` pushes and manual dispatch. It delegates analysis to the local reusable workflow `qodana_trusted_gate.yml`. Pull-request JetBrains analysis is handled separately by the ReSharper InspectCode fast lane, so Qodana no longer spends the PR feedback budget on full repository inspection. The Community lane remains tokenless; Qodana Cloud credentials are never passed to it.
+`.github/workflows/qodana_code_quality.yml` is the tokenless trusted Community caller. It runs on pushes to `main` and manual dispatch, and delegates analysis to the local reusable workflow `qodana_trusted_gate.yml`. Pull-request JetBrains analysis is handled separately by the ReSharper InspectCode fast lane, so Qodana no longer spends the PR feedback budget on full-repository inspection.
 
-For PRs:
+The Community lane performs the repository-wide Qodana scan with the canonical `qodana.yaml` project model and the reviewed per-inspection debt ratchet. `check-qodana-project-model.mjs` compares current inspection counts with `scripts/quality/qodana-rule-baseline.json`; any count above its reviewed budget fails, while Critical findings, unresolved-symbol findings, project-model failures, missing/invalid SARIF, and Qodana execution failures remain hard failures.
 
-- `pr-mode: true` supplies Qodana with pull-request comparison context while retaining the inspection inventory used by the repository guard.
-- Before Qodana starts, the workflow writes the exact `base...HEAD` changed-file set to a runner-temporary, NUL-delimited file.
-- After Qodana succeeds, `check-qodana-project-model.mjs` compares the current inspection counts with `scripts/quality/qodana-rule-baseline.json`.
-- Existing findings are treated as technical-debt budget, not as a reason to fail merely because their file was touched.
-- A rule fails the gate when its current count exceeds its recorded budget; a previously unseen rule therefore has an implicit budget of zero.
-- The native total-problem `--fail-threshold` is not used because it cannot express this repository's per-inspection ratchet policy.
-- Qodana execution failure is not masked with `continue-on-error`.
-- Repository permissions remain `contents: read`.
-- Qodana comments, annotations and quick-fix pushes are disabled.
-- `QODANA_TOKEN` is never passed to the pull-request workflow, including repository-owner PRs.
-- Repository-owner PRs may exercise proposed Qodana policy changes directly.
-- For every other PR, `qodana.yaml`, the Qodana bootstrap/guard, and the repository helper scripts executed by this job are restored from the PR base SHA before execution; the guard is restored again after analysis before it consumes SARIF.
-
-This preserves analysis of submitted source while preventing an external PR from replacing either the quality-policy scripts or the debt baseline that enforce the result. Historical findings remain visible without making a cleanup PR fail solely because it touched a file that already contained debt.
+The lane keeps repository permissions at `contents: read`, does not publish quick fixes or modify repository contents, and does not receive `QODANA_TOKEN`. Qodana Cloud publication is intentionally separated into the trusted Cloud workflow described below.
 
 ## Full-repository quality gate and Qodana Cloud
 
