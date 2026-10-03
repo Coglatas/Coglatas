@@ -44,8 +44,101 @@ jobs:
       - name: Enforce Coglatas rename completion
         run: python3 scripts/ci/check-coglatas-rename.py
 
+  dotnet-build:
+    name: .NET build producer
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      built: ${{ steps.scope.outputs.built }}
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      DOTNET_MULTILEVEL_LOOKUP: "0"
+      DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Route pull request changes
+        id: route
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/ci/route-main-ci-changes.sh
+
+      - name: Resolve shared build requirement
+        id: scope
+        shell: bash
+        env:
+          ROUTE_BACKEND: ${{ steps.route.outputs.backend }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" != "pull_request" || "$ROUTE_BACKEND" == "true" ]]; then
+            echo "built=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "built=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip shared .NET build for unrelated PR
+        if: steps.scope.outputs.built != 'true'
+        run: echo "No backend-relevant changes detected; shared .NET build is not required."
+
+      - name: Set up .NET SDK
+        if: steps.scope.outputs.built == 'true'
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore authoritative .NET graph
+        if: steps.scope.outputs.built == 'true'
+        run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
+
+      - name: Build authoritative .NET graph
+        if: steps.scope.outputs.built == 'true'
+        run: dotnet build Coglatas.slnx --configuration Release --no-restore --disable-build-servers -m:1
+
+      - name: Package shared .NET build outputs
+        if: steps.scope.outputs.built == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ci
+          git rev-parse HEAD > artifacts/ci/dotnet-build-sha
+
+          mapfile -d '' build_dirs < <(
+            find src tests -type d \
+              \( -path '*/bin/Release' -o -name obj \) \
+              -print0
+          )
+          if [[ "${#build_dirs[@]}" -eq 0 ]]; then
+            echo "::error::Authoritative build completed without reusable bin/obj outputs."
+            exit 1
+          fi
+
+          tar -cf "$RUNNER_TEMP/dotnet-release-build.tar" \
+            artifacts/ci/dotnet-build-sha \
+            "${build_dirs[@]}"
+
+          du -h "$RUNNER_TEMP/dotnet-release-build.tar"
+
+      - name: Publish shared .NET build artifact
+        if: steps.scope.outputs.built == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dotnet-release-build
+          path: ${{ runner.temp }}/dotnet-release-build.tar
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
   build-test:
     name: build-test
+    needs: dotnet-build
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -101,13 +194,37 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore
+      - name: Download shared .NET build artifact
         if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
-        run: dotnet restore Coglatas.slnx --disable-parallel --verbosity normal
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dotnet-release-build
+          path: ${{ runner.temp }}/dotnet-build-artifact
 
-      - name: Build
+      - name: Restore shared .NET build outputs
         if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
-        run: dotnet build Coglatas.slnx --configuration Release --no-restore --disable-build-servers -m:1
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/dotnet-build-artifact/dotnet-release-build.tar"
+          [[ -f "$archive" ]] || {
+            echo "::error::Shared .NET build artifact is missing."
+            exit 1
+          }
+
+          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
+
+          expected="$(git rev-parse HEAD)"
+          stamp="artifacts/ci/dotnet-build-sha"
+          [[ -f "$stamp" ]] || {
+            echo "::error::Shared .NET build artifact is missing its SHA stamp."
+            exit 1
+          }
+          actual="$(tr -d '\r\n' < "$stamp")"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Shared .NET build artifact SHA $actual does not match test revision $expected."
+            exit 1
+          fi
 
       - name: Restore .NET tools
         # PR tests no longer collect coverage. Tools are needed on PR only for EF;
@@ -134,6 +251,7 @@ jobs:
           common_args=(
             --configuration Release
             --no-build
+            --no-restore
             --disable-build-servers
             -m:1
             --verbosity normal
@@ -218,6 +336,17 @@ jobs:
           path: artifacts/test-results
           if-no-files-found: warn
           retention-days: 7
+
+  resharper-pr:
+    name: ReSharper PR fast lane
+    needs: dotnet-build
+    if: ${{ github.event_name == 'pull_request' && needs.dotnet-build.outputs.built == 'true' }}
+    uses: ./.github/workflows/resharper_pr.yml
+    with:
+      build-artifact-name: dotnet-release-build
+      analysis-sha: ${{ github.sha }}
+      base-sha: ${{ github.event.pull_request.base.sha }}
+      head-sha: ${{ github.event.pull_request.head.sha }}
 
   frontend-test:
     name: frontend-test
