@@ -377,7 +377,7 @@ while IFS= read -r path; do
 
   # Backend compile/test routing.
   case "$path" in
-    Coglatas.slnx|global.json|NuGet.config|Directory.Build.*|Directory.Packages.*|.config/*|tests/Coglatas.Tests/Coglatas.Tests.csproj|src/*.csproj)
+    Coglatas.slnx|global.json|NuGet.config|Directory.Build.*|Directory.Packages.*|.editorconfig|*.DotSettings|*.dotsettings|.config/*|tests/Coglatas.Tests/Coglatas.Tests.csproj|src/*.csproj)
       mark_backend_full
       backend_ef=true
       ;;
