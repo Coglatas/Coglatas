@@ -112,6 +112,13 @@
           "uniqueItems": true,
           "items": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"}
         },
+        "conditional_prerequisites": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^needs\\.[A-Za-z0-9_.-]+\\.outputs\\.[A-Za-z0-9_.-]+ == 'true'$"
+          }
+        },
         "rename": {"$ref": "#/$defs/rename"}
       }
     },

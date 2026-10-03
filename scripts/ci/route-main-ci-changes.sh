@@ -28,6 +28,7 @@ keys=(
   security_compose
   security_migration
   security_image
+  functional
 )
 
 write_output() {
@@ -49,6 +50,7 @@ route_all() {
   write_output "backend_test_filter" ""
   write_output "frontend_unit_scope" "full"
   write_output "frontend_unit_features" ""
+  write_output "functional_reason" "unknown-diff-run-all"
   if [[ -n "$summary_file" ]]; then
     echo "Unable to establish a safe diff base; all CI work is enabled." >> "$summary_file"
   fi
@@ -62,7 +64,10 @@ if [[ -z "$base_sha" || "$base_sha" == "$zero_sha" || -z "$head_sha" ]] || \
 fi
 
 changed_file_list="${RUNNER_TEMP:-/tmp}/ci-changed-files.txt"
-git diff --name-only "$base_sha" "$head_sha" > "$changed_file_list"
+if ! git diff --name-only "$base_sha" "$head_sha" > "$changed_file_list"; then
+  route_all
+  exit 0
+fi
 
 backend=false
 backend_ef=false
@@ -88,6 +93,25 @@ security_compose=false
 security_migration=false
 security_image=false
 frontend_features=()
+functional=false
+functional_reason="validated-documentation-only"
+
+# Only positively identified documentation is exempt from real-stack coverage.
+# Unknown paths and shared build/CI inputs run all fast domains conservatively.
+while IFS= read -r functional_path; do
+  [[ -n "$functional_path" ]] || continue
+  case "$functional_path" in
+    docs/verification/functional-ci/*|docs/ci/functional-compose-harness.md)
+      functional=true
+      ;;
+    docs/*|README.md|CONTRIBUTING.md|COPYRIGHT.md|THIRD_PARTY_NOTICES.md|AGENTS.md|LICENSE*)
+      ;;
+    *) functional=true ;;
+  esac
+done < "$changed_file_list"
+if [[ "$functional" == "true" ]]; then
+  functional_reason="runtime-or-unclassified-change"
+fi
 
 add_unique() {
   local value="$1"
@@ -618,6 +642,14 @@ while IFS= read -r path; do
   esac
 done < "$changed_file_list"
 
+# Functional runs consume the same PR build products, including when only one
+# product side changed. Unit-test selection stays independent of build reuse.
+if [[ "$functional" == "true" ]]; then
+  backend=true
+  frontend=true
+  frontend_build=true
+fi
+
 backend_test_scope="none"
 backend_test_filter=""
 if [[ "$backend_tests" == "true" ]]; then
@@ -651,11 +683,13 @@ write_output "backend_test_scope" "$backend_test_scope"
 write_output "backend_test_filter" "$backend_test_filter"
 write_output "frontend_unit_scope" "$frontend_unit_scope"
 write_output "frontend_unit_features" "$frontend_unit_features"
+write_output "functional_reason" "$functional_reason"
 
 if [[ -n "$summary_file" ]]; then
   {
     echo "### CI routing"
     echo "- backend: $backend"
+    echo "- Functional: $functional ($functional_reason)"
     echo "  - EF migration/model validation: $backend_ef"
     echo "  - main tests: $backend_tests ($backend_test_scope${backend_test_filter:+: $backend_test_filter})"
     echo "  - TASK-V1-PR07-B: $backend_pr07b"
