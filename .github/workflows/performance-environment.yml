@@ -1,6 +1,15 @@
 name: Performance environment
 
 on:
+  workflow_call:
+    inputs:
+      target_sha:
+        required: true
+        type: string
+      profile:
+        required: false
+        type: string
+        default: small
   workflow_dispatch:
     inputs:
       profile:
@@ -12,20 +21,6 @@ on:
           - small
           - medium
           - large
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/performance-environment.yml"
-      - "performance/**"
-      - "scripts/performance/**"
-      - "scripts/ci/verify-performance-environment.py"
-      - "infra/compose/performance/environment.yml"
-      - "Dockerfile"
-      - "infra/docker/playwright.Dockerfile"
-      - "src/**"
-      - "frontend/**"
-      - "package-lock.json"
-      - "frontend/package-lock.json"
 
 concurrency:
   group: performance-environment-${{ github.ref }}-${{ inputs.profile || 'small' }}
@@ -45,12 +40,13 @@ jobs:
       COGLATAS_PERFORMANCE_PROFILE: ${{ inputs.profile || 'small' }}
       COGLATAS_PERFORMANCE_PORT: "18080"
       COGLATAS_PERFORMANCE_COMPOSE_PROJECT: coglatas-performance-${{ github.run_id }}-${{ github.run_attempt }}
+      TARGET_SHA: ${{ github.event_name == 'workflow_call' && inputs.target_sha || github.sha }}
 
     steps:
       - name: Checkout reviewed commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.TARGET_SHA }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -61,6 +57,18 @@ jobs:
             echo "SYNCFUSION_LICENSE is not configured in the protected environment." >&2
             exit 1
           }
+      - name: Download main build artifacts
+        if: github.event_name == 'workflow_call'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: main-build-artifacts
+          path: ${{ runner.temp }}/main-build-artifacts
+
+      - name: Restore main build artifacts
+        if: github.event_name == 'workflow_call'
+        shell: bash
+        run: bash scripts/ci/restore-main-build-artifacts.sh "$RUNNER_TEMP/main-build-artifacts" "$TARGET_SHA" "$GITHUB_WORKSPACE"
+
 
       - name: Generate isolated synthetic fixture credential
         shell: bash
