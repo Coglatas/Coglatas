@@ -1,0 +1,120 @@
+name: ReSharper PR Analysis
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: resharper-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  resharper-inspectcode:
+    name: ReSharper InspectCode / PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      RESHARPER_VERSION: "2026.2.2"
+
+    steps:
+      - name: Checkout pull-request head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Classify pull-request changes
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$RUNNER_TEMP/resharper"
+          changed_files="$report_dir/changed-files.nul"
+          mkdir -p "$report_dir"
+
+          git diff --name-only --diff-filter=ACMRT -z "$BASE_SHA...HEAD" > "$changed_files"
+
+          CHANGED_FILES_PATH="$changed_files" python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
+          from pathlib import Path
+
+          changed_path = Path(os.environ["CHANGED_FILES_PATH"])
+          paths = [
+              item.decode("utf-8", errors="surrogateescape")
+              for item in changed_path.read_bytes().split(b"\0")
+              if item
+          ]
+
+          def affects_dotnet(path: str) -> bool:
+              lower = path.lower()
+              name = Path(path).name.lower()
+              return (
+                  lower.endswith((".cs", ".csproj", ".fsproj", ".vbproj", ".props", ".targets", ".sln", ".slnx", ".dotsettings"))
+                  or name in {
+                      ".editorconfig",
+                      "global.json",
+                      "nuget.config",
+                      "directory.build.props",
+                      "directory.build.targets",
+                      "directory.packages.props",
+                  }
+              )
+
+          print(f"needs_analysis={'true' if any(affects_dotnet(path) for path in paths) else 'false'}")
+          print(f"changed_files_path={changed_path}")
+          PY
+
+      - name: Install ReSharper command-line tools
+        if: steps.scope.outputs.needs_analysis == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_dir="$RUNNER_TEMP/resharper-tools"
+          dotnet tool install JetBrains.ReSharper.GlobalTools             --version "$RESHARPER_VERSION"             --tool-path "$tool_dir"
+          echo "RESHARPER_JB=$tool_dir/jb" >> "$GITHUB_ENV"
+
+      - name: Run ReSharper InspectCode fast lane
+        if: steps.scope.outputs.needs_analysis == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sarif="$RUNNER_TEMP/resharper/inspectcode.sarif.json"
+
+          "$RESHARPER_JB" inspectcode Coglatas.slnx             --output="$sarif"             --severity=WARNING             --no-swea             --build             --properties:Configuration=Release             --verbosity=WARN
+
+      - name: Gate changed files on ReSharper findings
+        if: steps.scope.outputs.needs_analysis == 'true'
+        shell: bash
+        run: |
+          python3 scripts/quality/check-resharper-pr-sarif.py             "$RUNNER_TEMP/resharper/inspectcode.sarif.json"             "${{ steps.scope.outputs.changed_files_path }}"
+
+      - name: Skip ReSharper for non-.NET pull request
+        if: steps.scope.outputs.needs_analysis != 'true'
+        shell: bash
+        run: echo "No .NET or ReSharper configuration changes detected; fast lane is not required."
+
+      - name: Upload ReSharper report
+        if: always() && steps.scope.outputs.needs_analysis == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: resharper-pr-sarif
+          path: ${{ runner.temp }}/resharper/inspectcode.sarif.json
+          if-no-files-found: warn
+          retention-days: 7
