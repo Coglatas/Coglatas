@@ -78,6 +78,14 @@
     },
     {
       "report": "frontend",
+      "package": "@storybook/angular",
+      "severity": "high",
+      "via": [
+        "dependency:@angular-devkit/build-angular"
+      ]
+    },
+    {
+      "report": "frontend",
       "package": "braces",
       "severity": "high",
       "via": [
