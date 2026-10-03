@@ -121,6 +121,41 @@ jobs:
         errors = guard.required_check_errors(".github/workflows/publication-readiness.yml", text, REGISTRY)
         self.assertTrue(any("must not depend" in error for error in errors))
 
+    def test_declared_build_prerequisite_passes(self) -> None:
+        text = """
+on:
+  pull_request:
+jobs:
+  dotnet-build:
+    name: .NET build producer
+    runs-on: ubuntu-latest
+  build-test:
+    name: build-test
+    needs: dotnet-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+"""
+        errors = guard.required_check_errors(".github/workflows/ci.yml", text, REGISTRY)
+        self.assertEqual([], errors)
+
+    def test_declared_prerequisite_with_job_if_is_rejected(self) -> None:
+        text = """
+on:
+  pull_request:
+jobs:
+  dotnet-build:
+    name: .NET build producer
+    if: github.actor != 'x'
+    runs-on: ubuntu-latest
+  build-test:
+    name: build-test
+    needs: dotnet-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+"""
+        errors = guard.required_check_errors(".github/workflows/ci.yml", text, REGISTRY)
+        self.assertTrue(any("prerequisite job 'dotnet-build' must not use job-level if" in error for error in errors))
+
     def test_continue_on_error_is_rejected(self) -> None:
         text = """
 on:
