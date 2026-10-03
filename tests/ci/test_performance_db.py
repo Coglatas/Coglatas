@@ -103,6 +103,13 @@ class PerformanceDbGateTests(unittest.TestCase):
         self.assertIn("n-plus-one-cardinality-growth", failures)
         self.assertIn("unstable-query-count", failures)
 
+    def test_unpaged_workspace_inventory_uses_cardinality_growth_without_fake_page_sizes(self):
+        small = {"cardinality": 1, "samples": [{"pageSize": 0, "page": 1, "capture": capture(4)} for _ in range(5)]}
+        medium = {"cardinality": 3, "samples": [{"pageSize": 0, "page": 1, "capture": capture(4)} for _ in range(5)]}
+        self.assertEqual([], growth_failures(small, medium, self.policy))
+        medium["samples"] = [{"pageSize": 0, "page": 1, "capture": capture(8)} for _ in range(5)]
+        self.assertIn("n-plus-one-cardinality-growth", growth_failures(small, medium, self.policy))
+
     def test_aggregate_rejects_partial_or_forged_fixture_evidence(self):
         with self.assertRaises(PerformanceContractError):
             module.evaluate({"collectionComplete": False}, {"collectionComplete": True}, self.contract)

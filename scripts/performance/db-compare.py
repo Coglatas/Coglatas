@@ -33,7 +33,7 @@ def evaluate(small, medium, contract):
             if len(matches) != 1:
                 raise PerformanceContractError("missing or duplicated scenario")
             record = matches[0]
-            expected_keys = {(size, page, iteration) for size in contract["policy"]["pageSizes"] for page in ((1, 2) if scenario["paged"] else (1,)) for iteration in range(1, contract["policy"]["samples"] + 1)}
+            expected_keys = {(size, page, iteration) for size in (contract["policy"]["pageSizes"] if scenario["paged"] else [0]) for page in ((1, 2) if scenario["paged"] else (1,)) for iteration in range(1, contract["policy"]["samples"] + 1)}
             actual_keys = {(s["pageSize"], s["page"], s["iteration"]) for s in record["samples"]}
             if actual_keys != expected_keys or len(record["samples"]) != len(expected_keys):
                 raise PerformanceContractError("missing/duplicate measured sample")
@@ -62,7 +62,7 @@ def duration_results(profile, fingerprint, root, baselines=None):
     for measurement in profile["measurements"]:
         # PERF-03's comparison is scenario-specific; keep the page-5 stream canonical.
         # Page-10 samples remain in raw evidence and are never mixed into that stream.
-        if measurement["pageSize"] != 5:
+        if measurement["pageSize"] not in (0, 5):
             continue
         baseline = {} if baselines is None else load_json(baselines / profile["profile"] / (measurement["scenario"] + ".json"))
         result = compare_documents(measurement, baseline, fingerprint, load_json(root / "performance/scenarios.json"), load_json(root / "performance/budgets.json"), load_json(root / "performance/environment.json"), load_json(root / "performance/comparison-policy.json"))

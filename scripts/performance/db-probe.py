@@ -99,21 +99,21 @@ def collect(args, contract):
         write_json_atomic(args.output, output)
         print(json.dumps({"scenario": scenario["id"], "phase": "collecting"}), flush=True)
         route_template = scenario["path"].format(**fixture["identities"])
-        for size in policy["pageSizes"]:
+        for size in policy["pageSizes"] if scenario["paged"] else [0]:
             remembered = {}
             for iteration in range(policy["samples"] + 1):
                 cursor = None
                 page_one = None
                 for page in (1, 2) if scenario["paged"] else (1,):
-                    query = {scenario["paginationParameter"]: size}
+                    query = {scenario["paginationParameter"]: size} if scenario["paged"] else {}
                     if scenario.get("cursor"):
                         if page == 2:
                             if cursor is None:
                                 raise PerformanceContractError("missing message cursor")
                             query["before"] = cursor
-                    else:
+                    elif scenario["paged"]:
                         query["page"] = page
-                    route = route_template + ("&" if "?" in route_template else "?") + urllib.parse.urlencode(query)
+                    route = route_template + (("&" if "?" in route_template else "?") + urllib.parse.urlencode(query) if query else "")
                     capture_id = uuid.uuid4().hex
                     # Iteration zero warms each exact route/size and is never measured.
                     measured_headers = headers | ({"X-Performance-Capture": capture_id} if iteration else {})

@@ -114,7 +114,8 @@ def growth_failures(small: dict, medium: dict, policy: dict) -> list[str]:
         raise PerformanceContractError("fixture cardinality did not grow")
     failures = []
     # Compare repeated medians; high baseline outliers cannot hide repeated N+1.
-    for page_size in policy["pageSizes"]:
+    sizes = [0] if any(s["pageSize"] == 0 for s in small["samples"]) else policy["pageSizes"]
+    for page_size in sizes:
         a = [s["capture"]["commandCount"] for s in small["samples"] if s["pageSize"] == page_size and s["page"] == 1]
         b = [s["capture"]["commandCount"] for s in medium["samples"] if s["pageSize"] == page_size and s["page"] == 1]
         if min(len(a), len(b)) < policy["samples"]:
@@ -123,7 +124,7 @@ def growth_failures(small: dict, medium: dict, policy: dict) -> list[str]:
             failures.append("unstable-query-count")
         if statistics.median(b) - statistics.median(a) > policy["maximumFixedPageQueryGrowth"]:
             failures.append("n-plus-one-cardinality-growth")
-    for profile in (small, medium):
+    for profile in (small, medium) if sizes != [0] else ():
         counts = {size: statistics.median(s["capture"]["commandCount"] for s in profile["samples"] if s["pageSize"] == size and s["page"] == 1) for size in policy["pageSizes"]}
         if counts[10] - counts[5] > policy["maximumPageSizeQueryGrowth"]:
             failures.append("n-plus-one-page-size-growth")
