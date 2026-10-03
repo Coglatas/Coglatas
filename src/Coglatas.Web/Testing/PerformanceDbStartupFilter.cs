@@ -36,7 +36,7 @@ internal sealed class PerformanceDbStartupFilter : IStartupFilter
             Directory.CreateDirectory(directory);
             var path = Path.Combine(directory, $"{captureId:N}.json");
             var temporary = path + ".tmp";
-            await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(evidence, new JsonSerializerOptions(JsonSerializerDefaults.Web)), context.RequestAborted);
+            await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(evidence, new JsonSerializerOptions(JsonSerializerDefaults.Web)), CancellationToken.None);
             File.Move(temporary, path, overwrite: true);
         });
         next(app);

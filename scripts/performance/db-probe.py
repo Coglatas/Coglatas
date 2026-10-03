@@ -114,7 +114,9 @@ def collect(args, contract):
                     capture_id = uuid.uuid4().hex
                     # Iteration zero warms each exact route/size and is never measured.
                     measured_headers = headers | ({"X-Performance-Capture": capture_id} if iteration else {})
+                    started = time.perf_counter()
                     status, payload = request(opener, base, route, measured_headers)
+                    elapsed_ms = (time.perf_counter() - started) * 1000
                     if status != 200:
                         raise PerformanceContractError(f"scenario {scenario['id']} failed with HTTP {status}")
                     identities, cursor = page_identity(payload, scenario)
@@ -134,6 +136,8 @@ def collect(args, contract):
                     deadline = time.monotonic() + 5
                     while not path.exists() and time.monotonic() < deadline:
                         time.sleep(0.01)
+                    if not path.exists():
+                        raise PerformanceContractError("request capture file missing")
                     try:
                         capture = validate_capture(load_json(path))
                     finally:
@@ -142,7 +146,7 @@ def collect(args, contract):
                         raise PerformanceContractError("capture HTTP status mismatch")
                     failures = capture_failures(capture, scenario, size, policy)
                     record["failures"].extend(failures)
-                    record["samples"].append({"pageSize": size, "page": page, "iteration": iteration, "returnedCount": len(identities), "capture": capture, "fingerprintCounts": fingerprint_counts(capture)})
+                    record["samples"].append({"pageSize": size, "page": page, "iteration": iteration, "returnedCount": len(identities), "requestDurationMs": elapsed_ms, "dbTimeFraction": capture["totalDurationMs"] / elapsed_ms, "capture": capture, "fingerprintCounts": fingerprint_counts(capture)})
             samples = [s["capture"]["totalDurationMs"] for s in record["samples"] if s["pageSize"] == size and s["page"] == 1]
             output["measurements"].append({"schemaVersion": 1, "scenario": scenario["id"], "metric": "db.total_time_ms", "unit": "ms", "headSha": output["headSha"], "samples": samples, "attempt": 1, "pageSize": size, "measurementEnvelope": {"warmupSamplesExcluded": True, "environmentStable": True, "benchmarkExitCode": 0, "timedOut": False}})
         record["failures"] = sorted(set(record["failures"]))
@@ -180,7 +184,7 @@ def main():
             "invalid slow command evidence", "DB probe response is not a collection", "DB probe response has no items",
             "invalid or duplicate response identity", "capture HTTP status mismatch", "fixture/fingerprint mismatch",
             "missing head identity", "DB probe CSRF bootstrap failed", "DB probe login failed", "missing message cursor",
-            "selected EXPLAIN command failed", "selected plan fixture is too small"
+            "selected EXPLAIN command failed", "selected plan fixture is too small", "request capture file missing"
         }
         reason = str(error) if str(error) in safe_messages else type(error).__name__
         print(f"PERF-05 collection failed: {reason}", file=sys.stderr)
