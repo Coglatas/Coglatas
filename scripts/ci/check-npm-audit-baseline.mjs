@@ -53,7 +53,7 @@ for (const finding of unreviewed) {
   console.error(`::error::Unreviewed npm audit finding: ${formatFinding(finding)}`);
 }
 for (const finding of stale) {
-  console.warn(`::warning::Reviewed npm audit baseline entry is not currently reported: ${formatFinding(finding)}`);
+  process.stderr.write(`::warning::Reviewed npm audit baseline entry is not currently reported: ${formatFinding(finding)}\n`);
 }
 
 if (unreviewed.length > 0) {
