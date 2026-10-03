@@ -10,7 +10,7 @@ const angularJson = JSON.parse(await readFile(new URL('../angular.json', import.
     '@microsoft/signalr': '10.0.11',
     '@syncfusion/ej2-angular-gantt': '35.1.37',
     '@syncfusion/ej2-angular-grids': '34.2.9',
-    '@syncfusion/ej2-angular-inputs': '34.2.8',
+    '@syncfusion/ej2-angular-inputs': '35.1.37',
     '@syncfusion/ej2-angular-popups': '34.2.8',
     'ag-grid-angular': '36.2.0',
     'ag-grid-community': '36.2.0',
