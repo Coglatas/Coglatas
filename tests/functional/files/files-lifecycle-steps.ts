@@ -50,7 +50,7 @@ export async function runFilesLifecycle(context: FilesLifecycleContext): Promise
     const navigation = await readJson(api, `/api/file-folders?workspaceId=${workspaceId}`);
     const folders = recordArray(navigation.folders);
     const destination = folders.find((folder) => folder.id === folderId);
-    expect(Boolean(destination?.name === folderName && destination?.workspaceId === workspaceId),
+    expect(destination?.name === folderName && destination?.workspaceId === workspaceId,
       'Fresh folder navigation contains the run-owned destination').toBe(true);
     const beforeMove = await readJson(api, `/api/files/${fileObjectId}/location`);
     expect(beforeMove.folderId).toBeNull();
