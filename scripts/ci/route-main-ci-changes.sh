@@ -104,7 +104,7 @@ while IFS= read -r functional_path; do
     docs/verification/functional-ci/*|docs/ci/functional-compose-harness.md)
       functional=true
       ;;
-    docs/*|README.md|CONTRIBUTING.md|COPYRIGHT.md|THIRD_PARTY_NOTICES.md|AGENTS.md|LICENSE*)
+    docs/*.md|docs/*.rst|docs/*.txt|README.md|README.dev-env.md|README.dev-docker.md|CONTRIBUTING.md|COPYRIGHT.md|THIRD_PARTY_NOTICES.md|AGENTS.md|LICENSE|LICENSE.md|LICENSE.txt)
       ;;
     *) functional=true ;;
   esac

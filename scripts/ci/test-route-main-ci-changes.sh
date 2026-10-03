@@ -308,4 +308,20 @@ output="$(route_repo "$repo" "1111111111111111111111111111111111111111" "$head")
 assert_eq true "$(value_of "$output" functional)" "invalid base enables Functional"
 assert_eq unknown-diff-run-all "$(value_of "$output" functional_reason)" "invalid base reason"
 
+# A documentation directory or license-like filename does not make executable
+# code or machine-readable fixtures safe to exempt from real-stack owners.
+for unclassified_input in docs/runtime-policy.mjs docs/runtime-fixture.json LICENSE-runtime.sh; do
+  slug="${unclassified_input//\//-}"
+  repo="$tmp_root/functional-unclassified-${slug//./-}"
+  init_repo "$repo"
+  printf 'base\n' > "$repo/README.md"
+  base="$(commit_all "$repo" base)"
+  mkdir -p "$(dirname "$repo/$unclassified_input")"
+  printf 'runtime input\n' > "$repo/$unclassified_input"
+  head="$(commit_all "$repo" runtime)"
+  output="$(route_repo "$repo" "$base" "$head")"
+  assert_eq true "$(value_of "$output" functional)" "unclassified Functional input $unclassified_input"
+  assert_eq runtime-or-unclassified-change "$(value_of "$output" functional_reason)" "unclassified reason $unclassified_input"
+done
+
 echo "route-main-ci-changes regression tests passed"
