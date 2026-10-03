@@ -1,14 +1,12 @@
-name: Main Build Artifacts
+name: Main CI
 
 on:
+  workflow_dispatch:
   push:
     branches: ["main"]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
 
 concurrency:
-  group: main-build-artifacts-${{ github.ref }}
+  group: main-ci-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
