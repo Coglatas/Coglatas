@@ -137,6 +137,15 @@ expected_pii_filters = [
     "ruleName" => "PII Disclosure",
     "newRisk" => "False Positive",
     "context" => "sec06-api",
+    "url" => "${COGLATAS_SECURITY_ZAP_TARGET}/api/announcements",
+    "urlRegex" => false,
+    "methods" => ["POST"],
+  },
+  {
+    "ruleId" => 10062,
+    "ruleName" => "PII Disclosure",
+    "newRisk" => "False Positive",
+    "context" => "sec06-api",
     "url" => "${COGLATAS_SECURITY_ZAP_TARGET}/api/tenant/export",
     "urlRegex" => false,
     "methods" => ["POST"],
@@ -152,7 +161,7 @@ expected_pii_filters = [
   },
 ]
 unless pii_filters == expected_pii_filters
-  fail!("PII Disclosure filters must remain exactly scoped to POST /api/comments, POST /api/tenant/export, and GET /api/admin/invites")
+  fail!("PII Disclosure filters must remain exactly scoped to POST /api/comments, POST /api/announcements, POST /api/tenant/export, and GET /api/admin/invites")
 end
 
 policy_job = only_job(jobs, "activeScan-policy")
@@ -350,6 +359,13 @@ expected_alert_filters = [
     {
         "ruleId": 10062,
         "method": "POST",
+        "path": "/api/announcements",
+        "newRisk": "False Positive",
+        "reason": "POST /api/announcements returns caller-controlled announcement title/body content from the submitted write, so ZAP can passively rediscover its own scan value as PII. Scope the override to this exact POST response; announcement reads and all other endpoints remain unfiltered.",
+    },
+    {
+        "ruleId": 10062,
+        "method": "POST",
         "path": "/api/tenant/export",
         "newRisk": "False Positive",
         "reason": "POST /api/tenant/export is the explicitly authorized metadata export contract and intentionally includes redacted tenant-user metadata such as email while excluding secrets, hashes, tokens, and file bodies. Export-job reads and all other endpoints remain unfiltered.",
@@ -365,7 +381,7 @@ expected_alert_filters = [
 if policy.get("alertFilters") != expected_alert_filters:
     raise SystemExit(
         "SEC-06 PII false-positive filters must remain exactly scoped to "
-        "POST /api/comments, POST /api/tenant/export, and GET /api/admin/invites"
+        "POST /api/comments, POST /api/announcements, POST /api/tenant/export, and GET /api/admin/invites"
     )
 blocking = policy["blockingPolicy"]
 if blocking["high"] != "block" or blocking["medium"] != "report":
@@ -414,6 +430,7 @@ for invariant in \
   '- ruleId: 10062' \
   'newRisk: False Positive' \
   'url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/comments"' \
+  'url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/announcements"' \
   'url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/tenant/export"' \
   'url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/admin/invites"' \
   'urlRegex: false' \

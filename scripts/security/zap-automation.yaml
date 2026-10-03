@@ -31,6 +31,11 @@ jobs:
   # passive PII rule 10062. Scope the false-positive override to this write
   # response only.
   #
+  # POST /api/announcements returns caller-controlled announcement title/body
+  # content from the submitted write. ZAP can therefore passively rediscover
+  # its own scan value as PII. Scope the override to this exact POST response;
+  # announcement reads and all other endpoints remain unfiltered.
+  #
   # POST /api/tenant/export is the explicit, reauthorized metadata-export
   # boundary. Its contract intentionally includes redacted tenant-user metadata
   # such as email while excluding secrets, hashes, tokens, and file bodies.
@@ -48,6 +53,14 @@ jobs:
         newRisk: False Positive
         context: sec06-api
         url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/comments"
+        urlRegex: false
+        methods:
+          - POST
+      - ruleId: 10062
+        ruleName: PII Disclosure
+        newRisk: False Positive
+        context: sec06-api
+        url: "${COGLATAS_SECURITY_ZAP_TARGET}/api/announcements"
         urlRegex: false
         methods:
           - POST
