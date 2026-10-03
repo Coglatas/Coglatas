@@ -71,7 +71,9 @@ The PR-stage gates include:
 
 The SonarQube Quality Gate is supplied by the SonarQube Cloud GitHub integration rather than by a secret-bearing workflow in this repository.
 
-## Pull-request build redistribution
+## Pull-request routing and build redistribution
+
+`.github/workflows/ci.yml` evaluates the changed-file graph exactly once in the `CI preflight + route` job. Its routing outputs are passed to the backend and frontend producer jobs, which proxy the relevant values to their dependent required checks. Downstream jobs do not rerun `scripts/ci/route-main-ci-changes.sh`.
 
 The PR workflow centralizes reusable build outputs before downstream checks consume them:
 
