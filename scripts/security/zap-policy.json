@@ -117,6 +117,13 @@
     {
       "ruleId": 10062,
       "method": "POST",
+      "path": "/api/announcements",
+      "newRisk": "False Positive",
+      "reason": "POST /api/announcements returns caller-controlled announcement title/body content from the submitted write, so ZAP can passively rediscover its own scan value as PII. Scope the override to this exact POST response; announcement reads and all other endpoints remain unfiltered."
+    },
+    {
+      "ruleId": 10062,
+      "method": "POST",
       "path": "/api/tenant/export",
       "newRisk": "False Positive",
       "reason": "POST /api/tenant/export is the explicitly authorized metadata export contract and intentionally includes redacted tenant-user metadata such as email while excluding secrets, hashes, tokens, and file bodies. Export-job reads and all other endpoints remain unfiltered."
