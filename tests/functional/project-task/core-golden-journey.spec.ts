@@ -62,6 +62,7 @@ interface TaskExecutionScope {
   canManage?: unknown;
   origin?: unknown;
   taskOverridePolicy?: {
+    policyV2?: unknown;
     projectFilesEnabled: boolean;
     webEnabled: boolean;
   };
@@ -264,25 +265,29 @@ test.describe('FCI-04 core real-backend golden journey', () => {
 
         await test.step('FUNC-TASK-001 / STEP-06 configure the authorized Project File source', async () => {
           const scopePanel = page.getByTestId('task-execution-scope');
-          const taskScopeGroup = scopePanel.getByRole('group', { name: 'Task source setting' });
+          const taskScopeGroup = scopePanel.getByRole('group', { name: 'Task source policy' });
           await expect(taskScopeGroup).toBeVisible();
           await taskScopeGroup.getByRole('radio', { name: /Use a complete Task override/ }).check();
 
-          const webCheckbox = taskScopeGroup.getByRole('checkbox', { name: /Allow Web as a future source/ });
-          const filesCheckbox = taskScopeGroup.getByRole('checkbox', { name: /Allow authorized Project files as a future source/ });
-          await expect(webCheckbox).toBeVisible();
-          await expect(filesCheckbox).toBeVisible();
-          if (await webCheckbox.isChecked()) { await webCheckbox.uncheck(); }
-          if (!await filesCheckbox.isChecked()) { await filesCheckbox.check(); }
+          for (const kind of ['Web', 'WebSite', 'ConnectedApp']) {
+            await taskScopeGroup.getByRole('combobox', { name: `Task override ${kind} policy`, exact: true }).selectOption('Exclude');
+          }
+          await taskScopeGroup.getByRole('combobox', { name: 'Task override ProjectFile policy', exact: true }).selectOption('Allow');
 
           const saveResponsePromise = waitForApiResponse(page, 'PUT', `/api/tasks/${taskId}/execution-scope-override`);
-          await taskScopeGroup.getByRole('button', { name: 'Save Task source setting' }).click();
+          await taskScopeGroup.getByRole('button', { name: 'Save Task source policy' }).click();
           const saveResponse = await saveResponsePromise;
           const saveText = await saveResponse.text();
           expect(saveResponse.status(), `Task scope save response: ${saveText}`).toBe(200);
           expect(saveResponse.request().postDataJSON()).toMatchObject({
             webEnabled: false,
             projectFilesEnabled: true,
+            policyV2: {
+              web: 'Exclude',
+              projectFile: 'Allow',
+              webSite: 'Exclude',
+              connectedApp: 'Exclude',
+            },
           });
           expect(saveResponse.request().headers()['x-csrf-token'], 'Task scope save uses the Angular CSRF interceptor').toBeTruthy();
 
@@ -674,6 +679,7 @@ async function restoreTaskScope(
     {
       webEnabled: originalPolicy.webEnabled,
       projectFilesEnabled: originalPolicy.projectFilesEnabled,
+      ...(originalPolicy.policyV2 ? { policyV2: originalPolicy.policyV2 } : {}),
       expectedVersion: current.taskOverrideVersion ?? 0,
     },
   );
