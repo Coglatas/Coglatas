@@ -101,11 +101,28 @@ def image_id(project: str, compose_file: Path, compose_override: Path | None, se
     return run(["docker", "inspect", "--format", "{{.Image}}", first_line(container_id)])
 
 
-def built_compose_image_id(project: str, service: str) -> str:
-    # Compose only lists images for created containers. performance-browser is
-    # deliberately build-only during PERF-02 environment validation, so inspect
-    # Compose's deterministic default image name instead.
-    image_name = f"{project}-{service}"
+def configured_compose_image_id(
+    project: str,
+    compose_file: Path,
+    compose_override: Path | None,
+    service: str,
+) -> str:
+    rendered = run(
+        compose_command(
+            project,
+            compose_file,
+            compose_override,
+            "config",
+            "--format",
+            "json",
+        )
+    )
+    payload = json.loads(rendered)
+    services = payload.get("services") if isinstance(payload, dict) else None
+    service_config = services.get(service) if isinstance(services, dict) else None
+    image_name = service_config.get("image") if isinstance(service_config, dict) else None
+    if not isinstance(image_name, str) or not image_name:
+        raise PerformanceContractError(f"service {service} has no configured image")
     return run(["docker", "image", "inspect", "--format", "{{.Id}}", image_name])
 
 
@@ -155,7 +172,12 @@ def main() -> int:
 
         app_image = image_id(args.compose_project, args.compose_file, args.compose_override, "app")
         postgres_image = image_id(args.compose_project, args.compose_file, args.compose_override, "postgres")
-        browser_image = built_compose_image_id(args.compose_project, "performance-browser")
+        browser_image = configured_compose_image_id(
+            args.compose_project,
+            args.compose_file,
+            args.compose_override,
+            "performance-browser",
+        )
 
         output = {
             "schemaVersion": 1,
