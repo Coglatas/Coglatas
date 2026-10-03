@@ -226,6 +226,10 @@ jobs:
             exit 1
           fi
 
+      - name: Restore NuGet packages for consumer tools
+        if: github.event_name != 'pull_request' || steps.route.outputs.backend == 'true'
+        run: dotnet restore Coglatas.slnx --disable-parallel --verbosity minimal
+
       - name: Restore .NET tools
         # PR tests no longer collect coverage. Tools are needed on PR only for EF;
         # main/manual still need ReportGenerator for the full coverage artifact.
