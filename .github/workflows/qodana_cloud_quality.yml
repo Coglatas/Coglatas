@@ -5,9 +5,7 @@ name: Qodana Cloud Full Analysis
 # the default branch by the job-level ref guard.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+  # Main pushes run Qodana Cloud inside Main Build Artifacts.
   # Scheduled trigger temporarily disabled on 2026-09-19 to reduce CI consumption.
   # schedule:
   #   - cron: "17 18 * * 0"
@@ -40,6 +38,7 @@ jobs:
       QODANA_UNRESOLVED_FILE_THRESHOLD: "0"
       QODANA_CRITICAL_THRESHOLD: "0"
       QODANA_RULE_BASELINE_PATH: scripts/quality/qodana-rule-baseline.json
+      QODANA_REUSE_PREBUILT_DOTNET_BUILD: "false"
 
     steps:
       - name: Repair previous Docker workspace ownership

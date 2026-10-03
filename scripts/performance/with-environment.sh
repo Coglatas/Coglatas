@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="$ROOT/infra/compose/performance/environment.yml"
 RUNTIME_MODE="${COGLATAS_PERFORMANCE_RUNTIME_MODE:-production}"
+REUSE_PREBUILT_APP="${COGLATAS_REUSE_PREBUILT_APP_IMAGE:-false}"
 COMPOSE_OVERRIDE=""
 PROFILE="${COGLATAS_PERFORMANCE_PROFILE:-small}"
 PORT="${COGLATAS_PERFORMANCE_PORT:-18080}"
@@ -29,7 +30,12 @@ if [[ ! "$PORT" =~ ^[0-9]+$ ]] || (( PORT < 1024 || PORT > 65535 )); then
 fi
 case "$RUNTIME_MODE" in
   production)
-    if [[ -z "${SYNCFUSION_LICENSE:-}" ]]; then
+    if [[ "$REUSE_PREBUILT_APP" == "true" ]]; then
+      if [[ -z "${COGLATAS_APP_IMAGE:-}" ]]; then
+        echo "PERF-02: COGLATAS_APP_IMAGE is required when reusing the main runtime image" >&2
+        exit 2
+      fi
+    elif [[ -z "${SYNCFUSION_LICENSE:-}" ]]; then
       echo "PERF-02: SYNCFUSION_LICENSE is required to build the production Angular image" >&2
       exit 2
     fi
@@ -102,9 +108,12 @@ compose down --volumes --remove-orphans >/dev/null 2>&1 || true
 docker info >/dev/null
 compose config >/dev/null
 
-# Build the browser image now so its immutable identity/version is fingerprinted.
-compose build performance-browser
-compose up -d --build postgres migrate app
+if [[ "$REUSE_PREBUILT_APP" == "true" ]]; then
+  docker image inspect "$COGLATAS_APP_IMAGE" >/dev/null
+  compose up -d --no-build postgres migrate app
+else
+  compose up -d --build postgres migrate app
+fi
 
 deadline=$((SECONDS + STARTUP_TIMEOUT))
 while (( SECONDS < deadline )); do

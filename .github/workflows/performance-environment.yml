@@ -1,6 +1,16 @@
 name: Performance environment
 
 on:
+  workflow_call:
+    inputs:
+      profile:
+        required: false
+        type: string
+        default: small
+      reuse_main_artifacts:
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       profile:
@@ -12,20 +22,6 @@ on:
           - small
           - medium
           - large
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/performance-environment.yml"
-      - "performance/**"
-      - "scripts/performance/**"
-      - "scripts/ci/verify-performance-environment.py"
-      - "infra/compose/performance/environment.yml"
-      - "Dockerfile"
-      - "infra/docker/playwright.Dockerfile"
-      - "src/**"
-      - "frontend/**"
-      - "package-lock.json"
-      - "frontend/package-lock.json"
 
 concurrency:
   group: performance-environment-${{ github.ref }}-${{ inputs.profile || 'small' }}
@@ -45,22 +41,44 @@ jobs:
       COGLATAS_PERFORMANCE_PROFILE: ${{ inputs.profile || 'small' }}
       COGLATAS_PERFORMANCE_PORT: "18080"
       COGLATAS_PERFORMANCE_COMPOSE_PROJECT: coglatas-performance-${{ github.run_id }}-${{ github.run_attempt }}
+      TARGET_SHA: ${{ github.sha }}
 
     steps:
       - name: Checkout reviewed commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify protected build input
+      - name: Resolve build credential requirement
         shell: bash
+        env:
+          REUSE_MAIN_ARTIFACTS: ${{ inputs.reuse_main_artifacts && 'true' || 'false' }}
         run: |
-          test -n "${SYNCFUSION_LICENSE:-}" || {
-            echo "SYNCFUSION_LICENSE is not configured in the protected environment." >&2
-            exit 1
-          }
+          set -euo pipefail
+          if [[ "$REUSE_MAIN_ARTIFACTS" == "true" ]]; then
+            # Compose still resolves the declared build secret during config
+            # rendering even though the prebuilt app path uses --no-build.
+            # Supply a non-secret sentinel only for that parser requirement.
+            echo "SYNCFUSION_LICENSE=artifact-reuse-no-build" >> "$GITHUB_ENV"
+          else
+            test -n "${SYNCFUSION_LICENSE:-}" || {
+              echo "SYNCFUSION_LICENSE is not configured in the protected environment." >&2
+              exit 1
+            }
+          fi
+      - name: Download main build artifacts
+        if: inputs.reuse_main_artifacts == true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: main-build-artifacts
+          path: ${{ runner.temp }}/main-build-artifacts
+
+      - name: Restore main build artifacts
+        if: inputs.reuse_main_artifacts == true
+        shell: bash
+        run: bash scripts/ci/restore-main-build-artifacts.sh "$RUNNER_TEMP/main-build-artifacts" "$TARGET_SHA" "$GITHUB_WORKSPACE"
+
 
       - name: Generate isolated synthetic fixture credential
         shell: bash

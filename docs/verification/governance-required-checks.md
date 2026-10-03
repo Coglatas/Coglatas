@@ -2,11 +2,15 @@
 
 Issue #629 defines a three-layer, fail-closed contract for merge-blocking status contexts:
 
-1. **Static topology** — repository workflows/jobs must continue to emit the registered context without event-level path filtering, job-level broad skips, dependency-induced skips, or `continue-on-error` masking.
+1. **Static topology** — repository workflows/jobs must continue to emit the registered context without event-level path filtering, job-level broad skips, undeclared dependency-induced skips, or `continue-on-error` masking. A required workflow job may depend only on prerequisites explicitly registered in `governance/required-checks.json`; the validator follows each prerequisite chain recursively and requires every upstream job to be unconditional and fail-closed.
 2. **Live ruleset topology** — the active default-branch ruleset must require exactly the registered contexts, with strict required-status-check semantics and the registered integration identity where GitHub supports pinning it.
 3. **Exact-head evidence** — only results attached to the PR's authoritative `.head.sha`, re-fetched from the Pull Request API by trusted default-branch code, can satisfy a gate.
 
-`governance/policy.json` / `GOV-CHECKS-001` remains authoritative for which logical checks are required. `governance/required-checks.json` is the operational registry: it adds a stable logical gate ID, producer identity, source workflow/job, trigger contract, scope, accepted conclusion, timeout/staleness policy, ruleset integration binding, and rename state. `scripts/ci/check-required-pr-checks.py` rejects a registry projection that differs from `GOV-CHECKS-001`.
+`governance/policy.json` / `GOV-CHECKS-001` remains authoritative for which logical checks are required. `governance/required-checks.json` is the operational registry: it adds a stable logical gate ID, producer identity, source workflow/job, trigger contract, scope, accepted conclusion, timeout/staleness policy, ruleset integration binding, explicit same-workflow prerequisites, and rename state. `scripts/ci/check-required-pr-checks.py` rejects a registry projection that differs from `GOV-CHECKS-001` and rejects any prerequisite topology not declared by the registry.
+
+## Required-job prerequisites
+
+The current registry declares `dotnet-build` as the prerequisite of both `build-test` and `security-scan`, and `frontend-build` as the prerequisite of `frontend-test`. Both producers depend on the shared `changes` preflight/router job. The validator recursively checks that chain: `changes`, each producer, and the required consumer must not use a job-level `if` or `continue-on-error`, and dependency cycles or missing upstream jobs are rejected. If any upstream job fails, GitHub cannot report its dependent required job as a successful current-head check. This preserves fail-closed merge behavior while allowing one routing decision and authoritative build outputs to fan out across the CI DAG.
 
 ## Result semantics
 

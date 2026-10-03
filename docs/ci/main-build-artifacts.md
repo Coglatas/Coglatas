@@ -1,0 +1,141 @@
+# Main build artifact fan-out
+
+## Purpose
+
+Main-branch CI parallelizes the independent .NET and frontend producer graphs and must not rebuild the same production application independently in
+backend tests, frontend tests, security validation, Qodana, Performance, real-backend E2E, or image-SBOM workflows.
+
+`.github/workflows/main-build-artifacts.yml` is the trusted main-only `Main CI`
+artifact hub. It runs on every `push` to `main` and uses the protected
+`syncfusion-licensed-build` environment.
+
+## Scheduling policy
+
+Main CI does not use workflow-level concurrency. A previous long-running Qodana,
+Performance, or acceptance consumer must never prevent the next trusted main
+revision from creating its build jobs.
+
+Concurrency is scoped to the producer/assembler jobs instead. A newer main push
+may cancel an older in-flight .NET producer, frontend producer, runtime assembler,
+or Qodana Cloud job for the same ref, while unrelated downstream work does not
+block the next build from starting.
+
+## Build graph
+
+```text
+push main
+  |
+  +-- Main CI
+      |
+      +-- Main .NET producer -------------------+
+      |   +-- dotnet restore (parallel)
+      |   +-- dotnet build Release -m (parallel project graph)
+      |   +-- package bin/Release + obj
+      |   +-- dotnet publish --no-build
+      |   +-- OpenAPI from prebuilt assembly
+      |                                        |
+      +-- Main Frontend producer ---------------+
+      |   +-- npm ci frontend
+      |   +-- licensed Angular production build
+      |   +-- Storybook build
+      |                                        |
+      +-- Main runtime artifact assembler <-----+
+          +-- verify exact-SHA producer outputs
+          +-- assemble production runtime image once
+          +-- publish combined compatibility artifact
+      |
+      +--> Main Test
+      |     +-- restore .NET bin/obj
+      |     +-- EF migration/model validation --no-build
+      |     +-- full backend + architecture tests --no-build
+      |     +-- coverage
+      |
+      +--> Main Frontend
+      |     +-- restore production dist + Storybook
+      |     +-- unit + architecture + license checks
+      |     +-- Playwright reuses redistributed dist
+      |
+      +--> Main Security
+      |     +-- restore .NET bin/obj + authoritative OpenAPI
+      |     +-- dependency / Compose / contract checks
+      |     +-- assemble SDK security image from prebuilt bin/obj
+      |     +-- SEC-03/04/05/06 + AUD-02 runtime lanes
+      |     +-- Trivy + Gitleaks
+      |
+      +--> Qodana Community
+      |     +-- restore .NET bin/obj
+      |     +-- NuGet restore for runner/container-local packages
+      |     +-- skip Qodana bootstrap compilation
+      |
+      +--> Qodana Cloud
+      |     +-- restore the same .NET bin/obj
+      |     +-- NuGet restore for runner/container-local packages
+      |     +-- skip Qodana bootstrap compilation
+      |
+      +--> Performance environment
+      |     +-- docker load runtime image
+      |     +-- restore .NET bin/obj
+      |     +-- EF restore + --no-build migration
+      |     +-- no app-image rebuild
+      |
+      +--> Licensed Real Backend Acceptance
+      |     +-- docker load runtime image
+      |     +-- restore .NET bin/obj
+      |     +-- EF restore + --no-build migration
+      |     +-- no app-image rebuild
+      |     +-- Playwright uses the pinned upstream image directly
+      |
+      +--> SBOM Image Security
+            +-- docker load the same runtime image
+            +-- tag the immutable loaded image for the SBOM run
+            +-- scan without rebuilding the production image
+```
+
+All redistributed artifacts contain or inherit an exact source-SHA stamp.
+`scripts/ci/restore-main-build-artifacts.sh` rejects mismatched source or .NET
+artifact SHAs before loading or executing redistributed outputs.
+
+## Manual and release fallbacks
+
+The reusable Performance and real-backend workflows retain their existing
+manual/integration execution paths. When they are not called by the main artifact
+hub, they fall back to their ordinary local build behavior.
+
+SBOM Image Security retains local image construction for manual and release
+execution. Only the main-branch reusable path consumes the redistributed runtime
+image.
+
+## Deliberate exclusions
+
+### OS portability
+
+OS portability continues to restore and build independently on Linux, Windows,
+and macOS. The ability to build successfully on each OS is the evidence being
+tested, so substituting a Linux-produced build artifact would invalidate the
+test.
+
+### Qodana
+
+Main-push Qodana Community and Qodana Cloud are consumers of the trusted main
+artifact hub. They restore the exact-SHA `.NET` `bin/obj` output, perform a
+lightweight NuGet restore for their own execution environment, and skip the
+duplicate Qodana bootstrap compilation. Manual Qodana workflows remain
+standalone fallbacks and perform their own build preparation.
+
+### Path-gated WPC acceptance
+
+The remaining WPC milestone workflows are narrow path-gated acceptance suites.
+They are not moved under the always-on main artifact hub because doing so would
+increase test execution on unrelated main commits. They remain candidates for a
+separate conditional-artifact migration if their automatic main coverage remains
+necessary.
+
+## Trust boundary
+
+The artifact hub is not triggered by `pull_request`, `pull_request_target`, or
+`workflow_run`. It has no manual or PR trigger. PR ReSharper never participates
+in this graph; it exists only in `.github/workflows/ci.yml`, which is pull-request-only. Protected Syncfusion material
+therefore executes only against the repository's trusted `main` push revision.
+
+Downstream reusable workflows use the caller revision and same-run artifacts.
+They do not accept an arbitrary checkout SHA from workflow inputs.

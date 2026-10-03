@@ -1,0 +1,453 @@
+name: Main CI
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  main-dotnet-build:
+    name: Main .NET producer
+    concurrency:
+      group: main-dotnet-producer-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+
+    steps:
+      - name: Checkout trusted main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore authoritative .NET graph in parallel
+        run: dotnet restore Coglatas.slnx --verbosity minimal
+
+      - name: Build authoritative .NET graph in parallel
+        run: dotnet build Coglatas.slnx --configuration Release --no-restore --disable-build-servers -m
+
+      - name: Generate authoritative OpenAPI from prebuilt assembly
+        run: bash scripts/ci/generate-security-openapi-from-prebuilt.sh
+
+      - name: Package reusable .NET build outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ci
+          git rev-parse HEAD > artifacts/ci/dotnet-build-sha
+
+          mapfile -d '' build_dirs < <(
+            find src tests -type d \
+              \( -path '*/bin/Release' -o -name obj \) \
+              -print0
+          )
+          test "${#build_dirs[@]}" -gt 0
+          tar -cf "$RUNNER_TEMP/dotnet-release-build.tar" \
+            artifacts/ci/dotnet-build-sha \
+            "${build_dirs[@]}"
+
+      - name: Publish backend from the same build
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/main-runtime/publish
+          mkdir -p artifacts/main-runtime/publish
+          dotnet publish src/Coglatas.Web/Coglatas.Web.csproj \
+            --configuration Release \
+            --no-build \
+            --no-restore \
+            --output artifacts/main-runtime/publish
+          tar -cf "$RUNNER_TEMP/backend-publish.tar" -C artifacts/main-runtime/publish .
+
+      - name: Package .NET producer artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/main-dotnet-build"
+          rm -rf "$out"
+          mkdir -p "$out/openapi"
+          git rev-parse HEAD > "$out/source-sha"
+          cp "$RUNNER_TEMP/dotnet-release-build.tar" "$out/dotnet-release-build.tar"
+          cp "$RUNNER_TEMP/backend-publish.tar" "$out/backend-publish.tar"
+          cp artifacts/openapi/coglatas-openapi.json "$out/openapi/coglatas-openapi.json"
+          ls -lh "$out" "$out/openapi"
+
+      - name: Upload .NET producer artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: main-dotnet-build
+          path: ${{ runner.temp }}/main-dotnet-build
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+  main-frontend-build:
+    name: Main Frontend producer
+    concurrency:
+      group: main-frontend-producer-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    environment: syncfusion-licensed-build
+    timeout-minutes: 60
+
+    env:
+      SYNCFUSION_LICENSE: ${{ secrets.SYNCFUSION_LICENSE }}
+
+    steps:
+      - name: Checkout trusted main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify protected build input
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SYNCFUSION_LICENSE:-}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+
+      - name: Use repository npm version without lifecycle scripts
+        run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+
+      - name: Install frontend dependencies
+        run: bash scripts/ci/npm-ci-retry.sh frontend
+
+      - name: Build licensed frontend once
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --prefix frontend run build:licensed
+          test -f frontend/dist/coglatas-web/index.html
+          test -f frontend/dist/coglatas-web/angular-app.marker
+          if grep -R -F -q -- "$SYNCFUSION_LICENSE" frontend/dist/coglatas-web; then
+            echo "::error::Syncfusion license material was found in frontend build output."
+            exit 1
+          fi
+
+      - name: Build Storybook once
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm --prefix frontend run build-storybook
+
+      - name: Package reusable frontend build outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ci
+          git rev-parse HEAD > artifacts/ci/frontend-build-sha
+          test -f frontend/storybook-static/index.html
+          tar -cf "$RUNNER_TEMP/frontend-build-artifacts.tar" \
+            artifacts/ci/frontend-build-sha \
+            frontend/dist/coglatas-web \
+            frontend/storybook-static
+
+      - name: Package frontend producer artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/main-frontend-build"
+          rm -rf "$out"
+          mkdir -p "$out"
+          git rev-parse HEAD > "$out/source-sha"
+          cp "$RUNNER_TEMP/frontend-build-artifacts.tar" "$out/frontend-build-artifacts.tar"
+          ls -lh "$out"
+
+      - name: Upload frontend producer artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: main-frontend-build
+          path: ${{ runner.temp }}/main-frontend-build
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+  main-build-artifacts:
+    name: Main runtime artifact assembler
+    concurrency:
+      group: main-runtime-assembler-${{ github.ref }}
+      cancel-in-progress: true
+    needs:
+      - main-dotnet-build
+      - main-frontend-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      IMAGE_NAME: coglatas-main-runtime:${{ github.sha }}
+
+    steps:
+      - name: Checkout trusted main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download .NET producer artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: main-dotnet-build
+          path: ${{ runner.temp }}/main-dotnet-build
+
+      - name: Download frontend producer artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: main-frontend-build
+          path: ${{ runner.temp }}/main-frontend-build
+
+      - name: Verify producer revisions
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$GITHUB_SHA"
+          dotnet_sha="$(tr -d '\r\n' < "$RUNNER_TEMP/main-dotnet-build/source-sha")"
+          frontend_sha="$(tr -d '\r\n' < "$RUNNER_TEMP/main-frontend-build/source-sha")"
+          [[ "$dotnet_sha" == "$expected" ]]
+          [[ "$frontend_sha" == "$expected" ]]
+
+      - name: Restore runtime assembly inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf artifacts/main-runtime frontend/dist frontend/storybook-static
+          mkdir -p artifacts/main-runtime/publish artifacts/main-runtime/frontend
+
+          tar -xf "$RUNNER_TEMP/main-dotnet-build/backend-publish.tar" \
+            -C artifacts/main-runtime/publish
+          tar -xf "$RUNNER_TEMP/main-frontend-build/frontend-build-artifacts.tar" \
+            -C "$GITHUB_WORKSPACE"
+
+          test -f frontend/dist/coglatas-web/index.html
+          cp -a frontend/dist/coglatas-web/. artifacts/main-runtime/frontend/
+
+      - name: Build production runtime image once
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build \
+            --file infra/docker/runtime-prebuilt.Dockerfile \
+            --tag "$IMAGE_NAME" \
+            .
+
+          docker run --rm --entrypoint sh "$IMAGE_NAME" -c '
+            test -s /app/Coglatas.Web.dll &&
+            test -s /app/wwwroot/index.html &&
+            test ! -e /run/secrets &&
+            test ! -e /app/.env &&
+            ! env | grep -q "^SYNCFUSION_LICENSE="
+          '
+
+      - name: Package combined main build artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/main-build-artifacts"
+          rm -rf "$out"
+          mkdir -p "$out/openapi"
+
+          git rev-parse HEAD > "$out/source-sha"
+          printf '%s\n' "$IMAGE_NAME" > "$out/runtime-image-name"
+          cp "$RUNNER_TEMP/main-dotnet-build/dotnet-release-build.tar" "$out/dotnet-release-build.tar"
+          cp "$RUNNER_TEMP/main-frontend-build/frontend-build-artifacts.tar" "$out/frontend-build-artifacts.tar"
+          cp "$RUNNER_TEMP/main-dotnet-build/openapi/coglatas-openapi.json" "$out/openapi/coglatas-openapi.json"
+          docker save "$IMAGE_NAME" | gzip -1 > "$out/runtime-image.tar.gz"
+          ls -lh "$out" "$out/openapi"
+
+      - name: Upload combined main build artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: main-build-artifacts
+          path: ${{ runner.temp }}/main-build-artifacts
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+      - name: Remove per-run runtime image
+        if: always()
+        run: docker image rm --force "$IMAGE_NAME" || true
+
+  main-validation:
+    name: Main Test / Frontend / Security
+    needs: main-build-artifacts
+    uses: ./.github/workflows/main-validation.yml
+
+  qodana-community:
+    name: Qodana Community from main artifacts
+    needs: main-build-artifacts
+    uses: ./.github/workflows/qodana_trusted_gate.yml
+    with:
+      reuse_main_artifacts: true
+
+  qodana-cloud:
+    name: Qodana Cloud from main artifacts
+    concurrency:
+      group: main-qodana-cloud-${{ github.ref }}
+      cancel-in-progress: true
+    needs: main-build-artifacts
+    runs-on: ubuntu-latest
+    environment: syncfusion-licensed-build
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      security-events: write
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      QODANA_SKIP_FRONTEND_BOOTSTRAP: "true"
+      QODANA_UNRESOLVED_THRESHOLD: "0"
+      QODANA_UNRESOLVED_FILE_THRESHOLD: "0"
+      QODANA_CRITICAL_THRESHOLD: "0"
+      QODANA_RULE_BASELINE_PATH: scripts/quality/qodana-rule-baseline.json
+      QODANA_REUSE_PREBUILT_DOTNET_BUILD: "true"
+
+    steps:
+      - name: Checkout trusted main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download trusted main build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: main-build-artifacts
+          path: ${{ runner.temp }}/main-build-artifacts
+
+      - name: Restore trusted main .NET build
+        shell: bash
+        run: bash scripts/ci/restore-main-dotnet-build.sh "$RUNNER_TEMP/main-build-artifacts" "$GITHUB_SHA" "$GITHUB_WORKSPACE"
+
+      - name: Configure persistent .NET caches
+        shell: bash
+        run: |
+          bash scripts/ci/configure-persistent-caches.sh
+          job_temp="$RUNNER_TEMP/dotnet-${GITHUB_JOB}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$job_temp/home" "$job_temp/nuget/scratch"
+          {
+            echo "DOTNET_CLI_HOME=$job_temp/home"
+            echo "DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE=1"
+            echo "NUGET_SCRATCH=$job_temp/nuget/scratch"
+          } >> "$GITHUB_ENV"
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Remove orphaned Qodana containers
+        run: bash scripts/ci/cleanup-qodana-containers.sh "$GITHUB_WORKSPACE"
+
+      - name: Require Qodana Cloud project token
+        env:
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+        shell: bash
+        run: |
+          if [[ -z "${QODANA_TOKEN:-}" ]]; then
+            echo "::error::QODANA_TOKEN is required for Qodana Cloud publishing."
+            exit 1
+          fi
+
+      - name: Run full Qodana analysis and publish to Cloud
+        id: qodana_scan
+        uses: JetBrains/qodana-action@3e8d76ff0e0241618abd808682f426afe84bab3f # v2026.2.2
+        env:
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+        with:
+          args: |
+            --image jetbrains/qodana-cdnet:2026.2-privileged@sha256:21bbbfeac0e61fe8790cc27d5754b87d57b8032c0c32f84ddeb887027f83ec4f
+          pr-mode: false
+          results-dir: ${{ runner.temp }}/qodana/results-${{ github.run_id }}-${{ github.run_attempt }}
+          use-caches: false
+          post-pr-comment: false
+          use-annotations: false
+          upload-result: false
+          push-fixes: none
+
+      - name: Repair Qodana workspace ownership
+        if: always()
+        shell: bash
+        run: |
+          uid="$(id -u)"
+          gid="$(id -g)"
+          docker run --rm             -v "$GITHUB_WORKSPACE:/workspace"             alpine:3.21.7@sha256:f27cad9117495d32d067133afff942cb2dc745dfe9163e949f6bfe8a6a245339             sh -c "chown -R ${uid}:${gid} /workspace"
+
+      - name: Prepare Qodana SARIF for GitHub Code Scanning
+        if: steps.qodana_scan.outcome == 'success'
+        shell: bash
+        run: |
+          sarif="${RUNNER_TEMP}/qodana/results-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/qodana.sarif.json"
+          github_sarif="${RUNNER_TEMP}/qodana/qodana.github.sarif.json"
+          test -f "$sarif"
+          python3 scripts/quality/prepare-qodana-sarif-for-github.py             "$sarif" "$github_sarif" qodana-dotnet-community
+
+      - name: Upload Qodana SARIF to GitHub Code Scanning
+        if: steps.qodana_scan.outcome == 'success'
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
+        with:
+          sarif_file: ${{ runner.temp }}/qodana/qodana.github.sarif.json
+          category: qodana-dotnet-community
+
+      - name: Set up Node.js for Qodana guard
+        if: steps.qodana_scan.outcome == 'success'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+
+      - name: Guard Qodana findings and project model
+        if: steps.qodana_scan.outcome == 'success'
+        env:
+          QODANA_PROJECT_MODEL_SUMMARY_PATH: ${{ runner.temp }}/qodana/project-model-summary.json
+        shell: bash
+        run: |
+          sarif="${RUNNER_TEMP}/qodana/results-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/qodana.sarif.json"
+          test -f "$sarif"
+          node scripts/quality/check-qodana-project-model.mjs "$sarif"
+
+      - name: Upload Qodana inspection inventory
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: qodana-cloud-full-inventory
+          path: ${{ runner.temp }}/qodana/results-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 14
+
+  performance-environment:
+    name: Performance from main artifacts
+    needs: main-build-artifacts
+    uses: ./.github/workflows/performance-environment.yml
+    with:
+      profile: small
+      reuse_main_artifacts: true
+
+  licensed-real-backend:
+    name: Real-backend E2E from main artifacts
+    needs: main-build-artifacts
+    uses: ./.github/workflows/licensed-real-backend-acceptance.yml
+    with:
+      suite: all
+      reuse_main_artifacts: true
+
+  sbom-image-security:
+    name: SBOM image scan from main artifacts
+    needs: main-build-artifacts
+    uses: ./.github/workflows/sbom-image-security.yml
+    with:
+      reuse_main_artifacts: true

@@ -8,6 +8,8 @@ spec="${1:-artifacts/openapi/coglatas-openapi.json}"
 scratch_parent="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
 determinism_runs="${COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS:-2}"
 selftests="${COGLATAS_SECURITY_AVMIG_SELFTESTS:-1}"
+generate_only="${COGLATAS_SECURITY_OPENAPI_GENERATE_ONLY:-0}"
+reuse_prebuilt="${COGLATAS_SECURITY_REUSE_PREBUILT_OPENAPI:-0}"
 case "$determinism_runs" in
   1|2) ;;
   *)
@@ -22,6 +24,28 @@ case "$selftests" in
     exit 2
     ;;
 esac
+case "$generate_only" in
+  0|1) ;;
+  *)
+    echo "COGLATAS_SECURITY_OPENAPI_GENERATE_ONLY must be 0 or 1." >&2
+    exit 2
+    ;;
+esac
+case "$reuse_prebuilt" in
+  0|1) ;;
+  *)
+    echo "COGLATAS_SECURITY_REUSE_PREBUILT_OPENAPI must be 0 or 1." >&2
+    exit 2
+    ;;
+esac
+if [[ "$generate_only" == "1" && "$reuse_prebuilt" == "1" ]]; then
+  echo "Generate-only and reuse-prebuilt modes are mutually exclusive." >&2
+  exit 2
+fi
+if [[ "$reuse_prebuilt" == "1" && "$determinism_runs" != "1" ]]; then
+  echo "Prebuilt OpenAPI reuse requires COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS=1." >&2
+  exit 2
+fi
 mkdir -p "$(dirname "$spec")"
 first="$(mktemp "$scratch_parent/coglatas-openapi.first.XXXXXX.json")"
 trap 'rm -f "$first"' EXIT
@@ -59,6 +83,17 @@ generate_openapi() {
     -p:GenerateSecurityOpenApiContract=true
 }
 
+if [[ "$generate_only" == "1" ]]; then
+  rm -f "$spec"
+  generate_openapi
+  [[ -f "$spec" ]] || {
+    echo "OpenAPI generation completed without producing $spec." >&2
+    exit 1
+  }
+  sha256sum "$spec"
+  exit 0
+fi
+
 # Mutation tests prove the verifier itself fails closed before it is trusted as
 # a CI boundary. Fast PRs may defer these expensive verifier/tooling self-tests;
 # the real generated contract is still verified below on every routed SEC-01 PR.
@@ -76,8 +111,16 @@ fi
 # MSBuild, never trust an ambient caller override.
 unset AV_MIG_CSHARP_DEFINE_CONSTANTS
 
-rm -f "$spec"
-generate_openapi
+if [[ "$reuse_prebuilt" == "1" ]]; then
+  [[ -f "$spec" ]] || {
+    echo "Prebuilt OpenAPI contract is missing: $spec" >&2
+    exit 1
+  }
+  echo "Reusing prebuilt OpenAPI contract: $spec"
+else
+  rm -f "$spec"
+  generate_openapi
+fi
 python3 scripts/ci/verify-openapi.py "$spec"
 python3 scripts/ci/verify_av_mig_contract_boundary.py "$spec"
 
