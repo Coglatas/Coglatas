@@ -60,6 +60,29 @@ jobs:
       - name: Enforce required PR check topology
         run: python3 scripts/ci/check-required-pr-checks.py
 
+      - name: Test required-check topology parser
+        run: python3 scripts/ci/test-required-pr-checks.py
+
+      - name: Test ReSharper SARIF changed-path normalization
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import importlib.util
+          import tempfile
+          from pathlib import Path
+
+          module_path = Path("scripts/quality/check-resharper-pr-sarif.py")
+          spec = importlib.util.spec_from_file_location("resharper_sarif_gate", module_path)
+          assert spec is not None and spec.loader is not None
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+
+          with tempfile.TemporaryDirectory() as directory:
+              changed = Path(directory) / "changed.nul"
+              changed.write_bytes(b".config/Foo.cs\0./src/Bar.cs\0")
+              assert module.read_changed_files(changed) == {".config/Foo.cs", "src/Bar.cs"}
+          PY
+
       - name: Validate CI helper syntax
         run: |
           bash -n scripts/ci/parallel-lane-lib.sh
