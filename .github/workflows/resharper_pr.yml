@@ -16,7 +16,7 @@ jobs:
   resharper-inspectcode:
     name: ReSharper InspectCode / PR
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     permissions:
       contents: read
 
@@ -38,7 +38,7 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Classify pull-request changes
+      - name: Classify pull-request analysis scope
         id: scope
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -47,43 +47,128 @@ jobs:
           set -euo pipefail
           report_dir="$RUNNER_TEMP/resharper"
           changed_files="$report_dir/changed-files.nul"
+          projects_file="$report_dir/projects.txt"
+          restore_targets="$report_dir/restore-targets.txt"
           mkdir -p "$report_dir"
 
           git diff --name-only --diff-filter=ACMRT -z "$BASE_SHA...HEAD" > "$changed_files"
 
-          CHANGED_FILES_PATH="$changed_files" python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          CHANGED_FILES_PATH="$changed_files" \
+          PROJECTS_FILE="$projects_file" \
+          RESTORE_TARGETS_FILE="$restore_targets" \
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import os
           from pathlib import Path
 
+          root = Path.cwd().resolve()
           changed_path = Path(os.environ["CHANGED_FILES_PATH"])
+          projects_path = Path(os.environ["PROJECTS_FILE"])
+          restore_targets_path = Path(os.environ["RESTORE_TARGETS_FILE"])
+
           paths = [
-              item.decode("utf-8", errors="surrogateescape")
+              item.decode("utf-8", errors="surrogateescape").replace("\\", "/")
               for item in changed_path.read_bytes().split(b"\0")
               if item
           ]
 
-          def affects_dotnet(path: str) -> bool:
+          self_test_paths = {
+              ".github/workflows/resharper_pr.yml",
+              "scripts/quality/check-resharper-pr-sarif.py",
+          }
+          global_names = {
+              ".editorconfig",
+              "global.json",
+              "nuget.config",
+              "directory.build.props",
+              "directory.build.targets",
+              "directory.packages.props",
+          }
+
+          def is_global_input(path: str) -> bool:
+              p = Path(path)
               lower = path.lower()
-              name = Path(path).name.lower()
               return (
-                  lower.endswith((".cs", ".csproj", ".fsproj", ".vbproj", ".props", ".targets", ".sln", ".slnx", ".dotsettings"))
-                  or path in {
-                      ".github/workflows/resharper_pr.yml",
-                      "scripts/quality/check-resharper-pr-sarif.py",
-                  }
-                  or name in {
-                      ".editorconfig",
-                      "global.json",
-                      "nuget.config",
-                      "directory.build.props",
-                      "directory.build.targets",
-                      "directory.packages.props",
-                  }
+                  path == "Coglatas.slnx"
+                  or p.name.lower() in global_names
+                  or lower.endswith((".props", ".targets", ".dotsettings", ".sln", ".slnx"))
               )
 
-          print(f"needs_analysis={'true' if any(affects_dotnet(path) for path in paths) else 'false'}")
+          def is_dotnet_input(path: str) -> bool:
+              lower = path.lower()
+              return (
+                  lower.endswith((".cs", ".csproj", ".fsproj", ".vbproj"))
+                  or is_global_input(path)
+                  or path in self_test_paths
+              )
+
+          def owning_csproj(path: str) -> Path | None:
+              candidate = (root / path).resolve()
+              if candidate.suffix.lower() == ".csproj":
+                  return candidate if candidate.is_file() else None
+
+              directory = candidate.parent
+              while directory == root or root in directory.parents:
+                  matches = sorted(directory.glob("*.csproj"))
+                  if len(matches) == 1:
+                      return matches[0]
+                  if len(matches) > 1:
+                      return None
+                  if directory == root:
+                      break
+                  directory = directory.parent
+              return None
+
+          relevant = [path for path in paths if is_dotnet_input(path)]
+          needs_analysis = bool(relevant)
+          full_solution = any(is_global_input(path) for path in relevant)
+
+          selected: dict[str, Path] = {}
+          if needs_analysis and not full_solution:
+              for path in relevant:
+                  if path in self_test_paths:
+                      continue
+                  project = owning_csproj(path)
+                  if project is None:
+                      full_solution = True
+                      selected.clear()
+                      break
+                  selected[project.stem] = project.relative_to(root)
+
+          # Workflow-only changes still execute a real, bounded InspectCode run.
+          if needs_analysis and not full_solution and not selected:
+              representative = Path("src/Coglatas.Domain/Coglatas.Domain.csproj")
+              selected[representative.stem] = representative
+
+          if full_solution:
+              projects_path.write_text("", encoding="utf-8")
+              restore_targets_path.write_text("Coglatas.slnx\n", encoding="utf-8")
+          else:
+              projects_path.write_text(
+                  "".join(f"{name}\n" for name in sorted(selected)),
+                  encoding="utf-8",
+              )
+              restore_targets_path.write_text(
+                  "".join(f"{selected[name].as_posix()}\n" for name in sorted(selected)),
+                  encoding="utf-8",
+              )
+
+          print(f"needs_analysis={'true' if needs_analysis else 'false'}")
+          print(f"full_solution={'true' if full_solution else 'false'}")
           print(f"changed_files_path={changed_path}")
+          print(f"projects_path={projects_path}")
+          print(f"restore_targets_path={restore_targets_path}")
           PY
+
+      - name: Restore selected .NET projects
+        if: steps.scope.outputs.needs_analysis == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r target; do
+            [[ -n "$target" ]] || continue
+            echo "Restoring $target"
+            dotnet restore "$target" --verbosity minimal
+          done < "${{ steps.scope.outputs.restore_targets_path }}"
 
       - name: Install ReSharper command-line tools
         if: steps.scope.outputs.needs_analysis == 'true'
@@ -91,7 +176,9 @@ jobs:
         run: |
           set -euo pipefail
           tool_dir="$RUNNER_TEMP/resharper-tools"
-          dotnet tool install JetBrains.ReSharper.GlobalTools             --version "$RESHARPER_VERSION"             --tool-path "$tool_dir"
+          dotnet tool install JetBrains.ReSharper.GlobalTools \
+            --version "$RESHARPER_VERSION" \
+            --tool-path "$tool_dir"
           echo "RESHARPER_JB=$tool_dir/jb" >> "$GITHUB_ENV"
 
       - name: Run ReSharper InspectCode fast lane
@@ -101,13 +188,40 @@ jobs:
           set -euo pipefail
           sarif="$RUNNER_TEMP/resharper/inspectcode.sarif.json"
 
-          "$RESHARPER_JB" inspectcode Coglatas.slnx             --output="$sarif"             --severity=WARNING             --no-swea             --build             --properties:Configuration=Release             --verbosity=WARN
+          args=(
+            inspectcode
+            Coglatas.slnx
+            --output="$sarif"
+            --severity=WARNING
+            --no-swea
+            --no-build
+            --no-updates
+            --properties:Configuration=Release
+            --properties:RunAnalyzers=false
+            --verbosity=WARN
+          )
+
+          while IFS= read -r project; do
+            [[ -n "$project" ]] || continue
+            args+=(--project="$project")
+          done < "${{ steps.scope.outputs.projects_path }}"
+
+          echo "ReSharper scope:"
+          if [[ -s "${{ steps.scope.outputs.projects_path }}" ]]; then
+            cat "${{ steps.scope.outputs.projects_path }}"
+          else
+            echo "full solution"
+          fi
+
+          "$RESHARPER_JB" "${args[@]}"
 
       - name: Gate changed files on ReSharper findings
         if: steps.scope.outputs.needs_analysis == 'true'
         shell: bash
         run: |
-          python3 scripts/quality/check-resharper-pr-sarif.py             "$RUNNER_TEMP/resharper/inspectcode.sarif.json"             "${{ steps.scope.outputs.changed_files_path }}"
+          python3 scripts/quality/check-resharper-pr-sarif.py \
+            "$RUNNER_TEMP/resharper/inspectcode.sarif.json" \
+            "${{ steps.scope.outputs.changed_files_path }}"
 
       - name: Skip ReSharper for non-.NET pull request
         if: steps.scope.outputs.needs_analysis != 'true'
