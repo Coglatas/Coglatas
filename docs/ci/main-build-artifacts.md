@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Main-branch CI must not rebuild the same production application independently in
+Main-branch CI parallelizes the independent .NET and frontend producer graphs and must not rebuild the same production application independently in
 backend tests, frontend tests, security validation, Qodana, Performance, real-backend E2E, or image-SBOM workflows.
 
 `.github/workflows/main-build-artifacts.yml` is the trusted main-only `Main CI`
@@ -16,16 +16,22 @@ push main
   |
   +-- Main CI
       |
-      +-- dotnet restore
-      +-- dotnet build Release                 (once)
-      +-- package bin/Release + obj
-      +-- dotnet publish --no-build            (same build)
-      |
-      +-- npm ci frontend
-      +-- licensed Angular production build    (once)
-      |
-      +-- assemble production runtime image    (once)
-      +-- package runtime image + .NET build
+      +-- Main .NET producer -------------------+
+      |   +-- dotnet restore (parallel)
+      |   +-- dotnet build Release -m (parallel project graph)
+      |   +-- package bin/Release + obj
+      |   +-- dotnet publish --no-build
+      |   +-- OpenAPI from prebuilt assembly
+      |                                        |
+      +-- Main Frontend producer ---------------+
+      |   +-- npm ci frontend
+      |   +-- licensed Angular production build
+      |   +-- Storybook build
+      |                                        |
+      +-- Main runtime artifact assembler <-----+
+          +-- verify exact-SHA producer outputs
+          +-- assemble production runtime image once
+          +-- publish combined compatibility artifact
       |
       +--> Main Test
       |     +-- restore .NET bin/obj
