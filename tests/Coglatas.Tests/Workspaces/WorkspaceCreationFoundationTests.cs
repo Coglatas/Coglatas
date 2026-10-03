@@ -141,6 +141,77 @@ public sealed class WorkspaceCreationFoundationTests
         await AssertNoCreateSideEffectsAsync(fixture.Db);
     }
 
+    [Theory]
+    [InlineData("name", "body.name")]
+    [InlineData("description", "body.description")]
+    [InlineData("icon", "body.icon")]
+    public async Task DatabaseUnsafeNullCreateInputFailsValidationWithoutSideEffects(
+        string field,
+        string expectedTarget)
+    {
+        await using var fixture = await Fixture.CreateAsync(
+            TenantUserRole.Owner,
+            TenantUserStatus.Active,
+            UserStatus.Active);
+        var request = field switch
+        {
+            "name" => new CreateWorkspaceRequest("Unsafe\0Name", null, null),
+            "description" => new CreateWorkspaceRequest("Workspace", "Unsafe\0Description", null),
+            "icon" => new CreateWorkspaceRequest("Workspace", null, "Unsafe\0Icon"),
+            _ => throw new ArgumentOutOfRangeException(nameof(field))
+        };
+
+        var failure = await fixture.CreateService().CreateAsync(
+            request,
+            "workspace-nul-create");
+
+        Assert.False(failure.IsSuccess);
+        Assert.Equal("ValidationFailed", failure.ErrorDetail?.Code);
+        Assert.Equal(expectedTarget, failure.ErrorDetail?.Target);
+        await AssertNoCreateSideEffectsAsync(fixture.Db);
+    }
+
+    [Theory]
+    [InlineData("name", "body.name")]
+    [InlineData("description", "body.description")]
+    [InlineData("icon", "body.icon")]
+    public async Task DatabaseUnsafeNullUpdateInputFailsValidationWithoutMutation(
+        string field,
+        string expectedTarget)
+    {
+        await using var fixture = await Fixture.CreateAsync(
+            TenantUserRole.Owner,
+            TenantUserStatus.Active,
+            UserStatus.Active);
+        var service = fixture.CreateService();
+        var created = await service.CreateAsync(
+            new CreateWorkspaceRequest("Original", "Original description", "Original icon"),
+            "workspace-nul-update-seed");
+        Assert.True(created.IsSuccess);
+        fixture.Db.ChangeTracker.Clear();
+
+        var request = field switch
+        {
+            "name" => new UpdateWorkspaceRequest("Unsafe\0Name", null, null, null),
+            "description" => new UpdateWorkspaceRequest(null, "Unsafe\0Description", null, null),
+            "icon" => new UpdateWorkspaceRequest(null, null, "Unsafe\0Icon", null),
+            _ => throw new ArgumentOutOfRangeException(nameof(field))
+        };
+
+        var failure = await service.UpdateAsync(created.Value!.Id, request);
+
+        Assert.False(failure.IsSuccess);
+        Assert.Equal("ValidationFailed", failure.ErrorDetail?.Code);
+        Assert.Equal(expectedTarget, failure.ErrorDetail?.Target);
+        var workspace = await fixture.Db.Workspaces.AsNoTracking().SingleAsync();
+        Assert.Equal("Original", workspace.Name);
+        Assert.Equal("Original description", workspace.Description);
+        Assert.Equal("Original icon", workspace.Icon);
+        Assert.Empty(await fixture.Db.AuditLogs.AsNoTracking()
+            .Where(item => item.Action == "WorkspaceUpdated")
+            .ToListAsync());
+    }
+
     [Fact]
     public async Task ConcurrentRetryFailsClosedWithoutRowsWhenGeneralDependencyIsUnavailable()
     {

@@ -39,7 +39,7 @@
     "@ngrx/store": "22.0.1",
     "@syncfusion/ej2-angular-gantt": "34.2.8",
     "@syncfusion/ej2-angular-grids": "34.2.9",
-    "@syncfusion/ej2-angular-inputs": "34.2.8",
+    "@syncfusion/ej2-angular-inputs": "35.1.37",
     "@syncfusion/ej2-angular-popups": "34.2.8",
     "ag-grid-angular": "36.2.0",
     "ag-grid-community": "36.2.0",
@@ -59,7 +59,7 @@
     "prettier": "3.9.9",
     "storybook": "10.6.0",
     "typescript": "6.0.3",
-    "vitest": "4.1.11"
+    "vitest": "5.0.2"
   },
   "allowScripts": {
     "@parcel/watcher@2.6.0": true,
@@ -67,7 +67,8 @@
     "fsevents@2.3.3": true,
     "lmdb@3.5.6": true,
     "msgpackr-extract@3.0.4": true,
-    "@syncfusion/ej2-angular-base@34.2.8": true
+    "@syncfusion/ej2-angular-base@34.2.8": true,
+    "@syncfusion/ej2-angular-base@35.1.37": true
   },
   "overrides": {
     "undici": "7.29.1",

@@ -1,4 +1,217 @@
 {
   "version": 1,
-  "findings": []
+  "findings": [
+    {
+      "report": "coglatas-frontend",
+      "package": "@angular-devkit/build-angular",
+      "severity": "high",
+      "via": [
+        "dependency:http-proxy-middleware"
+      ]
+    },
+    {
+      "report": "coglatas-frontend",
+      "package": "@storybook/angular",
+      "severity": "high",
+      "via": [
+        "dependency:@angular-devkit/build-angular"
+      ]
+    },
+    {
+      "report": "coglatas-frontend",
+      "package": "braces",
+      "severity": "high",
+      "via": [
+        "advisory:1240992"
+      ]
+    },
+    {
+      "report": "coglatas-frontend",
+      "package": "chokidar",
+      "severity": "high",
+      "via": [
+        "dependency:braces"
+      ]
+    },
+    {
+      "report": "coglatas-frontend",
+      "package": "http-proxy-middleware",
+      "severity": "high",
+      "via": [
+        "dependency:micromatch"
+      ]
+    },
+    {
+      "report": "coglatas-frontend",
+      "package": "micromatch",
+      "severity": "high",
+      "via": [
+        "dependency:braces"
+      ]
+    },
+    {
+      "report": "coglatas-frontend",
+      "package": "webpack-dev-server",
+      "severity": "high",
+      "via": [
+        "dependency:chokidar",
+        "dependency:http-proxy-middleware"
+      ]
+    },
+    {
+      "report": "frontend",
+      "package": "@angular-devkit/build-angular",
+      "severity": "high",
+      "via": [
+        "dependency:@angular-devkit/build-webpack",
+        "dependency:http-proxy-middleware",
+        "dependency:webpack-dev-server"
+      ]
+    },
+    {
+      "report": "frontend",
+      "package": "@angular-devkit/build-webpack",
+      "severity": "high",
+      "via": [
+        "dependency:webpack-dev-server"
+      ]
+    },
+    {
+      "report": "frontend",
+      "package": "@storybook/angular",
+      "severity": "high",
+      "via": [
+        "dependency:@angular-devkit/build-angular"
+      ]
+    },
+    {
+      "report": "frontend",
+      "package": "braces",
+      "severity": "high",
+      "via": [
+        "advisory:1240992"
+      ]
+    },
+    {
+      "report": "frontend",
+      "package": "chokidar",
+      "severity": "high",
+      "via": [
+        "dependency:braces"
+      ]
+    },
+    {
+      "report": "frontend",
+      "package": "http-proxy-middleware",
+      "severity": "high",
+      "via": [
+        "dependency:micromatch"
+      ]
+    },
+    {
+      "report": "frontend",
+      "package": "micromatch",
+      "severity": "high",
+      "via": [
+        "dependency:braces"
+      ]
+    },
+    {
+      "report": "frontend",
+      "package": "webpack-dev-server",
+      "severity": "high",
+      "via": [
+        "dependency:chokidar",
+        "dependency:http-proxy-middleware"
+      ]
+    },
+    {
+      "report": "tools_frontend-inspections",
+      "package": "braces",
+      "severity": "high",
+      "via": [
+        "advisory:1240992"
+      ]
+    },
+    {
+      "report": "tools_frontend-inspections",
+      "package": "fast-glob",
+      "severity": "high",
+      "via": [
+        "dependency:micromatch"
+      ]
+    },
+    {
+      "report": "tools_frontend-inspections",
+      "package": "globby",
+      "severity": "high",
+      "via": [
+        "dependency:fast-glob",
+        "dependency:micromatch"
+      ]
+    },
+    {
+      "report": "tools_frontend-inspections",
+      "package": "micromatch",
+      "severity": "high",
+      "via": [
+        "dependency:braces"
+      ]
+    },
+    {
+      "report": "tools_frontend-inspections",
+      "package": "stylelint",
+      "severity": "high",
+      "via": [
+        "dependency:fast-glob",
+        "dependency:globby",
+        "dependency:micromatch"
+      ]
+    },
+    {
+      "report": "tools_frontend-inspections",
+      "package": "stylelint-config-recommended",
+      "severity": "high",
+      "via": [
+        "dependency:stylelint"
+      ]
+    },
+    {
+      "report": "tools_frontend-inspections",
+      "package": "stylelint-config-recommended-scss",
+      "severity": "high",
+      "via": [
+        "dependency:stylelint",
+        "dependency:stylelint-config-recommended",
+        "dependency:stylelint-scss"
+      ]
+    },
+    {
+      "report": "tools_frontend-inspections",
+      "package": "stylelint-config-standard",
+      "severity": "high",
+      "via": [
+        "dependency:stylelint",
+        "dependency:stylelint-config-recommended"
+      ]
+    },
+    {
+      "report": "tools_frontend-inspections",
+      "package": "stylelint-config-standard-scss",
+      "severity": "high",
+      "via": [
+        "dependency:stylelint",
+        "dependency:stylelint-config-recommended-scss",
+        "dependency:stylelint-config-standard"
+      ]
+    },
+    {
+      "report": "tools_frontend-inspections",
+      "package": "stylelint-scss",
+      "severity": "high",
+      "via": [
+        "dependency:stylelint"
+      ]
+    }
+  ]
 }
