@@ -23,11 +23,15 @@ def read_changed_files(path: Path) -> set[str]:
     if not path.is_file():
         raise FileNotFoundError(f"changed-file inventory not found: {path}")
 
-    return {
-        item.decode("utf-8", errors="surrogateescape").replace("\\", "/").lstrip("./")
-        for item in path.read_bytes().split(b"\0")
-        if item
-    }
+    changed: set[str] = set()
+    for item in path.read_bytes().split(b"\0"):
+        if not item:
+            continue
+        value = item.decode("utf-8", errors="surrogateescape").replace("\\", "/")
+        while value.startswith("./"):
+            value = value[2:]
+        changed.add(value)
+    return changed
 
 
 def normalize_uri(uri: str, workspace: Path) -> str | None:
