@@ -86,8 +86,17 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
         evidence.failedMutationStatus = rejectedUpload.status();
         expect(await fileNamesForWorkspace(api, workspaceId)).not.toContain(failedFileName);
 
+        // NavigationEnd commits Workspace scope after the page component mounts.
+        // Wait for its scoped inventory read before acting on the uploader.
+        const initialFileListPromise = page.waitForResponse((response) =>
+          response.request().method() === 'GET' &&
+          new URL(response.url()).pathname === '/api/files' &&
+          new URL(response.url()).searchParams.get('workspaceId') === workspaceId,
+        );
         await page.goto(`/app/workspaces/${workspaceId}/files`);
+        assertSafeResponse(await initialFileListPromise, { label: 'FCI-05 initial scoped inventory', expectedStatus: 200 });
         await expect(page.getByTestId('files-page')).toBeVisible();
+        await expect(page.locator('app-coglatas-file-uploader input[type="file"]')).toBeEnabled();
 
         const uploadResponsePromise = page.waitForResponse((response) =>
           response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/files',

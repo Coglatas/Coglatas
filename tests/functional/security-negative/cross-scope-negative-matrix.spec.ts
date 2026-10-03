@@ -513,12 +513,25 @@ async function resolveCoreGraph(
 
   const taskFilesResponse = await api.get(`/api/tasks/${taskId}/files?page=1&pageSize=100`);
   await assertSafeResponse(taskFilesResponse, { label: 'FCI-07 Task File fixture list', expectedStatus: 200 });
-  const taskFiles = readItems(await taskFilesResponse.json(), 'Task File fixture list');
-  const file = taskFiles.find((item) => readString(item, 'fileName', 'FileName') === expected.fileName);
-  if (!file) {
-    throw new Error('FCI-07 expected Task File fixture was not found.');
-  }
+  const taskFilesPage = asRecord(await taskFilesResponse.json(), 'Task File fixture page');
+  const taskFiles = readItems(taskFilesPage, 'Task File fixture list');
+  // SEC-02 seeds exactly one attachment for this uniquely resolved Task.
+  // FileMetadata protects its filename even for a record-authorized owner.
+  expect(requireNumber(taskFilesPage, 'totalCount', 'TotalCount')).toBe(1);
+  expect(taskFiles).toHaveLength(1);
+  const [file] = taskFiles;
+  expect(readString(file, 'fileName', 'FileName')).toBe('[redacted:file]');
   const fileId = requireString(file, 'fileObjectId', 'FileObjectId');
+  const fileResponse = await api.get(`/api/files/${fileId}`);
+  await assertSafeResponse(fileResponse, { label: 'FCI-07 Task File fixture identity', expectedStatus: 200 });
+  const fileData = asRecord(await fileResponse.json(), 'Task File fixture identity');
+  expect(requireString(fileData, 'id', 'Id')).toBe(fileId);
+  expect(requireString(fileData, 'workspaceId', 'WorkspaceId')).toBe(workspaceId);
+  expect(requireString(fileData, 'projectId', 'ProjectId')).toBe(projectId);
+  expect(readString(fileData, 'originalFileName', 'OriginalFileName')).toBe('[redacted:file]');
+  expect(readString(fileData, 'originalFileName', 'OriginalFileName')).not.toBe(expected.fileName);
+  expect(readString(fileData, 'contentType', 'ContentType')).toBe('text/plain');
+  expect(readString(fileData, 'status', 'Status')).toBe('Active');
 
   return { workspaceId, projectId, taskId, fileId };
 }

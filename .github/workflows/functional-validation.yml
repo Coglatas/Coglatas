@@ -72,6 +72,7 @@ jobs:
       COGLATAS_FUNCTIONAL_DOMAIN: ${{ matrix.domain }}
       COGLATAS_FUNCTIONAL_SELECTED_GATES: ${{ inputs.gate }}
       FUNCTIONAL_COMPOSE_PROJECT_NAME: coglatas-functional-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.domain }}
+      FUNCTIONAL_DIAGNOSTIC_DIR: ${{ runner.temp }}/functional-diagnostics-${{ matrix.domain }}
     steps:
       - name: Checkout exact candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -92,8 +93,10 @@ jobs:
       - name: Execute isolated canonical domain owners
         shell: bash
         run: |
+          set -euo pipefail
           if [[ "$COGLATAS_FUNCTIONAL_DOMAIN" == 'authz-negative' ]]; then
-            export COGLATAS_SECURITY_CI_PASSWORD="Fci07!$(openssl rand -hex 24)"
+            COGLATAS_SECURITY_CI_PASSWORD="Fci07!$(openssl rand -hex 24)"
+            export COGLATAS_SECURITY_CI_PASSWORD
             export FUNCTIONAL_COMPOSE_FILES='infra/compose/test/real-backend-smoke.yml,infra/compose/security/security.yml,infra/compose/security/fci07-functional-security.yml,infra/compose/test/functional-domain.yml'
           else
             export FUNCTIONAL_COMPOSE_FILES='infra/compose/test/real-backend-smoke.yml,infra/compose/test/functional-domain.yml'
