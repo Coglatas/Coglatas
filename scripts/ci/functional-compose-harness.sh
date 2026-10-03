@@ -255,7 +255,7 @@ run_harness() {
   wait_for_healthy postgres "$timeout_seconds" || setup_failure postgres-readiness "PostgreSQL did not become healthy: $last_wait_state"
   "${compose[@]}" up --detach migrate || setup_failure apply-migrations "Migration service failed to start."
   wait_for_completed migrate "$timeout_seconds" || setup_failure migration-head "Migration head did not complete successfully: $last_wait_state"
-  "${compose[@]}" up --detach --no-deps app || setup_failure start-application "Application failed to start."
+  "${compose[@]}" up --detach --no-deps --no-build app || setup_failure start-application "Application failed to start."
   wait_for_healthy app "$timeout_seconds" || setup_failure application-readiness "Application did not become healthy: $last_wait_state"
 
   if [[ -n "${COGLATAS_FUNCTIONAL_DOMAIN:-}" ]]; then
