@@ -157,8 +157,8 @@ jobs:
         if: steps.audit.outputs.vulnerabilities_found == '1'
         run: |
           echo "npm audit reported known vulnerable dependency trees."
-          echo "High/Critical findings are allowed only when they exactly match the reviewed baseline."
-          echo "Any new or stale High/Critical baseline entry fails the preceding gate."
+          echo "High/Critical findings are allowed only when every current finding is covered by the reviewed baseline."
+          echo "Any unreviewed High/Critical finding fails the preceding gate; temporarily missing reviewed entries are reported as warnings."
 
   install-policy:
     name: npm install policy
