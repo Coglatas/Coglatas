@@ -49,6 +49,7 @@ jobs:
             tests/ci/test_performance_environment.py \
             tests/ci/test_performance_comparator.py \
             tests/ci/test_performance_comparator_hardening.py
+          python3 -m py_compile scripts/performance/db_gate.py scripts/performance/db-probe.py scripts/performance/db-compare.py
           bash -n scripts/performance/with-environment.sh
 
       - name: Test performance contract validators
@@ -56,6 +57,7 @@ jobs:
           python3 -m unittest discover -s tests/ci -p 'test_performance_contract.py'
           python3 -m unittest discover -s tests/ci -p 'test_performance_environment.py'
           python3 -m unittest discover -s tests/ci -p 'test_performance_comparator*.py'
+          python3 -m unittest discover -s tests/ci -p 'test_performance_db.py'
 
       - name: Validate versioned performance contract
         run: python3 scripts/ci/verify-performance-contract.py

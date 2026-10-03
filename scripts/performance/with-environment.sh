@@ -163,6 +163,8 @@ if [[ -n "$COMPOSE_OVERRIDE" ]]; then
 fi
 python3 "$ROOT/scripts/performance/collect-environment.py" "${collect_args[@]}"
 
+export COGLATAS_PERFORMANCE_COMPOSE_PROJECT="$PROJECT"
+export COGLATAS_PERFORMANCE_DB_EVIDENCE_PATH="$EVIDENCE_DIR/db-captures"
 export COGLATAS_PERFORMANCE_BASE_URL="$BASE_URL"
 export COGLATAS_PERFORMANCE_FIXTURE_EVIDENCE="$EVIDENCE_DIR/fixture.json"
 export COGLATAS_PERFORMANCE_PREFLIGHT_EVIDENCE="$EVIDENCE_DIR/preflight.json"

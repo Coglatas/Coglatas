@@ -140,3 +140,11 @@ python3 -m unittest discover -s tests/ci -p 'test_performance_environment.py'
 ```
 
 Validation rejects duplicate scenario IDs, unknown metrics/gates, missing/disabled budget metadata, relative budgets without baseline identity, invalid pagination/cardinality math, a Gantt page size above #270's maximum, a `large` Gantt profile silently collapsed into the old temporary full-snapshot envelope, public/production-like benchmark targets, incomplete fixture evidence, warm-up mixed into measured samples, insufficient samples, process failures/timeouts, missing environment fingerprints, and environment instability.
+
+## PERF-05 DB regression gate
+
+See [DB.md](DB.md) for the current major-list inventory, Test-only Npgsql
+instrumentation, structural/pagination/selected-plan checks, PERF-03 duration
+adapter, and existing product violations that must not be exempted to make CI
+green. The candidate requires actual PostgreSQL 18 workflow evidence before
+acceptance.

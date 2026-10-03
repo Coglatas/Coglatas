@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "inventorySha": "bb6d04351a55a954b01e5e732add3ba8a366cdb9",
+  "policy": {
+    "queryCountHardCeiling": 80,
+    "maximumFixedPageQueryGrowth": 2,
+    "maximumPageSizeQueryGrowth": 2,
+    "slowCommandHardCeilingMs": 10000,
+    "samples": 5,
+    "pageSizes": [5, 10],
+    "rationale": "An 80-command emergency ceiling includes tenant/session/authorization reads and batched list projection. At fixed pagination, cardinality or a five-row page increase may add at most two batch/empty-page queries. Ten seconds per DB command is an extreme failure ceiling, not a latency SLO. Existing product violations must fail; they are not exempted or used to raise budgets.",
+    "evidence": ["src/Coglatas.Infrastructure/Persistence/PlanningRepository.cs", "src/Coglatas.Application/Files/FileService.cs", "performance/environment.json"],
+    "durationPolicy": "PR blocks only the extreme per-command ceiling; main/nightly emits repeated db.total_time_ms samples for PERF-03 and never creates an approved baseline automatically."
+  },
+  "scenarios": [
+    {"id":"workspace.list","path":"/api/workspaces","focus":"workspaces","paged":false,"rootTable":"workspaces","paginationParameter":"pageSize","currentDebt":"Unpaged product collection; inventory and query growth probe only."},
+    {"id":"project.list","path":"/api/projects?workspaceId={workspaceId}","focus":"workspaceProjects","paged":true,"rootTable":"projects","paginationParameter":"pageSize","currentDebt":"ProjectService.ListAsync materializes all visible Projects and performs per-row permission checks."},
+    {"id":"task.list","path":"/api/projects/{taskListProjectId}/tasks","focus":"projectTasks","paged":true,"rootTable":"task_items","paginationParameter":"pageSize","currentDebt":"ProjectService.ListTasksAsync materializes and authorizes all Tasks before pagination."},
+    {"id":"task.my-tasks","path":"/api/me/tasks","focus":"userMyTasks","paged":true,"rootTable":"task_items","paginationParameter":"pageSize"},
+    {"id":"file.list","path":"/api/files?workspaceId={workspaceId}","focus":"workspaceFiles","paged":true,"rootTable":"attachments","paginationParameter":"pageSize"},
+    {"id":"conversation.list","path":"/api/conversations","focus":"conversations","paged":true,"rootTable":"conversations","paginationParameter":"pageSize","currentDebt":"ConversationService.ListAsync adds last-message/read-state/unread/member queries per Conversation."},
+    {"id":"conversation.messages","path":"/api/conversations/{conversationId}/messages","focus":"conversationMessages","paged":true,"rootTable":"messages","paginationParameter":"limit","cursor":true},
+    {"id":"notification.list","path":"/api/notifications","focus":"userNotifications","paged":true,"rootTable":"notifications","paginationParameter":"pageSize","currentDebt":"DbNotificationService checks current target visibility in batches with per-item resolution."},
+    {"id":"announcement.list","path":"/api/announcements","focus":"visibleAnnouncements","paged":true,"rootTable":"announcements","paginationParameter":"pageSize","currentDebt":"AnnouncementService.ListAsync reads confirmation state per Announcement."}
+  ],
+  "planChecks": [{"id":"task.primary-key-lookup","profile":"medium","minimumTableRows":3000,"relation":"task_items","requiredIndex":"PK_task_items","rationale":"The canonical Task detail/authorization lookup by Task ID must retain its primary-key index on the deterministic medium fixture; no blanket Seq Scan ban or exact plan comparison."}]
+}

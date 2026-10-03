@@ -2,6 +2,7 @@ using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
 using Coglatas.Domain.Enums;
 using Coglatas.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 [assembly: HostingStartup(typeof(Coglatas.Web.Testing.PerformanceCiHostingStartup))]
 
@@ -29,6 +30,13 @@ public sealed class PerformanceCiHostingStartup : IHostingStartup
             }
 
             services.AddHostedService<PerformanceCiFixtureHostedService>();
+            if (context.Configuration.GetValue<bool>("COGLATAS_PERFORMANCE_DB_CAPTURE_ENABLED"))
+            {
+                services.AddSingleton<PerformanceDbCapture>();
+                services.AddDbContext<AppDbContext>((provider, options) =>
+                    options.AddInterceptors(provider.GetRequiredService<PerformanceDbCapture>()));
+                services.AddTransient<IStartupFilter, PerformanceDbStartupFilter>();
+            }
         });
     }
 }
