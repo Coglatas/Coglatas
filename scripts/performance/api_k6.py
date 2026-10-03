@@ -143,6 +143,7 @@ def collect(output: Path) -> None:
     fingerprint['k6Version'] = contract['k6Version']
     write_json_atomic(output, {
         'schemaVersion': 1, 'headSha': fingerprint['commitSha'], 'fingerprint': fingerprint,
+        'trialId': os.environ['COGLATAS_PERFORMANCE_COMPOSE_PROJECT'],
         'contractHash': hashlib.sha256((ROOT / 'performance/api-k6.json').read_bytes()).hexdigest(),
         'profile': contract['profile'], 'measurements': measurements,
     })
@@ -159,6 +160,9 @@ def evaluate(current: list[dict], baseline: list[dict], mode: str) -> dict:
     expected_contract_hash = hashlib.sha256((ROOT / 'performance/api-k6.json').read_bytes()).hexdigest()
     if reference.get('contractHash') != expected_contract_hash:
         raise PerformanceContractError('measurement does not bind to the current API contract')
+    trial_ids = [run.get('trialId') for run in current + baseline]
+    if any(not isinstance(t, str) or not t.startswith('coglatas-performance-') for t in trial_ids) or len(set(trial_ids)) != len(trial_ids):
+        raise PerformanceContractError('duplicate or missing independent trial identity')
     for group in (current, baseline):
         for run in group:
             if run.get('schemaVersion') != 1 or run.get('contractHash') != reference['contractHash'] or run.get('profile') != contract['profile']:

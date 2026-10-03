@@ -10,3 +10,7 @@
 # any future key rotation or content-introducing commit must be reviewed again.
 735e92a1538be10a29ffd3c77ca2c083ebe541e5:deploy/gcp/bootstrap-vm.sh:generic-api-key:8
 1b029eced939f9593a4f935b541fbfcdd599f4e7:deploy/gcp/bootstrap-vm.sh:generic-api-key:8
+
+# PERF-04: metric literal api.latency.p95_ms falsely matched generic-api-key.
+# Exact historical commit/path/rule/line only; no real credential is present.
+17dfc1d7d02b2c14db126d617eeb7f346553b0ed:scripts/performance/api_k6.py:generic-api-key:41

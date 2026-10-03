@@ -616,6 +616,9 @@ def compare_api_documents(
                     isinstance(c, bool) or not isinstance(c, int) or c < contract["minimumRequests"] for c in baseline_counts)):
             result.update(decision="insufficient-data", reasonCode="insufficient-baseline-samples")
             return result
+        if "ceiling" in metric_policy and max(baseline_samples) > metric_policy["ceiling"]:
+            result.update(decision="regression", reasonCode="baseline-hard-ceiling-exceeded")
+            return result
         baseline_summary = summarize(baseline_samples)
         bkind, bvar, blimit = _variability(metric, metric_policy["unit"], baseline_summary, policy)
         baseline_summary.update(variabilityKind=bkind, variabilityValue=bvar, variabilityLimit=blimit)

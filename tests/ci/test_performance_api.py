@@ -27,9 +27,16 @@ def run(sha=HEAD):
     fp['commitSha'] = sha
     fp['fixture']['profile'] = contract['profile']['fixture']
     fp['k6Version'] = contract['k6Version']
-    return {'schemaVersion': 1, 'headSha': sha, 'fingerprint': fp,
+    return {'schemaVersion': 1, 'headSha': sha, 'fingerprint': fp, 'trialId': 'coglatas-performance-' + sha,
             'contractHash': hashlib.sha256((ROOT / 'performance/api-k6.json').read_bytes()).hexdigest(),
             'profile': contract['profile'], 'measurements': api_k6.normalize(raw_result(), contract)}
+
+
+def independent(source):
+    trials = [copy.deepcopy(source) for _ in range(5)]
+    for index, trial in enumerate(trials):
+        trial['trialId'] += '-' + str(index)
+    return trials
 
 
 class ApiNormalizationTests(unittest.TestCase):
@@ -83,8 +90,7 @@ class ApiGateTests(unittest.TestCase):
         return api_k6.evaluate([self.current], [], 'fast')
 
     def regression(self):
-        return api_k6.evaluate([copy.deepcopy(self.current) for _ in range(5)],
-                               [copy.deepcopy(self.base) for _ in range(5)], 'regression')
+        return api_k6.evaluate(independent(self.current), independent(self.base), 'regression')
 
     def test_valid_fast_gate_needs_no_fabricated_baseline(self):
         result = self.fast()
@@ -118,6 +124,14 @@ class ApiGateTests(unittest.TestCase):
         self.current['measurements']['workspace.list']['api.throughput_rps'] = 5
         self.assertEqual('fail', self.regression()['decision'])
 
+    def test_reused_trial_cannot_fake_multiple_independent_runs(self):
+        with self.assertRaises(api_k6.PerformanceContractError):
+            api_k6.evaluate([self.current] * 5, independent(self.base), 'regression')
+
+    def test_baseline_errors_cannot_report_green(self):
+        self.base['measurements']['workspace.list']['api.error_rate'] = 0.05
+        self.assertEqual('fail', self.regression()['decision'])
+
     def test_main_missing_baseline_is_not_green(self):
         with self.assertRaises(api_k6.PerformanceContractError): api_k6.evaluate([self.current] * 5, [], 'regression')
 
@@ -135,16 +149,16 @@ class ApiGateTests(unittest.TestCase):
             with self.assertRaises(api_k6.PerformanceContractError): self.regression()
 
     def test_main_high_variance_is_not_green(self):
-        runs = [copy.deepcopy(self.current) for _ in range(5)]
+        runs = independent(self.current)
         for item, value in zip(runs, [100, 200, 300, 400, 500]):
             item['measurements']['workspace.list']['api.latency.p95_ms'] = value
-        result = api_k6.evaluate(runs, [self.base] * 5, 'regression')
+        result = api_k6.evaluate(runs, independent(self.base), 'regression')
         self.assertIn('unstable', {r['decision'] for r in result['results']})
 
     def test_single_failed_run_cannot_disappear_in_median(self):
-        runs = [copy.deepcopy(self.current) for _ in range(5)]
+        runs = independent(self.current)
         runs[0]['measurements']['workspace.list']['api.error_rate'] = 0.05
-        result = api_k6.evaluate(runs, [self.base] * 5, 'regression')
+        result = api_k6.evaluate(runs, independent(self.base), 'regression')
         self.assertEqual('fail', result['decision'])
 
     def test_result_key_parity(self):
