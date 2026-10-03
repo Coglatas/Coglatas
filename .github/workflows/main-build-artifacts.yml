@@ -51,16 +51,10 @@ jobs:
         run: dotnet restore Coglatas.slnx --disable-parallel --verbosity minimal
 
       - name: Build authoritative .NET graph once
-        run: >-
-          dotnet build Coglatas.slnx
-          --configuration Release
-          --no-restore
-          --disable-build-servers
-          -m:1
-          -p:GenerateSecurityOpenApiContract=true
+        run: dotnet build Coglatas.slnx --configuration Release --no-restore --disable-build-servers -m:1
 
-      - name: Verify authoritative OpenAPI build output
-        run: test -f artifacts/openapi/coglatas-openapi.json
+      - name: Generate authoritative OpenAPI from prebuilt assembly
+        run: bash scripts/ci/generate-security-openapi-from-prebuilt.sh
 
       - name: Package reusable .NET build outputs
         shell: bash

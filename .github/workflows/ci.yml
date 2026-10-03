@@ -195,14 +195,10 @@ jobs:
           retention-days: 1
           compression-level: 0
 
-      - name: Generate PR security OpenAPI build output
-        if: github.event_name == 'pull_request' && needs.changes.outputs.avmig_contract == 'true'
+      - name: Generate PR security OpenAPI from shared build
+        if: needs.changes.outputs.avmig_contract == 'true'
         shell: bash
-        env:
-          COGLATAS_SECURITY_OPENAPI_GENERATE_ONLY: "1"
-          COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS: "1"
-          COGLATAS_SECURITY_AVMIG_SELFTESTS: "0"
-        run: bash scripts/ci/generate-security-openapi-contract.sh
+        run: bash scripts/ci/generate-security-openapi-from-prebuilt.sh
 
       - name: Package PR security OpenAPI build output
         if: github.event_name == 'pull_request' && needs.changes.outputs.avmig_contract == 'true'
