@@ -60,11 +60,14 @@ jobs:
       - name: Enforce required PR check topology
         run: python3 scripts/ci/check-required-pr-checks.py
 
-      - name: Validate parallel CI helper syntax
+      - name: Validate CI helper syntax
         run: |
           bash -n scripts/ci/parallel-lane-lib.sh
           bash -n scripts/ci/run-frontend-parallel.sh
           bash -n scripts/ci/run-security-runtime-parallel.sh
+          bash -n scripts/ci/restore-main-build-artifacts.sh
+          bash -n scripts/performance/with-environment.sh
+          node --check tests/ui/run-real-backend-smoke-compose.mjs
 
       - name: Enforce Coglatas rename completion
         run: python3 scripts/ci/check-coglatas-rename.py
