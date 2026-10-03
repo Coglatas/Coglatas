@@ -196,7 +196,7 @@ export class SyncfusionGanttComponent {
   }
 
   get dataSource(): readonly SyncfusionGanttRow[] {
-    const canonicalItems = this.canonicalItems,
+    const { canonicalItems } = this,
       dependencies = this.contract.dependencies ?? [],
       itemIds = new Set(canonicalItems.map((item) => item.taskId)),
       predecessors = new Map<string, string[]>(),
