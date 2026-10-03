@@ -72,7 +72,6 @@ jobs:
       COGLATAS_FUNCTIONAL_DOMAIN: ${{ matrix.domain }}
       COGLATAS_FUNCTIONAL_SELECTED_GATES: ${{ inputs.gate }}
       FUNCTIONAL_COMPOSE_PROJECT_NAME: coglatas-functional-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.domain }}
-      FUNCTIONAL_DIAGNOSTIC_DIR: ${{ runner.temp }}/functional-diagnostics-${{ matrix.domain }}
     steps:
       - name: Checkout exact candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -91,6 +90,8 @@ jobs:
           bash scripts/ci/restore-main-build-artifacts.sh "$RUNNER_TEMP/main-build-artifacts" "$TARGET_SHA" "$GITHUB_WORKSPACE"
           echo 'SYNCFUSION_LICENSE=artifact-reuse-no-build' >> "$GITHUB_ENV"
       - name: Execute isolated canonical domain owners
+        env:
+          FUNCTIONAL_DIAGNOSTIC_DIR: ${{ runner.temp }}/functional-diagnostics-${{ matrix.domain }}
         shell: bash
         run: |
           set -euo pipefail
