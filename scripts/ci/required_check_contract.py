@@ -321,18 +321,64 @@ def _field(text: str, block: tuple[int, int, int], key: str) -> str | None:
     return None
 
 
-def _needs_list(raw: str | None) -> list[str]:
-    if raw is None:
+def _direct_job_fields(text: str, block: tuple[int, int, int]) -> dict[str, list[tuple[int, str]]]:
+    lines = _lines(text)
+    start, end, ji = block
+    children = [i for i in range(start + 1, end) if lines[i].strip() and _indent(lines[i]) > ji]
+    if not children:
+        return {}
+    field_indent = min(_indent(lines[i]) for i in children)
+    fields: dict[str, list[tuple[int, str]]] = {}
+    for i in children:
+        if _indent(lines[i]) != field_indent:
+            continue
+        match = re.match(r"^([A-Za-z0-9_.-]+)\s*:\s*(.*)$", lines[i].strip())
+        if match:
+            fields.setdefault(match.group(1), []).append((i, match.group(2).strip()))
+    return fields
+
+
+def _duplicate_job_fields(text: str, block: tuple[int, int, int]) -> set[str]:
+    return {key for key, entries in _direct_job_fields(text, block).items() if len(entries) > 1}
+
+
+def _needs_list(text: str, block: tuple[int, int, int]) -> list[str]:
+    lines = _lines(text)
+    fields = _direct_job_fields(text, block)
+    entries = fields.get("needs", [])
+    if not entries:
         return []
+    if len(entries) != 1:
+        raise ValueError("duplicate needs keys")
+
+    line_index, raw = entries[0]
     value = raw.strip()
-    if not value:
-        return []
-    if value.startswith("[") and value.endswith("]"):
-        inner = value[1:-1].strip()
-        if not inner:
-            return []
-        return [item.strip().strip("'\"") for item in inner.split(",") if item.strip()]
-    return [value.strip("'\"")]
+    if value:
+        if value.startswith("[") and value.endswith("]"):
+            inner = value[1:-1].strip()
+            values = [] if not inner else [item.strip().strip("'\"") for item in inner.split(",") if item.strip()]
+        else:
+            values = [value.strip("'\"")]
+    else:
+        parent_indent = _indent(lines[line_index])
+        items: list[str] = []
+        for i in range(line_index + 1, block[1]):
+            line = lines[i]
+            if not line.strip():
+                continue
+            indent = _indent(line)
+            if indent <= parent_indent:
+                break
+            stripped = line.strip()
+            match = re.match(r"^-\s*([A-Za-z0-9_.-]+)\s*$", stripped)
+            if not match:
+                raise ValueError("needs block must be a sequence of job identifiers")
+            items.append(match.group(1))
+        values = items
+
+    if len(values) != len(set(values)) or any(not re.fullmatch(r"[A-Za-z0-9_.-]+", item) for item in values):
+        raise ValueError("needs contains invalid or duplicate job identifiers")
+    return values
 
 
 def _prerequisite_chain_errors(
@@ -351,6 +397,13 @@ def _prerequisite_chain_errors(
     if block is None:
         return [f"{relative}: required check prerequisite job '{prerequisite}' is missing"]
 
+    duplicates = _duplicate_job_fields(text, block)
+    if duplicates:
+        errors.append(
+            f"{relative}: required check prerequisite job '{prerequisite}' has duplicate job keys: "
+            + ", ".join(sorted(duplicates))
+        )
+
     if _field(text, block, "if") is not None:
         errors.append(
             f"{relative}: required check prerequisite job '{prerequisite}' must not use job-level if"
@@ -360,7 +413,15 @@ def _prerequisite_chain_errors(
             f"{relative}: required check prerequisite job '{prerequisite}' must not use continue-on-error"
         )
 
-    for upstream in _needs_list(_field(text, block, "needs")):
+    try:
+        upstream_jobs = _needs_list(text, block)
+    except ValueError as exc:
+        errors.append(
+            f"{relative}: required check prerequisite job '{prerequisite}' has invalid needs: {exc}"
+        )
+        upstream_jobs = []
+
+    for upstream in upstream_jobs:
         errors.extend(
             _prerequisite_chain_errors(
                 relative,
@@ -388,6 +449,12 @@ def required_check_errors(relative: str, text: str, registry: dict[str, Any] | N
             errors.append(f"{relative}: required check job '{item['job']}' is missing")
             continue
         if item["kind"] == "workflow-job":
+            duplicates = _duplicate_job_fields(text, block)
+            if duplicates:
+                errors.append(
+                    f"{relative}: required check job '{item['job']}' has duplicate job keys: "
+                    + ", ".join(sorted(duplicates))
+                )
             name = _field(text, block, "name")
             if name not in {item["context"], f'"{item["context"]}"', f"'{item['context']}'"}:
                 errors.append(f"{relative}: required check job '{item['job']}' must keep name {item['context']!r}")
