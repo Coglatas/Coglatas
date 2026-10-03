@@ -72,13 +72,59 @@ jobs:
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: bash scripts/ci/route-main-ci-changes.sh
 
+      - name: Download redistributed .NET build for security contract
+        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dotnet-release-build
+          path: ${{ runner.temp }}/security-dotnet-build
+
+      - name: Restore redistributed .NET build for security contract
+        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/security-dotnet-build/dotnet-release-build.tar"
+          test -f "$archive"
+          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
+          expected="$(git rev-parse HEAD)"
+          actual="$(tr -d '\r\n' < artifacts/ci/dotnet-build-sha)"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Security .NET build artifact SHA $actual does not match analyzed revision $expected."
+            exit 1
+          fi
+
+      - name: Download redistributed security OpenAPI build
+        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: security-openapi-build
+          path: ${{ runner.temp }}/security-openapi-build
+
+      - name: Restore redistributed security OpenAPI build
+        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/security-openapi-build/security-openapi-build.tar"
+          test -f "$archive"
+          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
+          expected="$(git rev-parse HEAD)"
+          actual="$(tr -d '\r\n' < artifacts/ci/security-openapi-sha)"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Security OpenAPI artifact SHA $actual does not match analyzed revision $expected."
+            exit 1
+          fi
+          test -f artifacts/openapi/coglatas-openapi.json
+
       - name: Resolve shared build requirement
         id: scope
         shell: bash
         env:
           ROUTE_BACKEND: ${{ steps.route.outputs.backend }}
+          ROUTE_AVMIG_CONTRACT: ${{ steps.route.outputs.avmig_contract }}
         run: |
-          if [[ "$GITHUB_EVENT_NAME" != "pull_request" || "$ROUTE_BACKEND" == "true" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" != "pull_request" || "$ROUTE_BACKEND" == "true" || "$ROUTE_AVMIG_CONTRACT" == "true" ]]; then
             echo "built=true" >> "$GITHUB_OUTPUT"
           else
             echo "built=false" >> "$GITHUB_OUTPUT"
@@ -132,6 +178,38 @@ jobs:
         with:
           name: dotnet-release-build
           path: ${{ runner.temp }}/dotnet-release-build.tar
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
+      - name: Generate PR security OpenAPI build output
+        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
+        shell: bash
+        env:
+          COGLATAS_SECURITY_OPENAPI_GENERATE_ONLY: "1"
+          COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS: "1"
+          COGLATAS_SECURITY_AVMIG_SELFTESTS: "0"
+        run: bash scripts/ci/generate-security-openapi-contract.sh
+
+      - name: Package PR security OpenAPI build output
+        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/openapi/coglatas-openapi.json
+          mkdir -p artifacts/ci
+          git rev-parse HEAD > artifacts/ci/security-openapi-sha
+          tar -cf "$RUNNER_TEMP/security-openapi-build.tar" \
+            artifacts/ci/security-openapi-sha \
+            artifacts/openapi/coglatas-openapi.json
+          du -h "$RUNNER_TEMP/security-openapi-build.tar"
+
+      - name: Publish PR security OpenAPI build artifact
+        if: github.event_name == 'pull_request' && steps.route.outputs.avmig_contract == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: security-openapi-build
+          path: ${{ runner.temp }}/security-openapi-build.tar
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
@@ -347,8 +425,91 @@ jobs:
     if: ${{ github.event_name == 'pull_request' && needs.dotnet-build.outputs.built == 'true' }}
     uses: ./.github/workflows/resharper_pr.yml
 
+  frontend-build:
+    name: Frontend build producer
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Route frontend build changes
+        id: route
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || (github.event_name == 'push' && github.event.before || '') }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/ci/route-main-ci-changes.sh
+
+      - name: Skip frontend build producer for unrelated changes
+        if: steps.route.outputs.frontend != 'true'
+        run: echo "No frontend-relevant changes detected; no frontend artifact is required."
+
+      - name: Set up Node.js
+        if: steps.route.outputs.frontend == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+
+      - name: Use repository npm version without lifecycle scripts
+        if: steps.route.outputs.frontend == 'true'
+        run: npm install --global npm@11.17.0 --ignore-scripts --no-audit --no-fund
+
+      - name: Install Angular dependencies with reviewed lifecycle policy
+        if: steps.route.outputs.frontend == 'true'
+        run: bash scripts/ci/npm-ci-retry.sh frontend
+
+      - name: Build production Angular artifact
+        if: steps.route.outputs.frontend_build == 'true' || steps.route.outputs.frontend_playwright == 'true'
+        run: npm --prefix frontend run build
+
+      - name: Build Storybook artifact
+        if: steps.route.outputs.frontend_storybook == 'true'
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm --prefix frontend run build-storybook
+
+      - name: Package frontend build artifacts
+        if: steps.route.outputs.frontend_build == 'true' || steps.route.outputs.frontend_playwright == 'true' || steps.route.outputs.frontend_storybook == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ci
+          git rev-parse HEAD > artifacts/ci/frontend-build-sha
+
+          outputs=(artifacts/ci/frontend-build-sha)
+          if [[ -d frontend/dist/coglatas-web ]]; then
+            outputs+=(frontend/dist/coglatas-web)
+          fi
+          if [[ -d frontend/storybook-static ]]; then
+            outputs+=(frontend/storybook-static)
+          fi
+
+          if [[ "${#outputs[@]}" -le 1 ]]; then
+            echo "::error::Frontend build producer completed without reusable output."
+            exit 1
+          fi
+
+          tar -cf "$RUNNER_TEMP/frontend-build-artifacts.tar" "${outputs[@]}"
+          du -h "$RUNNER_TEMP/frontend-build-artifacts.tar"
+
+      - name: Publish frontend build artifacts
+        if: steps.route.outputs.frontend_build == 'true' || steps.route.outputs.frontend_playwright == 'true' || steps.route.outputs.frontend_storybook == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: frontend-build-artifacts
+          path: ${{ runner.temp }}/frontend-build-artifacts.tar
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
   frontend-test:
     name: frontend-test
+    needs: frontend-build
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
@@ -366,6 +527,37 @@ jobs:
           BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || (github.event_name == 'push' && github.event.before || '') }}
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: bash scripts/ci/route-main-ci-changes.sh
+
+      - name: Download redistributed frontend build artifacts
+        if: steps.route.outputs.frontend_build == 'true' || steps.route.outputs.frontend_playwright == 'true' || steps.route.outputs.frontend_storybook == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: frontend-build-artifacts
+          path: ${{ runner.temp }}/frontend-build-artifact
+
+      - name: Restore redistributed frontend build artifacts
+        if: steps.route.outputs.frontend_build == 'true' || steps.route.outputs.frontend_playwright == 'true' || steps.route.outputs.frontend_storybook == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/frontend-build-artifact/frontend-build-artifacts.tar"
+          test -f "$archive"
+          tar -xf "$archive" -C "$GITHUB_WORKSPACE"
+
+          expected="$(git rev-parse HEAD)"
+          actual="$(tr -d '\r\n' < artifacts/ci/frontend-build-sha)"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Frontend build artifact SHA $actual does not match test revision $expected."
+            exit 1
+          fi
+
+          if [[ "${{ steps.route.outputs.frontend_build }}" == "true" || "${{ steps.route.outputs.frontend_playwright }}" == "true" ]]; then
+            test -f frontend/dist/coglatas-web/index.html
+            test -f frontend/dist/coglatas-web/angular-app.marker
+          fi
+          if [[ "${{ steps.route.outputs.frontend_storybook }}" == "true" ]]; then
+            test -f frontend/storybook-static/index.html
+          fi
 
       - name: Skip frontend checks for unrelated changes
         if: steps.route.outputs.frontend != 'true'
@@ -419,12 +611,13 @@ jobs:
         if: steps.route.outputs.frontend == 'true'
         shell: bash
         env:
-          FRONTEND_BUILD: ${{ steps.route.outputs.frontend_build }}
+          FRONTEND_BUILD: "false"
           FRONTEND_UNIT: ${{ steps.route.outputs.frontend_unit }}
           FRONTEND_ARCHITECTURE: ${{ steps.route.outputs.frontend_architecture }}
           FRONTEND_LICENSE_GUARD: ${{ steps.route.outputs.frontend_license_guard }}
-          FRONTEND_STORYBOOK: ${{ steps.route.outputs.frontend_storybook }}
+          FRONTEND_STORYBOOK: "false"
           FRONTEND_PLAYWRIGHT: ${{ steps.route.outputs.frontend_playwright }}
+          COGLATAS_PLAYWRIGHT_REUSE_HOST_BUILD: "true"
         run: bash scripts/ci/run-frontend-parallel.sh
 
       - name: Upload browser artifacts on failure
@@ -441,6 +634,7 @@ jobs:
 
   security-scan:
     name: security-scan
+    needs: dotnet-build
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -509,6 +703,7 @@ jobs:
         env:
           # PRs verify the generated contract once; main/manual repeat generation.
           COGLATAS_SECURITY_OPENAPI_DETERMINISM_RUNS: ${{ github.event_name == 'pull_request' && '1' || '2' }}
+          COGLATAS_SECURITY_REUSE_PREBUILT_OPENAPI: ${{ github.event_name == 'pull_request' && '1' || '0' }}
           # Verifier mutation suites run on PR only when verifier/policy/toolchain
           # or their concrete Program/AppHub mutation targets changed.
           COGLATAS_SECURITY_AVMIG_SELFTESTS: ${{ github.event_name != 'pull_request' && '1' || (steps.route.outputs.avmig_selftests == 'true' && '1' || '0') }}
