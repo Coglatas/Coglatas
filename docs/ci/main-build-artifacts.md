@@ -27,6 +27,16 @@ push main
       +-- assemble production runtime image    (once)
       +-- package runtime image + .NET build
       |
+      +--> Qodana Community
+      |     +-- restore .NET bin/obj
+      |     +-- NuGet restore for runner/container-local packages
+      |     +-- skip Qodana bootstrap compilation
+      |
+      +--> Qodana Cloud
+      |     +-- restore the same .NET bin/obj
+      |     +-- NuGet restore for runner/container-local packages
+      |     +-- skip Qodana bootstrap compilation
+      |
       +--> Performance environment
       |     +-- docker load runtime image
       |     +-- restore .NET bin/obj
@@ -71,9 +81,11 @@ test.
 
 ### Qodana
 
-Qodana retains its own project-model/build preparation. Its build is part of the
-analysis environment and cannot be replaced by ordinary runtime binaries without
-changing inspection semantics.
+Main-push Qodana Community and Qodana Cloud are consumers of the trusted main
+artifact hub. They restore the exact-SHA `.NET` `bin/obj` output, perform a
+lightweight NuGet restore for their own execution environment, and skip the
+duplicate Qodana bootstrap compilation. Manual Qodana workflows remain
+standalone fallbacks and perform their own build preparation.
 
 ### Path-gated WPC acceptance
 
@@ -86,7 +98,8 @@ necessary.
 ## Trust boundary
 
 The artifact hub is not triggered by `pull_request`, `pull_request_target`, or
-`workflow_run`. It cannot be manually dispatched. Protected Syncfusion material
+`workflow_run`. It cannot be manually dispatched. PR ReSharper never participates
+in this graph; it exists only in `.github/workflows/ci.yml`, which is pull-request-only. Protected Syncfusion material
 therefore executes only against the repository's trusted `main` push revision.
 
 Downstream reusable workflows use the caller revision and same-run artifacts.

@@ -45,13 +45,25 @@
         "qodana-cloud"
       ],
       "events": [
-        "workflow_dispatch",
+        "workflow_dispatch"
+      ],
+      "permissions": [
+        "security-events:write"
+      ],
+      "reason": "Publish normalized Qodana SARIF only from the manually dispatched trusted default-branch fallback; pull-request workflows remain read-only."
+    },
+    {
+      "workflow": ".github/workflows/main-build-artifacts.yml",
+      "jobs": [
+        "qodana-cloud"
+      ],
+      "events": [
         "push"
       ],
       "permissions": [
         "security-events:write"
       ],
-      "reason": "Publish normalized Qodana SARIF only from the trusted default-branch full scan; pull-request Qodana workflows remain read-only."
+      "reason": "Publish normalized Qodana SARIF from the protected main artifact-hub Cloud job after restoring the exact-SHA trusted build artifact."
     },
     {
       "workflow": ".github/workflows/nuget-dependency-submission.yml",

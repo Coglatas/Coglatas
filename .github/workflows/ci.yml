@@ -1,16 +1,10 @@
-name: CI
+name: PR CI
 
 on:
-  workflow_dispatch:
-  push:
-    branches: ["main"]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
   pull_request: # Required checks: intentionally unfiltered.
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: pr-ci-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 permissions:

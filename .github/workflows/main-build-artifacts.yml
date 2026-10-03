@@ -151,6 +151,145 @@ jobs:
         if: always()
         run: docker image rm --force "$IMAGE_NAME" || true
 
+  qodana-community:
+    name: Qodana Community from main artifacts
+    needs: main-build-artifacts
+    uses: ./.github/workflows/qodana_trusted_gate.yml
+    with:
+      reuse_main_artifacts: true
+
+  qodana-cloud:
+    name: Qodana Cloud from main artifacts
+    needs: main-build-artifacts
+    runs-on: ubuntu-latest
+    environment: syncfusion-licensed-build
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      security-events: write
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+      QODANA_SKIP_FRONTEND_BOOTSTRAP: "true"
+      QODANA_UNRESOLVED_THRESHOLD: "0"
+      QODANA_UNRESOLVED_FILE_THRESHOLD: "0"
+      QODANA_CRITICAL_THRESHOLD: "0"
+      QODANA_RULE_BASELINE_PATH: scripts/quality/qodana-rule-baseline.json
+      QODANA_REUSE_PREBUILT_DOTNET_BUILD: "true"
+
+    steps:
+      - name: Checkout trusted main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download trusted main build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: main-build-artifacts
+          path: ${{ runner.temp }}/main-build-artifacts
+
+      - name: Restore trusted main .NET build
+        shell: bash
+        run: bash scripts/ci/restore-main-dotnet-build.sh "$RUNNER_TEMP/main-build-artifacts" "$GITHUB_SHA" "$GITHUB_WORKSPACE"
+
+      - name: Configure persistent .NET caches
+        shell: bash
+        run: |
+          bash scripts/ci/configure-persistent-caches.sh
+          job_temp="$RUNNER_TEMP/dotnet-${GITHUB_JOB}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$job_temp/home" "$job_temp/nuget/scratch"
+          {
+            echo "DOTNET_CLI_HOME=$job_temp/home"
+            echo "DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE=1"
+            echo "NUGET_SCRATCH=$job_temp/nuget/scratch"
+          } >> "$GITHUB_ENV"
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Remove orphaned Qodana containers
+        run: bash scripts/ci/cleanup-qodana-containers.sh "$GITHUB_WORKSPACE"
+
+      - name: Require Qodana Cloud project token
+        env:
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+        shell: bash
+        run: |
+          if [[ -z "${QODANA_TOKEN:-}" ]]; then
+            echo "::error::QODANA_TOKEN is required for Qodana Cloud publishing."
+            exit 1
+          fi
+
+      - name: Run full Qodana analysis and publish to Cloud
+        id: qodana_scan
+        uses: JetBrains/qodana-action@3e8d76ff0e0241618abd808682f426afe84bab3f # v2026.2.2
+        env:
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+        with:
+          args: |
+            --image jetbrains/qodana-cdnet:2026.2-privileged@sha256:21bbbfeac0e61fe8790cc27d5754b87d57b8032c0c32f84ddeb887027f83ec4f
+          pr-mode: false
+          results-dir: ${{ runner.temp }}/qodana/results-${{ github.run_id }}-${{ github.run_attempt }}
+          use-caches: false
+          post-pr-comment: false
+          use-annotations: false
+          upload-result: false
+          push-fixes: none
+
+      - name: Repair Qodana workspace ownership
+        if: always()
+        shell: bash
+        run: |
+          uid="$(id -u)"
+          gid="$(id -g)"
+          docker run --rm             -v "$GITHUB_WORKSPACE:/workspace"             alpine:3.21.7@sha256:f27cad9117495d32d067133afff942cb2dc745dfe9163e949f6bfe8a6a245339             sh -c "chown -R ${uid}:${gid} /workspace"
+
+      - name: Prepare Qodana SARIF for GitHub Code Scanning
+        if: steps.qodana_scan.outcome == 'success'
+        shell: bash
+        run: |
+          sarif="${RUNNER_TEMP}/qodana/results-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/qodana.sarif.json"
+          github_sarif="${RUNNER_TEMP}/qodana/qodana.github.sarif.json"
+          test -f "$sarif"
+          python3 scripts/quality/prepare-qodana-sarif-for-github.py             "$sarif" "$github_sarif" qodana-dotnet-community
+
+      - name: Upload Qodana SARIF to GitHub Code Scanning
+        if: steps.qodana_scan.outcome == 'success'
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4
+        with:
+          sarif_file: ${{ runner.temp }}/qodana/qodana.github.sarif.json
+          category: qodana-dotnet-community
+
+      - name: Set up Node.js for Qodana guard
+        if: steps.qodana_scan.outcome == 'success'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+
+      - name: Guard Qodana findings and project model
+        if: steps.qodana_scan.outcome == 'success'
+        env:
+          QODANA_PROJECT_MODEL_SUMMARY_PATH: ${{ runner.temp }}/qodana/project-model-summary.json
+        shell: bash
+        run: |
+          sarif="${RUNNER_TEMP}/qodana/results-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}/qodana.sarif.json"
+          test -f "$sarif"
+          node scripts/quality/check-qodana-project-model.mjs "$sarif"
+
+      - name: Upload Qodana inspection inventory
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: qodana-cloud-full-inventory
+          path: ${{ runner.temp }}/qodana/results-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 14
+
   performance-environment:
     name: Performance from main artifacts
     needs: main-build-artifacts

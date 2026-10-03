@@ -59,36 +59,31 @@ Qodana runs `scripts/quality/qodana-bootstrap.sh` before inspections. For the Co
 1. Reads the required SDK from `global.json`.
 2. Installs that exact SDK if the image does not provide it.
 3. Prints the active SDK/MSBuild information.
-4. Runs `dotnet restore Coglatas.slnx --verbosity normal`.
-5. Runs `dotnet build Coglatas.slnx --configuration Release --no-restore`.
+4. Runs `dotnet restore Coglatas.slnx --verbosity normal` for the Qodana execution environment.
+5. On main artifact-hub runs, verifies and reuses the exact-SHA prebuilt `bin/obj` tree and skips compilation; on standalone/manual fallback runs, executes `dotnet build Coglatas.slnx --configuration Release --no-restore`.
 6. Skips the frontend bootstrap because `qodana-cdnet` does not analyze the active Angular/TypeScript application.
 
 Restore, build, SDK, package-resolution, solution-load and project-model failures are hard failures.
 
 ## Trusted Community quality gate
 
-`.github/workflows/qodana_code_quality.yml` is the tokenless trusted Community caller. It runs on pushes to `main` and manual dispatch, and delegates analysis to the local reusable workflow `qodana_trusted_gate.yml`. Pull-request JetBrains analysis is handled separately by the ReSharper InspectCode fast lane, so Qodana no longer spends the PR feedback budget on full-repository inspection.
+Main pushes invoke the tokenless Community lane from `.github/workflows/main-build-artifacts.yml`, after the trusted main .NET build artifact is available. `.github/workflows/qodana_code_quality.yml` remains a manual fallback caller and delegates analysis to the same local reusable workflow `qodana_trusted_gate.yml`. Pull-request JetBrains analysis is handled separately by the ReSharper InspectCode fast lane, so Qodana no longer spends the PR feedback budget on full-repository inspection.
 
-The Community lane performs the repository-wide Qodana scan with the canonical `qodana.yaml` project model and the reviewed per-inspection debt ratchet. `check-qodana-project-model.mjs` compares current inspection counts with `scripts/quality/qodana-rule-baseline.json`; any count above its reviewed budget fails, while Critical findings, unresolved-symbol findings, project-model failures, missing/invalid SARIF, and Qodana execution failures remain hard failures.
+On the main artifact-hub path, the Community lane restores the exact-SHA `bin/obj` outputs, performs NuGet restore for the Qodana environment, skips duplicate bootstrap compilation, and then performs the repository-wide Qodana scan with the canonical `qodana.yaml` project model and the reviewed per-inspection debt ratchet. `check-qodana-project-model.mjs` compares current inspection counts with `scripts/quality/qodana-rule-baseline.json`; any count above its reviewed budget fails, while Critical findings, unresolved-symbol findings, project-model failures, missing/invalid SARIF, and Qodana execution failures remain hard failures.
 
 The lane keeps repository permissions at `contents: read`, does not publish quick fixes or modify repository contents, and does not receive `QODANA_TOKEN`. Qodana Cloud publication is intentionally separated into the trusted Cloud workflow described below.
 
 ## Full-repository quality gate and Qodana Cloud
 
-`.github/workflows/qodana_cloud_quality.yml` is a separate trusted Cloud-publishing workflow. It has no `pull_request` or review trigger and runs only for:
+Main-push Cloud publication is the protected `qodana-cloud` job inside `.github/workflows/main-build-artifacts.yml`. It restores the same exact-SHA .NET build outputs used by the other main consumers, performs only the environment-local NuGet restore, then runs full repository analysis with `pr-mode: false`. The job is bound to `syncfusion-licensed-build`, receives `QODANA_TOKEN` there, and publishes the report to Qodana Cloud.
 
-- pushes to `main`;
-- manual dispatches on `main`.
-
-The former weekly schedule is currently disabled to reduce CI consumption.
-
-The Cloud workflow performs a full repository analysis with `pr-mode: false`, passes `QODANA_TOKEN` directly to the pinned Qodana action, and therefore publishes the report to Qodana Cloud. Manual dispatches on non-`main` refs are blocked by the job-level ref guard.
+`.github/workflows/qodana_cloud_quality.yml` remains a manual-only fallback for trusted `main`. It performs normal local build preparation instead of consuming the main artifact hub. The former weekly schedule is currently disabled to reduce CI consumption.
 
 Because repository publication policy requires every secret-bearing job to use a static protected environment, the Cloud job is bound to the repository's existing `syncfusion-licensed-build` protected environment. Qodana does not consume the Syncfusion secret; the environment is reused solely as the already-established trusted secret boundary. A dedicated Qodana environment may replace it later if one is created with equivalent protection.
 
 The Cloud lane fails before Qodana starts if `QODANA_TOKEN` is empty. The token must be available to the job as the Qodana Cloud project token for this repository. This prevents a green trusted run from silently producing only a local/GitHub report while Qodana Cloud receives nothing.
 
-Keeping Cloud publication in a workflow with no PR trigger is deliberate: Qodana Cloud credentials never enter the pull-request trust boundary, while the existing immutable PR gate remains unprivileged.
+Keeping Cloud publication exclusively in protected main/manual jobs with no PR trigger is deliberate: Qodana Cloud credentials never enter the pull-request trust boundary, while the ReSharper PR lane remains unprivileged.
 
 The repository currently has historical non-critical Qodana debt. The baseline captured from main commit `c6aedb95c8780a5e8fac42b7b96ecccf80f1ad80` contains 3,479 findings. Instead of accepting unlimited historical debt or requiring an immediate zero-warning migration, the SARIF guard uses a per-inspection ratchet while preserving the full report:
 
