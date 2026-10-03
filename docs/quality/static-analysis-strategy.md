@@ -7,7 +7,7 @@
 | SonarQube Cloud | Repository-wide quality gate across C#, JavaScript, TypeScript, HTML, CSS and SCSS | Automatic Analysis on every PR update and every push to `main` |
 | ESLint + angular-eslint | JavaScript, TypeScript and Angular template policy | `Frontend Static Analysis` on every PR and `main` push; blocking |
 | Stylelint | CSS and SCSS policy | `Frontend Static Analysis` on every PR and `main` push; blocking |
-| ReSharper InspectCode CLI | Fast JetBrains inspection lane for .NET pull-request feedback | Every PR; runs only when .NET/config inputs changed, reports `WARNING` or higher with solution-wide analysis disabled, and fails on findings in files changed by the PR |
+| ReSharper InspectCode CLI | Fast JetBrains inspection lane for .NET pull-request feedback | Every PR; runs only when .NET/config inputs changed, scopes ordinary changes to affected projects, reports `WARNING` or higher with solution-wide analysis and duplicate Roslyn analyzer execution disabled, and fails on findings in files changed by the PR |
 | Qodana Community for .NET | Deep JetBrains/ReSharper repository inspection and project-model validation | Trusted `main` pushes and manual dispatch; full repository scan with strict Critical/unresolved/project-model guards |
 | CodeQL | Security-oriented semantic/data-flow analysis | Every PR targeting `main`, trusted `main` pushes and weekly schedule |
 
@@ -75,7 +75,7 @@ The SonarQube Quality Gate is supplied by the SonarQube Cloud GitHub integration
 
 `.github/workflows/resharper_pr.yml` is the fast .NET inspection lane. It runs on every pull request targeting `main`, but skips the expensive analysis when the diff contains no .NET source, project, solution, SDK, NuGet, ReSharper, or MSBuild configuration inputs.
 
-The workflow pins `JetBrains.ReSharper.GlobalTools` to version `2026.2.2` and runs `InspectCode` against `Coglatas.slnx` with `--severity=WARNING`, `--no-swea`, and a Release build. The SARIF guard fails only when a reported issue is located in a file changed by the pull request. This keeps historical debt from making unrelated PRs permanently red while still preventing touched files from carrying Warning-or-higher ReSharper findings forward. The full SARIF report is retained as a short-lived workflow artifact. The lane uses read-only repository permissions and no JetBrains license secret.
+The workflow pins `JetBrains.ReSharper.GlobalTools` to version `2026.2.2`. Ordinary C# changes are mapped to their owning projects and passed to `InspectCode` with `--project`; repository-wide MSBuild/ReSharper configuration changes fall back to the full solution. The lane restores only the selected project graph, then runs `InspectCode` with `--severity=WARNING`, `--no-swea`, `--no-build`, and `RunAnalyzers=false`. Compile correctness and Roslyn analyzers remain covered by the separate required build/test lane, while trusted `main` Qodana retains the full build-aware deep inspection. The SARIF guard fails only when a reported issue is located in a file changed by the pull request. This keeps historical debt from making unrelated PRs permanently red while still preventing touched files from carrying Warning-or-higher ReSharper findings forward. The full SARIF report is retained as a short-lived workflow artifact. The lane uses read-only repository permissions and no JetBrains license secret.
 
 ## Qodana policy
 
