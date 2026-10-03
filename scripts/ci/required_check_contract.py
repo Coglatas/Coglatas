@@ -306,6 +306,32 @@ def _jobs(text: str) -> dict[str, tuple[int, int, int]]:
     return {job: (start, starts[n + 1][0] if n + 1 < len(starts) else len(lines), ind) for n, (start, job) in enumerate(starts)}
 
 
+def _duplicate_job_ids(text: str) -> set[str]:
+    lines = _lines(text)
+    jobs_index = next((i for i, line in enumerate(lines) if re.match(r"^jobs\s*:\s*$", line)), None)
+    if jobs_index is None:
+        return set()
+    base = _indent(lines[jobs_index])
+    nested = []
+    for i in range(jobs_index + 1, len(lines)):
+        if not lines[i].strip():
+            continue
+        if _indent(lines[i]) <= base:
+            break
+        nested.append(i)
+    if not nested:
+        return set()
+    job_indent = min(_indent(lines[i]) for i in nested)
+    counts: dict[str, int] = {}
+    for i in nested:
+        if _indent(lines[i]) != job_indent:
+            continue
+        match = re.match(r"^([A-Za-z0-9_.-]+)\s*:\s*$", lines[i].strip())
+        if match:
+            counts[match.group(1)] = counts.get(match.group(1), 0) + 1
+    return {job for job, count in counts.items() if count > 1}
+
+
 def _field(text: str, block: tuple[int, int, int], key: str) -> str | None:
     lines = _lines(text)
     start, end, ji = block
@@ -440,6 +466,11 @@ def required_check_errors(relative: str, text: str, registry: dict[str, Any] | N
     if not entries:
         return []
     errors = []
+    duplicate_jobs = _duplicate_job_ids(text)
+    if duplicate_jobs:
+        errors.append(
+            f"{relative}: workflow has duplicate job identifiers: " + ", ".join(sorted(duplicate_jobs))
+        )
     jobs = _jobs(text)
     if any(c["kind"] == "workflow-job" and c["scope"] == "all-pr" for c in entries) and not has_unfiltered_event(text, "pull_request"):
         errors.append(f"{relative}: required workflow must use an unfiltered pull_request trigger")
