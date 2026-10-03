@@ -839,7 +839,6 @@ public static class PerformanceCiFixtureSeed
         return new DatasetProfile(
             profileName,
             seed,
-            schemaVersion,
             seedManifestVersion,
             fixtureHash,
             counts,
@@ -980,7 +979,6 @@ public static class PerformanceCiFixtureSeed
     private sealed record DatasetProfile(
         string Name,
         int Seed,
-        int SchemaVersion,
         int SeedManifestVersion,
         string FixtureHash,
         Dictionary<string, int> Counts,

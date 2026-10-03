@@ -2,7 +2,6 @@ using Coglatas.Application.Common.Interfaces;
 using Coglatas.Application.Common.Tenancy;
 using Coglatas.Domain.Enums;
 using Coglatas.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 [assembly: HostingStartup(typeof(Coglatas.Web.Testing.PerformanceCiHostingStartup))]
 

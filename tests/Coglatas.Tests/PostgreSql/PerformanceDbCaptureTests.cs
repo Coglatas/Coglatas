@@ -57,18 +57,23 @@ public sealed class PerformanceDbCaptureTests
     public async Task ConcurrentExecutionContextsHaveIndependentMeasurements()
     {
         using var capture = new PerformanceDbCapture();
-        var tasks = Enumerable.Range(1, 5).Select(index => Task.Run(async () =>
+        static Task<int> ObserveAsync(PerformanceDbCapture capture) => Task.Run(async () =>
         {
             using var measurement = capture.Begin();
             await Task.Yield();
             using var source = new ActivitySource("Npgsql");
-            using (var activity = source.StartActivity("query"))
+            using (var activity = source.StartActivity())
             {
                 Assert.NotNull(activity);
                 activity.SetTag("db.query.text", "SELECT 1");
             }
             return measurement.Snapshot().Count;
-        }));
+        });
+        var tasks = new List<Task<int>>();
+        for (var index = 0; index < 5; index++)
+        {
+            tasks.Add(ObserveAsync(capture));
+        }
         Assert.All(await Task.WhenAll(tasks), count => Assert.Equal(1, count));
     }
 
@@ -82,7 +87,7 @@ public sealed class PerformanceDbCaptureTests
         {
             await setup.ExecuteNonQueryAsync();
         }
-        async Task<int> CountAsync(int cardinality, bool batched)
+        static async Task<int> CountAsync(PerformanceDbCapture capture, NpgsqlConnection connection, int cardinality, bool batched)
         {
             using var measurement = capture.Begin();
             if (batched)
@@ -103,9 +108,9 @@ public sealed class PerformanceDbCaptureTests
             }
             return measurement.Snapshot().Count;
         }
-        Assert.Equal(5, await CountAsync(5, batched: false));
-        Assert.Equal(20, await CountAsync(20, batched: false));
-        Assert.Equal(1, await CountAsync(5, batched: true));
-        Assert.Equal(1, await CountAsync(20, batched: true));
+        Assert.Equal(5, await CountAsync(capture, connection, 5, batched: false));
+        Assert.Equal(20, await CountAsync(capture, connection, 20, batched: false));
+        Assert.Equal(1, await CountAsync(capture, connection, 5, batched: true));
+        Assert.Equal(1, await CountAsync(capture, connection, 20, batched: true));
     }
 }

@@ -75,7 +75,50 @@ remains invalid/missing-baseline; current or PR samples are never silently
 approved as a baseline. Repeated raw samples remain available for baseline
 review and DB-time trends. `db-compare.py --baselines <directory>` supports
 approved baseline documents at `<profile>/<scenario>.json` and blocks all
-non-pass comparisons. Baseline governance remains owned by PERF-03.
+non-pass comparisons, including when the baseline directory is absent. Main
+and nightly explicitly use `performance/baselines/db/`; the repository has
+no approved documents there today. Baseline governance remains owned by
+PERF-03. Missing, duplicate, or wrong-page duration streams also fail closed.
+
+Baseline preparation must follow successful, reviewed product remediation
+and a current-main fixture-version-2 collection. Do not promote the failing
+draft's samples. Record the exact approved main SHA, both fixture hashes,
+environment compatibility keys, repeated samples, and before/after evidence
+through the PERF-03 review ledger before enabling comparisons. Fixture-1
+documents cannot silently become fixture-2 baselines.
+
+The current PERF-03 compatibility key includes the application image's
+content identity. Different production source images therefore require an
+explicitly reviewed distinction between runtime/toolchain compatibility and
+the measured application's source identity before cross-SHA production-image
+comparisons can work. This PR preserves that existing compatibility check;
+it does not remove the image field or approve an incompatible baseline.
+
+## Routing and exact-SHA build reuse
+
+The stable `PostgreSQL query regression gate` is created on every PR to main.
+`db-ci.py` records the head/base SHA, changed-file count/hash, applicability,
+and reason. Established documentation/frontend-only changes are explicitly
+not applicable. Backend, performance, dependency, workflow, unknown, empty,
+and unavailable-diff cases run conservatively. Only an explicit unrelated
+route paired with a skipped collector can produce `not-applicable`.
+Relevant skipped, missing, cancelled, failed, or partial lanes fail.
+
+Untrusted PRs use the secret-free Release source runtime. Trusted main runs
+are invoked by the main artifact hub through `workflow_call` and reuse its
+runtime image and Release outputs. Schedule/dispatch resolves a completed
+main push at the exact target SHA, requires the runtime assembler job to have
+succeeded and its artifact to remain available, then verifies the source and
+.NET stamps during restoration. Missing artifacts fail; they never trigger
+an implicit licensed rebuild. No build credential is needed by this lane.
+
+Collectors, fingerprints, routing, and aggregation must all match the tested
+workflow SHA. For PRs this is GitHub's tested merge revision, which differs
+from the contributor's head SHA. The sanitized aggregate preserves the
+workflow/run identity, scenario-contract hash, fixture hashes, environment
+fingerprint hashes, and structural/duration decisions. This DB evidence is
+an input to PERF-11; it does not implement the program-wide `ci/performance`
+or exact-SHA release acceptance by itself.
 
 ## Existing product debt is deliberately detected
 
@@ -96,6 +139,35 @@ cardinality-dependent budgets. #606 explicitly excludes fixing #74/#78
 product behavior. If execution confirms these violations, this PR must stay
 unmerged until separately authorized product remediation is available. No
 claim of full Issue acceptance or green CI may be based on local unit tests.
+
+### Latest executed evidence and remaining blockers
+
+The latest draft-head run at `86aaf5a5b0fcd43b54a97e3c3b78562d3e83ce72`
+tested merge SHA `27658472a7546f6dd9572d5033e5bff4ee4f9240`. Both collectors
+succeeded in [run 37134574811](https://github.com/NYGsatoshi/Coglatas/actions/runs/37134574811);
+the aggregate reported thirteen failed checks:
+
+- Project lists lacked ordered DB paging; the medium profile also exceeded
+  the command ceiling and materialized an unbounded collection. Both dataset
+  growth and page-size growth failed.
+- Task lists issued exactly 1,452 commands for the small profile and 6,252
+  for medium, exceeded the ceiling, and materialized the unbounded collection.
+- Conversation lists exceeded the medium command ceiling (maximum 120)
+  and failed dataset/page-size growth.
+- Notifications over-materialized both page profiles and increased from four
+  to nine commands with dataset cardinality.
+- Announcements failed page-size query growth.
+- The selected Task lookup used an Index Scan on 3,000 rows, but its observed
+  index did not satisfy the named `PK_task_items` invariant. Further plan
+  diagnosis is required; the current evidence does not establish a Seq Scan
+  or a missing physical primary key. The failure remains blocking.
+
+These results belong to the previously executed candidate. The CI-only
+repair of routing, source binding, image reuse, fixture metadata and static
+analysis must be re-executed before any new runtime claim. Issue #606 remains
+open and PR #1046 remains draft/unmerged. Product query/authorization/paging
+remediation is outside this CI-only slice; neither budgets nor scenarios are
+exempted to suppress the failures.
 
 ## Validation
 

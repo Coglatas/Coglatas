@@ -5,6 +5,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="$ROOT/infra/compose/performance/environment.yml"
 RUNTIME_MODE="${COGLATAS_PERFORMANCE_RUNTIME_MODE:-production}"
 REUSE_PREBUILT_APP="${COGLATAS_REUSE_PREBUILT_APP_IMAGE:-false}"
+case "$REUSE_PREBUILT_APP" in
+  1|true) REUSE_PREBUILT_APP=true ;;
+  0|false) REUSE_PREBUILT_APP=false ;;
+  *) echo "PERF-02: invalid prebuilt app reuse flag" >&2; exit 2 ;;
+esac
 COMPOSE_OVERRIDE=""
 PROFILE="${COGLATAS_PERFORMANCE_PROFILE:-small}"
 PORT="${COGLATAS_PERFORMANCE_PORT:-18080}"
@@ -15,6 +20,13 @@ BASE_URL="http://127.0.0.1:${PORT}"
 STARTUP_TIMEOUT="${COGLATAS_PERFORMANCE_STARTUP_TIMEOUT_SECONDS:-900}"
 COMMAND_TIMEOUT="${COGLATAS_PERFORMANCE_COMMAND_TIMEOUT_SECONDS:-900}"
 cleanup_done=0
+
+SOURCE_SHA="$(git -C "$ROOT" rev-parse HEAD)"
+REQUESTED_SHA="${COGLATAS_PERFORMANCE_TARGET_SHA:-${GITHUB_SHA:-$SOURCE_SHA}}"
+if [[ "$REQUESTED_SHA" != "$SOURCE_SHA" ]]; then
+  echo "PERF-02: checkout does not match requested source SHA" >&2
+  exit 2
+fi
 
 case "$PROFILE" in
   small|medium|large) ;;
@@ -41,6 +53,10 @@ case "$RUNTIME_MODE" in
     fi
     ;;
   source)
+    if [[ "$REUSE_PREBUILT_APP" == true ]]; then
+      echo "PERF-02: source runtime cannot reuse a production app image" >&2
+      exit 2
+    fi
     COMPOSE_OVERRIDE="$ROOT/infra/compose/performance/pr.yml"
     ;;
   *)

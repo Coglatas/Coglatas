@@ -18,9 +18,9 @@ public sealed class PerformanceDbCapture : DbCommandInterceptor, IDisposable
         _listener = new ActivityListener
         {
             ShouldListenTo = source => source.Name == "Npgsql",
-            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+            Sample = (ref _) =>
                 _current.Value is null ? ActivitySamplingResult.None : ActivitySamplingResult.AllData,
-            SampleUsingParentId = (ref ActivityCreationOptions<string> _) =>
+            SampleUsingParentId = (ref _) =>
                 _current.Value is null ? ActivitySamplingResult.None : ActivitySamplingResult.AllData,
             ActivityStopped = activity =>
             {

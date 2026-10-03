@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "fixtureVersion": 1,
+  "fixtureVersion": 2,
   "composeProjectPrefix": "coglatas-performance-",
   "databaseName": "coglatas_performance",
   "target": {

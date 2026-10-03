@@ -40,8 +40,8 @@ def main() -> int:
             fail(f"missing required file: {path.relative_to(ROOT)}")
 
     environment = json.loads(environment_path.read_text(encoding="utf-8"))
-    if environment.get("schemaVersion") != 1 or environment.get("fixtureVersion") != 1:
-        fail("environment schemaVersion/fixtureVersion must be 1")
+    if environment.get("schemaVersion") != 1 or environment.get("fixtureVersion") != common.FIXTURE_VERSION:
+        fail("environment schema/fixture version must match the current PERF-02 contract")
     target = environment.get("target")
     if not isinstance(target, dict):
         fail("target contract is missing")

@@ -2,37 +2,86 @@ name: PostgreSQL structural performance
 
 on:
   pull_request:
-    paths:
-      - ".github/workflows/performance-db.yml"
-      - "src/**"
-      - "tests/Coglatas.Tests/PostgreSql/PerformanceDbCaptureTests.cs"
-      - "tests/ci/test_performance_db.py"
-      - "performance/**"
-      - "scripts/performance/**"
-      - "infra/compose/performance/**"
-      - "global.json"
-  push:
-    branches: ["main"]
-    paths:
-      - "src/**"
-      - "performance/**"
-      - "scripts/performance/**"
-      - "infra/compose/performance/**"
-      - ".github/workflows/performance-db.yml"
+    branches: [main]
+  workflow_call:
+    inputs:
+      reuse_main_artifacts:
+        type: boolean
+        default: false
+      producer_run_id:
+        type: string
+        default: ""
+      target_sha:
+        type: string
+        default: ""
   schedule:
     - cron: "41 17 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: performance-db-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  route:
+    name: DB performance routing
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      required: ${{ steps.route.outputs.required }}
+      producer_run_id: ${{ steps.build.outputs.run_id }}
+    env:
+      TARGET_SHA: ${{ inputs.target_sha || github.sha }}
+    steps:
+      - name: Checkout tested revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.target_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Classify changes conservatively
+        id: route
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          required="$(python3 scripts/performance/db-ci.py route --head "$TARGET_SHA" \
+            --event "$EVENT_NAME" --base "$BASE_SHA" --output artifacts/perf05/route.json)"
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+      - name: Resolve trusted exact-main build producer
+        id: build
+        if: steps.route.outputs.required == 'true' && github.event_name != 'pull_request'
+        env:
+          REUSE_MAIN_ARTIFACTS: ${{ inputs.reuse_main_artifacts && 'true' || 'false' }}
+          REQUESTED_RUN_ID: ${{ inputs.producer_run_id }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if [[ "$REUSE_MAIN_ARTIFACTS" == true ]]; then
+            run_id="${REQUESTED_RUN_ID:-$GITHUB_RUN_ID}"
+            [[ "$run_id" =~ ^[0-9]+$ ]]
+          else
+            run_id="$(python3 scripts/performance/db-ci.py resolve-build \
+              --repository "$REPOSITORY" --head "$TARGET_SHA")"
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+      - name: Preserve machine-readable route
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: perf05-route
+          path: artifacts/perf05/route.json
+          if-no-files-found: error
+          retention-days: 14
+
   collect:
     name: DB evidence (${{ matrix.profile }})
+    needs: route
+    if: needs.route.outputs.required == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
@@ -40,37 +89,46 @@ jobs:
       matrix:
         profile: [small, medium]
     env:
+      TARGET_SHA: ${{ inputs.target_sha || github.sha }}
+      COGLATAS_PERFORMANCE_TARGET_SHA: ${{ inputs.target_sha || github.sha }}
       COGLATAS_PERFORMANCE_PROFILE: ${{ matrix.profile }}
-      COGLATAS_PERFORMANCE_RUNTIME_MODE: source
+      COGLATAS_PERFORMANCE_RUNTIME_MODE: ${{ github.event_name == 'pull_request' && 'source' || 'production' }}
       COGLATAS_PERFORMANCE_PORT: "18080"
       COGLATAS_PERFORMANCE_DB_CAPTURE_ENABLED: "true"
       COGLATAS_PERFORMANCE_COMPOSE_PROJECT: coglatas-performance-db-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.profile }}
-
     steps:
       - name: Checkout tested revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ inputs.target_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
-
       - name: Test fail-closed DB evidence validator
-        run: python3 -m unittest discover -s tests/ci -p 'test_performance_db.py'
-
+        run: python3 -m unittest discover -s tests/ci -p 'test_performance_db*.py'
+      - name: Download trusted main build artifacts
+        if: github.event_name != 'pull_request'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: main-build-artifacts
+          path: ${{ runner.temp }}/main-build-artifacts
+          run-id: ${{ needs.route.outputs.producer_run_id }}
+          github-token: ${{ github.token }}
+      - name: Restore runtime image and Release outputs at the exact target SHA
+        if: github.event_name != 'pull_request'
+        run: |
+          bash scripts/ci/restore-main-build-artifacts.sh "$RUNNER_TEMP/main-build-artifacts" "$TARGET_SHA" "$GITHUB_WORKSPACE"
+          echo "SYNCFUSION_LICENSE=artifact-reuse-no-build" >> "$GITHUB_ENV"
       - name: Generate synthetic fixture credential
-        shell: bash
         run: |
           password="$(python3 -c 'import secrets; print("PerfCi-" + secrets.token_urlsafe(24))')"
           echo "::add-mask::$password"
           echo "COGLATAS_PERFORMANCE_PASSWORD=$password" >> "$GITHUB_ENV"
-
       - name: Collect warmed Release API query evidence on PostgreSQL 18
-        shell: bash
         run: |
           bash scripts/performance/with-environment.sh \
             python3 scripts/performance/db-probe.py \
             --profile "$COGLATAS_PERFORMANCE_PROFILE" \
             --output "artifacts/performance/$COGLATAS_PERFORMANCE_PROFILE/db.json"
-
       - name: Upload safe structural and duration evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -85,42 +143,54 @@ jobs:
 
   gate:
     name: PostgreSQL query regression gate
-    needs: collect
+    needs: [route, collect]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      TARGET_SHA: ${{ inputs.target_sha || github.sha }}
     steps:
       - name: Checkout tested revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ inputs.target_sha || github.sha }}
           persist-credentials: false
-
-      - name: Require both dataset collectors
+      - name: Require successful routing
         env:
-          COLLECT_RESULT: ${{ needs.collect.result }}
-        run: test "$COLLECT_RESULT" = "success"
-
-      - name: Download both dataset artifacts
+          ROUTE_RESULT: ${{ needs.route.result }}
+        run: test "$ROUTE_RESULT" = success
+      - name: Download routing and applicable dataset artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: perf05-*
           path: artifacts/perf05
-
-      - name: Block structural regressions and record PERF-03 duration results
-        shell: bash
+      - name: Block structural regressions and invalid PERF-03 duration results
+        if: needs.route.outputs.required == 'true'
         env:
           EVENT_NAME: ${{ github.event_name }}
+          COLLECT_RESULT: ${{ needs.collect.result }}
         run: |
+          test "$COLLECT_RESULT" = success
           args=()
-          if [[ "$EVENT_NAME" != "pull_request" ]]; then
-            args+=(--duration)
+          if [[ "$EVENT_NAME" != pull_request ]]; then
+            args+=(--duration --baselines performance/baselines/db)
           fi
           python3 scripts/performance/db-compare.py \
             --small artifacts/perf05/perf05-small/db.json \
             --medium artifacts/perf05/perf05-medium/db.json \
+            --expected-sha "$TARGET_SHA" \
             --output artifacts/perf05/results/structural.json \
             "${args[@]}"
-
+      - name: Finalize exact-SHA aggregate evidence
+        if: always()
+        env:
+          COLLECT_RESULT: ${{ needs.collect.result }}
+        run: |
+          python3 scripts/performance/db-ci.py gate --head "$TARGET_SHA" \
+            --route artifacts/perf05/perf05-route/route.json \
+            --collector-result "$COLLECT_RESULT" \
+            --measurement artifacts/perf05/results/structural.json \
+            --output artifacts/perf05/results/gate.json
       - name: Upload DB gate results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
