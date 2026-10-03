@@ -40,6 +40,10 @@ reauthorization owners in the journey matrix. Existing licensed acceptance
 remains independently required by the final verifier. This slice must not be
 described as exhaustive completion of every historical matrix row.
 
+Core evidence also reuses the existing FCI-04 completion validator: fast requires
+all nine bounded steps, while full and extended require all eleven steps. A
+passing test without those completed owner steps is `BLOCKED`.
+
 No retry is enabled. An initially failed attempt followed by success is `FLAKY`
 and blocks the aggregate. Expected failures, skips, zero or duplicate owners,
 interruption, quarantine, missing evidence, stale SHA, another run, and another

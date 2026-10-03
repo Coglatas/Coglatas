@@ -1,4 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { validateFci04Owner } from './fci04-owner-reporter.mjs';
 
 const owners = {
   core: ['FUNC-TASK-001'],
@@ -29,6 +30,29 @@ export function ownerResult(test) {
   return { status, attempts: attempts.length, durationMs: attempts.reduce((sum, attempt) => sum + attempt.duration, 0) };
 }
 
+function completedOwnerResult(owner, journeyId, gate) {
+  const outcome = ownerResult(owner);
+  if (journeyId === 'FUNC-TASK-001' && outcome.status === 'PASS') {
+    const [attempt] = owner.results;
+    try {
+      // Extended reuses the complete eleven-step owner rather than granting
+      // a new meaning to the existing fast/full completion validator.
+      validateFci04Owner([{
+        journey: journeyId,
+        backend: 'real',
+        gates: owner.annotations.find((annotation) => annotation.type === 'functional-gates')?.description,
+      }], [{
+        status: attempt.status,
+        retry: attempt.retry,
+        steps: attempt.steps.filter((step) => step.category === 'test.step' && !step.error).map((step) => step.title),
+      }], gate === 'functional-extended' ? 'functional-full' : gate);
+    } catch {
+      outcome.status = 'BLOCKED';
+    }
+  }
+  return outcome;
+}
+
 /** Persist only allowlisted metadata; no titles, assertion bodies, headers, or attachments. */
 export default class FunctionalEvidenceReporter {
   onBegin(_config, suite) {
@@ -46,7 +70,7 @@ export default class FunctionalEvidenceReporter {
         annotation.type === 'journey' && annotation.description === journeyId));
       const real = matches.length === 1 && matches[0].annotations.some((annotation) =>
         annotation.type === 'backend' && annotation.description === 'real');
-      const outcome = real ? ownerResult(matches[0]) : { status: 'BLOCKED', attempts: 0, durationMs: 0 };
+      const outcome = real ? completedOwnerResult(matches[0], journeyId, gate) : { status: 'BLOCKED', attempts: 0, durationMs: 0 };
       if (quarantine.some((entry) => entry.journeyId === journeyId)) {
         outcome.status = 'QUARANTINED';
       }
