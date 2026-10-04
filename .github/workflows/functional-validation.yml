@@ -103,6 +103,14 @@ jobs:
             export FUNCTIONAL_COMPOSE_FILES='infra/compose/test/real-backend-smoke.yml,infra/compose/test/functional-domain.yml'
           fi
           bash scripts/ci/functional-compose-harness.sh
+      - name: Publish bounded container failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: functional-diagnostics-${{ inputs.gate }}-${{ matrix.domain }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/functional-diagnostics-${{ matrix.domain }}/functional-container-states.ndjson
+          if-no-files-found: warn
+          retention-days: 14
       - name: Record blocked owners and summarize lane metadata
         if: always()
         run: python3 scripts/ci/finalize-functional-lane.py
