@@ -38,7 +38,7 @@ export async function runFilesLifecycle(context: FilesLifecycleContext): Promise
     const searchResult = await searchResponse;
     requireStatus(searchResult, 200, 'F05-FULL-01 search');
     const results = recordArray(record(await searchResult.json()).items);
-    const matches = results.filter((item) => item.id === fileObjectId && item.type === 'File');
+    const matches = results.filter((item) => item.id === fileObjectId && item.type === 13);
     expect(matches, 'Real search returns the same logical FileObject').toHaveLength(1);
     const [searchMatch] = matches;
     expect(searchMatch.workspaceId).toBe(workspaceId);
