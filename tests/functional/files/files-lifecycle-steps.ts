@@ -151,7 +151,13 @@ export async function runFilesLifecycle(context: FilesLifecycleContext): Promise
     expect(detail.accessState).toBe('Workspace');
     expect(detail.sharingVersion).toBe(shared.sharingVersion);
     const list = await readJson(api, `/api/files?workspaceId=${workspaceId}&page=1&pageSize=100`);
-    const matches = recordArray(list.items).filter((item) => item.fileObjectId === fileObjectId);
+    const items = recordArray(list.items);
+    expect(list.totalCount).toBe(items.length);
+    expect(list.page).toBe(1);
+    for (const item of items) {
+      expect(item.workspaceId).toBe(workspaceId);
+    }
+    const matches = items.filter((item) => item.fileObjectId === fileObjectId);
     expect(matches).toHaveLength(1);
     const [listItem] = matches;
     expect(listItem.id).toBe(inventoryRowId);
