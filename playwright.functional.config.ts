@@ -29,6 +29,9 @@ export default defineConfig({
     ['./tests/functional/files/files-owner-reporter.mjs'],
     ['list', { printSteps: true }],
     ['junit', { outputFile: 'test-results/functional-playwright-results.xml' }],
+    ...(process.env.COGLATAS_FUNCTIONAL_EVIDENCE === '1'
+      ? [['./tests/functional/fixtures/functional-evidence-reporter.mjs'] as [string]]
+      : []),
     ...(process.env.COGLATAS_FCI04_REQUIRED === '1'
       ? [['./tests/functional/fixtures/fci04-owner-reporter.mjs'] as [string]]
       : [])

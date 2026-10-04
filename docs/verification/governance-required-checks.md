@@ -2,7 +2,7 @@
 
 Issue #629 defines a three-layer, fail-closed contract for merge-blocking status contexts:
 
-1. **Static topology** — repository workflows/jobs must continue to emit the registered context without event-level path filtering, job-level broad skips, undeclared dependency-induced skips, or `continue-on-error` masking. A required workflow job may depend only on prerequisites explicitly registered in `governance/required-checks.json`; the validator follows each prerequisite chain recursively and requires every upstream job to be unconditional and fail-closed.
+1. **Static topology** — repository workflows/jobs must continue to emit the registered context without event-level path filtering, job-level broad skips, undeclared dependency-induced skips, or `continue-on-error` masking. A required workflow job may depend only on prerequisites explicitly registered in `governance/required-checks.json`; the validator follows each prerequisite chain recursively. Conditional work is allowed only with the exact registered routing predicate and an `always()` aggregate that checks the result.
 2. **Live ruleset topology** — the active default-branch ruleset must require exactly the registered contexts, with strict required-status-check semantics and the registered integration identity where GitHub supports pinning it.
 3. **Exact-head evidence** — only results attached to the PR's authoritative `.head.sha`, re-fetched from the Pull Request API by trusted default-branch code, can satisfy a gate.
 
@@ -10,13 +10,15 @@ Issue #629 defines a three-layer, fail-closed contract for merge-blocking status
 
 ## Required-job prerequisites
 
-The current registry declares `dotnet-build` as the prerequisite of both `build-test` and `security-scan`, and `frontend-build` as the prerequisite of `frontend-test`. Both producers depend on the shared `changes` preflight/router job. The validator recursively checks that chain: `changes`, each producer, and the required consumer must not use a job-level `if` or `continue-on-error`, and dependency cycles or missing upstream jobs are rejected. If any upstream job fails, GitHub cannot report its dependent required job as a successful current-head check. This preserves fail-closed merge behavior while allowing one routing decision and authoritative build outputs to fan out across the CI DAG.
+The registry declares `dotnet-build` as the prerequisite of both `build-test` and `security-scan`, and `frontend-build` as the prerequisite of `frontend-test`. Both producers depend on the shared `changes` preflight/router job. The consumers use `always()` and require producer success before consuming their artifacts, so a failed or cancelled producer still results in an explicit failed required check.
+
+`functional-fast` and `performance-fast` also use `always()`. Their expensive prerequisites may use only the exact predicates in `conditional_prerequisites`; the router itself remains unconditional. Functional NOT_APPLICABLE requires a successful router, a validated documentation-only reason and skipped runtime/suite jobs. API performance applies its independently validated route contract. Unknown or invalid diffs execute the suites. Missing, failed or cancelled routed work cannot satisfy either aggregate. The validator rejects changed predicates, undeclared conditional jobs, failure masking, cycles and missing prerequisites.
 
 ## Result semantics
 
 A required gate passes only on `success` from the registered producer on the authoritative current head SHA. `queued`, `in_progress`, and commit-status `pending` remain pending only inside the registered timeout. Missing current-head evidence, previous-head-only evidence, timeout, `failure`, `timed_out`, `action_required`, `cancelled`, `skipped`, `neutral`, `stale`, unknown states, or producer/workflow drift never become PASS.
 
-For GitHub Actions check runs, the evaluator requires the registered GitHub App integration and resolves the Actions run referenced by `details_url` back to the registered workflow path and `pull_request` event. The current merge-required registry contains only ordinary GitHub Actions check runs: `build-test`, `frontend-test`, `security-scan`, and `publication-readiness`.
+For GitHub Actions check runs, the evaluator requires the registered GitHub App integration and resolves the Actions run referenced by `details_url` back to the registered workflow path and `pull_request` event. The registry contains ordinary GitHub Actions check runs: `build-test`, `frontend-test`, `security-scan`, `publication-readiness`, `functional-fast`, and `performance-fast`. New contexts must be proven on a current PR head and added to the live ruleset before this migration is considered complete; a registry change alone does not establish active protection.
 
 The live evaluator entry point is:
 

@@ -110,7 +110,7 @@ def load_required_check_registry(registry_path: Path = REGISTRY_PATH, policy_pat
     ids, contexts, projection = set(), set(), []
     for i, item in enumerate(checks):
         label = f"registry checks[{i}]"
-        if not isinstance(item, dict) or set(item) != fields:
+        if not isinstance(item, dict) or set(item) - {"conditional_prerequisites"} != fields:
             raise RuntimeError(f"{label} fields are invalid")
         gate = _text(item["gate_id"], f"{label}.gate_id")
         if not re.fullmatch(r"GOV-GATE-[A-Z0-9-]+-\d{3}", gate) or gate in ids:
@@ -133,6 +133,13 @@ def load_required_check_registry(registry_path: Path = REGISTRY_PATH, policy_pat
             raise RuntimeError(f"{label}: commit-status checks cannot declare job prerequisites")
         if item["job"] in prerequisites:
             raise RuntimeError(f"{label}: check job cannot depend on itself")
+        conditional = item.get("conditional_prerequisites", {})
+        if not isinstance(conditional, dict) or any(
+            key not in prerequisites or not isinstance(value, str)
+            or not re.fullmatch(r"needs\.[A-Za-z0-9_.-]+\.outputs\.[A-Za-z0-9_.-]+ == 'true'", value)
+            for key, value in conditional.items()
+        ):
+            raise RuntimeError(f"{label}: conditional prerequisite contract is invalid")
         _validate_rename(item["rename"], f"{label}.rename")
         producer, integration = item["producer"], item["ruleset_integration_id"]
         if item["kind"] == "workflow-job":
@@ -413,6 +420,7 @@ def _prerequisite_chain_errors(
     jobs: dict[str, tuple[int, int, int]],
     prerequisite: str,
     stack: tuple[str, ...] = (),
+    conditional: dict[str, str] | None = None,
 ) -> list[str]:
     errors: list[str] = []
     if prerequisite in stack:
@@ -430,7 +438,9 @@ def _prerequisite_chain_errors(
             + ", ".join(sorted(duplicates))
         )
 
-    if _field(text, block, "if") is not None:
+    condition = _field(text, block, "if")
+    expected_condition = (conditional or {}).get(prerequisite)
+    if condition != expected_condition:
         errors.append(
             f"{relative}: required check prerequisite job '{prerequisite}' must not use job-level if"
         )
@@ -455,6 +465,7 @@ def _prerequisite_chain_errors(
                 jobs,
                 upstream,
                 (*stack, prerequisite),
+                conditional,
             )
         )
     return errors
@@ -489,8 +500,13 @@ def required_check_errors(relative: str, text: str, registry: dict[str, Any] | N
             name = _field(text, block, "name")
             if name not in {item["context"], f'"{item["context"]}"', f"'{item['context']}'"}:
                 errors.append(f"{relative}: required check job '{item['job']}' must keep name {item['context']!r}")
-            if _field(text, block, "if") is not None:
+            condition = _field(text, block, "if")
+            unconditional = {"always()", "${{ always() }}"}
+            if condition is not None and condition not in unconditional:
                 errors.append(f"{relative}: required check job '{item['job']}' must not use job-level if")
+            conditional = item.get("conditional_prerequisites", {})
+            if conditional and condition not in unconditional:
+                errors.append(f"{relative}: routed aggregate must use always() to reject failed/cancelled/missing prerequisites")
             actual_needs = _field(text, block, "needs")
             expected_needs = item.get("prerequisites", [])
             if expected_needs:
@@ -506,7 +522,7 @@ def required_check_errors(relative: str, text: str, registry: dict[str, Any] | N
                     )
                 for prerequisite in expected_needs:
                     errors.extend(
-                        _prerequisite_chain_errors(relative, text, jobs, prerequisite)
+                        _prerequisite_chain_errors(relative, text, jobs, prerequisite, conditional=conditional)
                     )
             elif actual_needs is not None:
                 errors.append(f"{relative}: required check job '{item['job']}' must not depend on another job")

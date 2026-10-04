@@ -1,5 +1,5 @@
 /* eslint-disable max-lines-per-function -- Keep the real Files lifecycle steps and fresh-read assertions together. */
-import { expect, test, type APIRequestContext, type APIResponse, type Page, type Response } from '@playwright/test';
+import { expect, test, type APIRequestContext, type APIResponse, type Locator, type Page, type Response } from '@playwright/test';
 
 import { csrfAwareRequest } from '../helpers/csrf';
 
@@ -8,16 +8,24 @@ interface FilesLifecycleContext {
   page: Page;
   workspaceId: string;
   fileObjectId: string;
+  inventoryRowId: string;
   fileName: string;
   content: Buffer;
 }
 
+/** Use the existing adapter row hooks; inventory rows carry Attachment IDs. */
+export function fileRowAction(page: Page, rowId: string): Locator {
+  return page.getByTestId('files-page').locator(
+    `[data-grid-row-id="${rowId}"][data-grid-action="open"], [row-id="${rowId}"] [data-grid-action="open"]`,
+  );
+}
+
 /** The full expansion uses the same upload and identity as the bounded owner. */
 export async function runFilesLifecycle(context: FilesLifecycleContext): Promise<Record<string, unknown>> {
-  const { api, page, workspaceId, fileObjectId, fileName, content } = context;
+  const { api, page, workspaceId, fileObjectId, inventoryRowId, fileName, content } = context;
   const evidence: Record<string, unknown> = {};
   const inspector = page.getByTestId('files-preview-pane');
-  const openFile = page.getByRole('button', { name: fileName, exact: true });
+  const openFile = fileRowAction(page, inventoryRowId);
 
   await test.step('FUNC-FILE-002 / F05-FULL-01 / search and reopen', async () => {
     await page.getByTestId('files-search-input').fill(fileName);
@@ -30,10 +38,16 @@ export async function runFilesLifecycle(context: FilesLifecycleContext): Promise
     const searchResult = await searchResponse;
     requireStatus(searchResult, 200, 'F05-FULL-01 search');
     const results = recordArray(record(await searchResult.json()).items);
-    expect(results.some((item) => item.id === fileObjectId && item.type === 'File'),
-      'Real search returns the same logical FileObject').toBe(true);
-    await expect(openFile).toBeVisible();
-    await openFile.click();
+    const matches = results.filter((item) => item.id === fileObjectId && item.type === 'File');
+    expect(matches, 'Real search returns the same logical FileObject').toHaveLength(1);
+    const [searchMatch] = matches;
+    expect(searchMatch.workspaceId).toBe(workspaceId);
+    expect(searchMatch.title).toBe(fileName);
+    // SearchSnippet projects title; canonical inventory/FileMetadata redacts it.
+    const searchAction = fileRowAction(page, fileObjectId);
+    await expect(searchAction).toBeVisible();
+    await expect(searchAction).toHaveAccessibleName(fileName);
+    await searchAction.click();
     await expect(inspector.getByRole('heading', { name: fileName, exact: true })).toBeVisible();
     await page.getByTestId('files-search-clear').click();
     evidence.searchSucceeded = true;
@@ -57,7 +71,8 @@ export async function runFilesLifecycle(context: FilesLifecycleContext): Promise
 
     await page.reload();
     await expect(openFile).toBeVisible();
-    const row = page.getByRole('row').filter({ has: openFile });
+    await expect(openFile).toHaveAccessibleName('[redacted:file]');
+    const row = openFile.locator('xpath=ancestor::*[@role="row"][1]');
     await row.getByRole('checkbox').check();
     await page.getByTestId('files-selected-move').click();
     await page.getByTestId('files-move-destination').selectOption(folderId);
@@ -130,12 +145,26 @@ export async function runFilesLifecycle(context: FilesLifecycleContext): Promise
     expect(reloaded.sharingVersion).toBe(shared.sharingVersion);
     expect(reloaded.accessState).toBe('Workspace');
     const detail = await readJson(api, `/api/files/${fileObjectId}`);
+    expect(detail.id).toBe(fileObjectId);
+    expect(detail.workspaceId).toBe(workspaceId);
+    expect(detail.originalFileName).toBe('[redacted:file]');
     expect(detail.accessState).toBe('Workspace');
     expect(detail.sharingVersion).toBe(shared.sharingVersion);
     const list = await readJson(api, `/api/files?workspaceId=${workspaceId}&page=1&pageSize=100`);
-    const listItem = recordArray(list.items).find((item) => item.fileObjectId === fileObjectId);
-    expect(listItem?.accessState).toBe('Workspace');
-    expect(listItem?.sharingVersion).toBe(shared.sharingVersion);
+    const items = recordArray(list.items);
+    expect(list.totalCount).toBe(items.length);
+    expect(list.page).toBe(1);
+    for (const item of items) {
+      expect(item.workspaceId).toBe(workspaceId);
+    }
+    const matches = items.filter((item) => item.fileObjectId === fileObjectId);
+    expect(matches).toHaveLength(1);
+    const [listItem] = matches;
+    expect(listItem.id).toBe(inventoryRowId);
+    expect(listItem.workspaceId).toBe(workspaceId);
+    expect(listItem.originalFileName).toBe('[redacted:file]');
+    expect(listItem.accessState).toBe('Workspace');
+    expect(listItem.sharingVersion).toBe(shared.sharingVersion);
     evidence.sharingPersisted = true;
     evidence.staleSharingRejected = true;
   });
@@ -149,14 +178,14 @@ export async function runFilesLifecycle(context: FilesLifecycleContext): Promise
     const version = record(versions[0].version);
     expect(version.versionNumber).toBe(1);
     expect(version.isCurrent).toBe(true);
-    expect(version.fileName).toBe(fileName);
+    expect(version.fileName).toBe('[redacted:file]');
     expect(version.contentType).toBe('text/plain');
     expect(version.sizeBytes).toBe(content.byteLength);
     // The current product's migration captures version 1 with this exact ID.
     expect(version.versionId).toBe(fileObjectId);
     const sharingEvents = items.filter((item) => item.kind === 'sharingChanged');
     expect(sharingEvents.length).toBeGreaterThan(0);
-    expect(sharingEvents.some((item) => record(item.sharing).accessState === 'Workspace')).toBe(true);
+    expect(sharingEvents.some((item) => record(item.sharing).accessState === 'workspace')).toBe(true);
     const versionRead = await api.get(`/api/files/${fileObjectId}/versions/${fileObjectId}/content`);
     requireStatus(versionRead, 200, 'F05-FULL-04 version content');
     expect((await versionRead.body()).equals(content), 'Version bytes match the uploaded fixture').toBe(true);

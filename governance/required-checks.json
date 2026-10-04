@@ -137,6 +137,43 @@
         "migration_issue": null
       },
       "prerequisites": []
+    },
+    {
+      "gate_id": "GOV-GATE-FUNCTIONAL-001",
+      "kind": "workflow-job",
+      "workflow": ".github/workflows/ci.yml",
+      "job": "functional-fast",
+      "context": "functional-fast",
+      "scope": "all-pr",
+      "trigger": {"mode": "unfiltered-pull-request", "event": "pull_request"},
+      "producer": {"type": "github-actions-check", "integration_id": 15368, "app_slug": "github-actions"},
+      "ruleset_integration_id": 15368,
+      "allowed_conclusions": ["success"],
+      "timeout_minutes": 5,
+      "staleness_policy": "exact-head-and-timeout",
+      "prerequisites": ["changes", "functional-runtime", "functional-run"],
+      "conditional_prerequisites": {
+        "functional-runtime": "needs.changes.outputs.functional == 'true'",
+        "functional-run": "needs.changes.outputs.functional == 'true'"
+      },
+      "rename": {"state": "stable", "previous_context": null, "previous_workflow": null, "previous_job": null, "migration_issue": null}
+    },
+    {
+      "gate_id": "GOV-GATE-PERFORMANCE-001",
+      "kind": "workflow-job",
+      "workflow": ".github/workflows/performance-api.yml",
+      "job": "gate",
+      "context": "performance-fast",
+      "scope": "all-pr",
+      "trigger": {"mode": "unfiltered-pull-request", "event": "pull_request"},
+      "producer": {"type": "github-actions-check", "integration_id": 15368, "app_slug": "github-actions"},
+      "ruleset_integration_id": 15368,
+      "allowed_conclusions": ["success"],
+      "timeout_minutes": 5,
+      "staleness_policy": "exact-head-and-timeout",
+      "prerequisites": ["route", "benchmark"],
+      "conditional_prerequisites": {"benchmark": "needs.route.outputs.required == 'true'"},
+      "rename": {"state": "stable", "previous_context": null, "previous_workflow": null, "previous_job": null, "migration_issue": null}
     }
   ]
 }

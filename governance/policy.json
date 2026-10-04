@@ -68,7 +68,7 @@
       "id": "GOV-CHECKS-001",
       "family": "required-status-checks",
       "title": "Required pull-request status checks",
-      "purpose": "Pin the four ordinary merge-required CI contexts so rename, skip, missing, or stale states fail closed from one repository-owned contract.",
+      "purpose": "Pin merge-required CI and routed Functional/API Performance aggregates so missing, cancelled, skipped, failed or stale required work fails closed from one repository-owned contract.",
       "scope": [
         "pr",
         "default-branch"
@@ -102,6 +102,18 @@
             "workflow": ".github/workflows/publication-readiness.yml",
             "job": "publication-readiness",
             "context": "publication-readiness"
+          },
+          {
+            "kind": "workflow-job",
+            "workflow": ".github/workflows/ci.yml",
+            "job": "functional-fast",
+            "context": "functional-fast"
+          },
+          {
+            "kind": "workflow-job",
+            "workflow": ".github/workflows/performance-api.yml",
+            "job": "gate",
+            "context": "performance-fast"
           }
         ]
       },
@@ -121,7 +133,8 @@
         ],
         "workflows": [
           ".github/workflows/ci.yml",
-          ".github/workflows/publication-readiness.yml"
+          ".github/workflows/publication-readiness.yml",
+          ".github/workflows/performance-api.yml"
         ],
         "checks": [
           {
@@ -147,6 +160,18 @@
             "workflow": ".github/workflows/publication-readiness.yml",
             "job": "publication-readiness",
             "context": "publication-readiness"
+          },
+          {
+            "kind": "workflow-job",
+            "workflow": ".github/workflows/ci.yml",
+            "job": "functional-fast",
+            "context": "functional-fast"
+          },
+          {
+            "kind": "workflow-job",
+            "workflow": ".github/workflows/performance-api.yml",
+            "job": "gate",
+            "context": "performance-fast"
           }
         ],
         "rulesets": [

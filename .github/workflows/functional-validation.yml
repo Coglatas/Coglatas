@@ -1,0 +1,165 @@
+name: Functional Domain Validation
+
+on:
+  workflow_call:
+    inputs:
+      gate:
+        type: string
+        default: functional-full
+      domains:
+        type: string
+        default: '["core","files","collaboration","authz-negative"]'
+      reuse_main_artifacts:
+        type: boolean
+        default: true
+      candidate_sha:
+        type: string
+        default: ''
+      artifact_name:
+        type: string
+        default: main-build-artifacts
+      artifact_run_id:
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate-selection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.candidate_sha || github.sha }}
+          persist-credentials: false
+      - name: Validate domain selection and protected execution boundary
+        env:
+          GATE: ${{ inputs.gate }}
+          DOMAINS: ${{ inputs.domains }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha || github.sha }}
+          REUSE_ARTIFACTS: ${{ inputs.reuse_main_artifacts }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          from scripts.ci.functional_evidence import GATES, OWNERS
+          gate = os.environ['GATE']
+          domains = json.loads(os.environ['DOMAINS'])
+          assert gate in GATES, 'Unknown Functional gate'
+          assert isinstance(domains, list) and domains and len(set(domains)) == len(domains)
+          assert set(domains) <= set(OWNERS), 'Unknown Functional domain'
+          assert re.fullmatch(r'[0-9a-f]{40}', os.environ['CANDIDATE_SHA']), 'An exact SHA is required'
+          assert os.environ['REUSE_ARTIFACTS'] == 'true', 'Functional CI only consumes prebuilt artifacts'
+          if gate != 'functional-fast':
+              assert set(domains) == set(OWNERS), 'Full/extended gates cannot omit a domain'
+          PY
+      - name: Validate expiring quarantine registry
+        run: python3 scripts/ci/validate-functional-quarantine.py
+
+  domains:
+    name: Functional ${{ matrix.domain }}
+    needs: validate-selection
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.gate == 'functional-fast' && 20 || inputs.gate == 'functional-full' && 30 || 120 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        domain: ${{ fromJSON(inputs.domains) }}
+    env:
+      TARGET_SHA: ${{ inputs.candidate_sha || github.sha }}
+      COGLATAS_FUNCTIONAL_DOMAIN: ${{ matrix.domain }}
+      COGLATAS_FUNCTIONAL_SELECTED_GATES: ${{ inputs.gate }}
+      FUNCTIONAL_COMPOSE_PROJECT_NAME: coglatas-functional-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.domain }}
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.candidate_sha || github.sha }}
+          persist-credentials: false
+      - name: Download reviewed main build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ${{ runner.temp }}/main-build-artifacts
+          run-id: ${{ inputs.artifact_run_id || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify and restore candidate build
+        run: |
+          bash scripts/ci/restore-main-build-artifacts.sh "$RUNNER_TEMP/main-build-artifacts" "$TARGET_SHA" "$GITHUB_WORKSPACE"
+          echo 'SYNCFUSION_LICENSE=artifact-reuse-no-build' >> "$GITHUB_ENV"
+      - name: Execute isolated canonical domain owners
+        env:
+          FUNCTIONAL_DIAGNOSTIC_DIR: ${{ runner.temp }}/functional-diagnostics-${{ matrix.domain }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$COGLATAS_FUNCTIONAL_DOMAIN" == 'authz-negative' ]]; then
+            COGLATAS_SECURITY_CI_PASSWORD="Fci07!$(openssl rand -hex 24)"
+            export COGLATAS_SECURITY_CI_PASSWORD
+            export FUNCTIONAL_COMPOSE_FILES='infra/compose/test/real-backend-smoke.yml,infra/compose/security/security.yml,infra/compose/security/fci07-functional-security.yml,infra/compose/test/functional-domain.yml'
+          else
+            export FUNCTIONAL_COMPOSE_FILES='infra/compose/test/real-backend-smoke.yml,infra/compose/test/functional-domain.yml'
+          fi
+          bash scripts/ci/functional-compose-harness.sh
+      - name: Publish bounded container failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: functional-diagnostics-${{ inputs.gate }}-${{ matrix.domain }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/functional-diagnostics-${{ matrix.domain }}/functional-container-states.ndjson
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Record blocked owners and summarize lane metadata
+        if: always()
+        run: python3 scripts/ci/finalize-functional-lane.py
+      - name: Publish secret-free lane metadata
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: functional-lane-${{ inputs.gate }}-${{ matrix.domain }}-${{ github.run_attempt }}
+          path: artifacts/functional/lane-*.json
+          if-no-files-found: error
+          retention-days: 14
+
+  aggregate:
+    name: ${{ inputs.gate }}
+    needs: [validate-selection, domains]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.candidate_sha || github.sha }}
+          persist-credentials: false
+      - name: Require all selected lanes
+        env:
+          SELECTION_RESULT: ${{ needs.validate-selection.result }}
+          DOMAIN_RESULT: ${{ needs.domains.result }}
+        run: |
+          if [[ "$SELECTION_RESULT" != 'success' || "$DOMAIN_RESULT" != 'success' ]]; then
+            echo '### Functional gate: NO-GO — missing, blocked, failed, or cancelled domain' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: functional-lane-${{ inputs.gate }}-*-${{ github.run_attempt }}
+          path: artifacts/functional-lanes
+      - name: Validate exact-run evidence and summarize owners
+        env:
+          TARGET_SHA: ${{ inputs.candidate_sha || github.sha }}
+          GATE: ${{ inputs.gate }}
+          DOMAINS: ${{ inputs.domains }}
+        run: |
+          python3 scripts/ci/functional_evidence.py artifacts/functional-lanes \
+            --sha "$TARGET_SHA" --gate "$GATE" --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" \
+            --domains "$DOMAINS" --output artifacts/functional-evidence/manifest.json --summary "$GITHUB_STEP_SUMMARY"
+      - name: Publish validated candidate evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: functional-evidence-${{ inputs.gate }}-${{ inputs.candidate_sha || github.sha }}-${{ github.run_attempt }}
+          path: artifacts/functional-evidence/manifest.json
+          if-no-files-found: error
+          retention-days: 90

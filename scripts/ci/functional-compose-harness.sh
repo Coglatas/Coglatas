@@ -174,9 +174,34 @@ wait_for_completed() {
   return 1
 }
 
+write_container_diagnostic() {
+  local service="$1" state="$2"
+  local status health exit_code
+  case "$service" in
+    postgres|migrate|app|real-backend-playwright) ;;
+    *) return 1 ;;
+  esac
+  read -r status health exit_code <<< "$state"
+  case "$status" in
+    created|running|paused|restarting|removing|exited|dead) ;;
+    *) status=unknown ;;
+  esac
+  case "$health" in
+    none|starting|healthy|unhealthy) ;;
+    *) health=unknown ;;
+  esac
+  if [[ "$exit_code" =~ ^[0-9]{1,3}$ ]] && (( 10#$exit_code <= 255 )); then
+    exit_code="$((10#$exit_code))"
+  else
+    exit_code=null
+  fi
+  printf '{"service":"%s","status":"%s","health":"%s","exitCode":%s}\n' \
+    "$service" "$status" "$health" "$exit_code"
+}
+
 collect_diagnostics() {
   local diagnostic_dir="${FUNCTIONAL_DIAGNOSTIC_DIR:-$DEFAULT_DIAGNOSTIC_DIR}"
-  local temporary migration_id migration_state service safe_service
+  local temporary migration_id migration_state service safe_service service_id service_state
   local -a services=(postgres migrate app real-backend-playwright)
   [[ ${#compose[@]} -gt 0 ]] || return 0
 
@@ -193,7 +218,15 @@ collect_diagnostics() {
   printf '%s\n' "$migration_state" >"$temporary"
   sanitize_file "$temporary" "$diagnostic_dir/functional-migration-status.txt"
 
+  # Publish only this allowlisted state snapshot; log tails remain ephemeral.
+  : >"$diagnostic_dir/functional-container-states.ndjson"
   for service in "${services[@]}"; do
+    service_id="$(get_service_container_id "$service")"
+    service_state="not created"
+    if [[ -n "$service_id" ]]; then
+      service_state="$(inspect_container_state "$service_id")"
+    fi
+    write_container_diagnostic "$service" "$service_state" >>"$diagnostic_dir/functional-container-states.ndjson"
     safe_service="${service//[^a-zA-Z0-9_-]/-}"
     "${compose[@]}" logs --no-color --tail 300 "$service" >"$temporary" 2>&1 || true
     sanitize_file "$temporary" "$diagnostic_dir/functional-${safe_service}.log"
@@ -207,7 +240,10 @@ cleanup() {
   fi
   cleanup_done=1
   if [[ ${#compose[@]} -gt 0 ]]; then
-    "${compose[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
+    if ! "${compose[@]}" down --volumes --remove-orphans >/dev/null 2>&1; then
+      printf '[INFRA/SETUP FAILURE] phase=cleanup: isolated Functional volumes could not be removed.\n' >&2
+      return 1
+    fi
   fi
 }
 
@@ -220,7 +256,7 @@ setup_failure() {
 }
 
 run_harness() {
-  local project_name compose_files timeout_seconds suite_status
+  local project_name compose_files timeout_seconds suite_status setup_started
   local -a suite_args=(run --rm)
 
   if ! validate_fixture_profile; then
@@ -240,17 +276,25 @@ run_harness() {
 
   trap 'exit 130' INT
   trap 'exit 143' TERM
-  trap 'status=$?; trap - EXIT; cleanup; exit "$status"' EXIT
+  trap 'status=$?; trap - EXIT; if ! cleanup; then (( status != 0 )) || status=1; fi; exit "$status"' EXIT
 
+  setup_started=$SECONDS
   docker info >/dev/null 2>&1 || setup_failure validate-host "Docker daemon is unavailable."
   "${compose[@]}" config --quiet || setup_failure validate-compose-config "Compose configuration is invalid."
-  "${compose[@]}" build app real-backend-playwright || setup_failure build-images "Required Functional images failed to build."
+  if [[ "${COGLATAS_REUSE_PREBUILT_APP_IMAGE:-}" != "1" ]]; then
+    "${compose[@]}" build app || setup_failure build-images "Required Functional application image failed to build."
+  fi
   "${compose[@]}" up --detach postgres || setup_failure start-postgres "PostgreSQL failed to start."
   wait_for_healthy postgres "$timeout_seconds" || setup_failure postgres-readiness "PostgreSQL did not become healthy: $last_wait_state"
   "${compose[@]}" up --detach migrate || setup_failure apply-migrations "Migration service failed to start."
   wait_for_completed migrate "$timeout_seconds" || setup_failure migration-head "Migration head did not complete successfully: $last_wait_state"
-  "${compose[@]}" up --detach --no-deps app || setup_failure start-application "Application failed to start."
+  "${compose[@]}" up --detach --no-deps --no-build app || setup_failure start-application "Application failed to start."
   wait_for_healthy app "$timeout_seconds" || setup_failure application-readiness "Application did not become healthy: $last_wait_state"
+
+  if [[ -n "${COGLATAS_FUNCTIONAL_DOMAIN:-}" ]]; then
+    mkdir -p artifacts/functional
+    printf '{"setupSeconds":%s}\n' "$((SECONDS - setup_started))" > "artifacts/functional/setup-${COGLATAS_FUNCTIONAL_DOMAIN}.json"
+  fi
 
   if [[ "${COGLATAS_REAL_BACKEND_P0_SETUP:-}" == "1" ]]; then
     suite_args+=(--env COGLATAS_REAL_BACKEND_P0_SETUP=1)
@@ -282,6 +326,15 @@ self_test() {
     return 1
   fi
   COGLATAS_BROWSER_SMOKE_EMAIL="self-test@example.test" COGLATAS_BROWSER_SMOKE_PASSWORD="synthetic" validate_fixture_profile
+
+  [[ "$(write_container_diagnostic app 'running healthy 0')" == '{"service":"app","status":"running","health":"healthy","exitCode":0}' ]]
+  [[ "$(write_container_diagnostic migrate 'exited none 001')" == '{"service":"migrate","status":"exited","health":"none","exitCode":1}' ]]
+  [[ "$(write_container_diagnostic app 'password-secret token-secret connection-secret')" == '{"service":"app","status":"unknown","health":"unknown","exitCode":null}' ]]
+  [[ "$(write_container_diagnostic app 'exited none 999')" == '{"service":"app","status":"exited","health":"none","exitCode":null}' ]]
+  if write_container_diagnostic 'foreign-secret' 'running healthy 0'; then
+    printf 'Unexpected diagnostic service must not be published.\n' >&2
+    return 1
+  fi
 
   temporary_input="$(mktemp)"
   temporary_output="$(mktemp)"
