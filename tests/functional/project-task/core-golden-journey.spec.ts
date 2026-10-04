@@ -579,7 +579,7 @@ async function assertFreshProjectScope(page: Page, workspaceId: string, expected
   // against a fresh real read without requiring a redundant navigation request.
   const projects = await expectJsonOk(
     page,
-    `/api/projects?workspaceId=${encodeURIComponent(workspaceId)}&page=1&pageSize=100`,
+    `/api/projects?workspaceId=${encodeURIComponent(workspaceId)}`,
   );
   expect(projects.items).toEqual(expect.arrayContaining([
     expect.objectContaining({ title: expectedTitle, workspaceId }),
@@ -587,6 +587,13 @@ async function assertFreshProjectScope(page: Page, workspaceId: string, expected
   for (const project of projects.items) {
     expect(project.workspaceId, 'fresh Project list retains the selected Workspace scope').toBe(workspaceId);
   }
+  const expectedProjectIds = projects.items.map((project: { id: string }) => project.id).sort();
+  await expect.poll(
+    () => page.getByTestId('project-summary-card').evaluateAll((cards) => cards.map((card) => (
+      card.querySelector<HTMLAnchorElement>('a[aria-label^="Open "]')?.pathname.split('/').pop() ?? ''
+    )).sort()),
+    { message: 'rendered Project cards match the fresh selected Workspace projection' },
+  ).toEqual(expectedProjectIds);
 }
 
 async function clickTaskOpenDetail(page: Page, taskRow: Locator): Promise<void> {

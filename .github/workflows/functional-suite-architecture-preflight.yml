@@ -4,23 +4,29 @@ on:
   pull_request:
     paths:
       - ".github/workflows/functional-suite-architecture-preflight.yml"
+      - ".github/workflows/functional-validation.yml"
+      - ".github/workflows/functional-extended.yml"
       - "package.json"
       - "package-lock.json"
       - "playwright.functional.config.ts"
       - "scripts/ci/build-functional-grep.mjs"
       - "scripts/ci/functional-tags.mjs"
       - "scripts/ci/run-functional-playwright.mjs"
+      - "scripts/ci/*functional*"
       - "tests/functional/**"
   push:
     branches: ["main"]
     paths:
       - ".github/workflows/functional-suite-architecture-preflight.yml"
+      - ".github/workflows/functional-validation.yml"
+      - ".github/workflows/functional-extended.yml"
       - "package.json"
       - "package-lock.json"
       - "playwright.functional.config.ts"
       - "scripts/ci/build-functional-grep.mjs"
       - "scripts/ci/functional-tags.mjs"
       - "scripts/ci/run-functional-playwright.mjs"
+      - "scripts/ci/*functional*"
       - "tests/functional/**"
 
 concurrency:
@@ -37,12 +43,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24"
 
@@ -52,12 +58,19 @@ jobs:
       - name: Self-test Functional metadata and selection contracts
         run: node --test tests/functional/*.node-test.mjs
 
+      - name: Reject stale, incomplete and quarantined Functional evidence
+        run: |
+          python3 scripts/ci/test-functional-evidence.py
+          python3 scripts/ci/validate-functional-quarantine.py
+
       - name: Check Functional runner syntax
         shell: bash
         run: |
           node --check scripts/ci/functional-tags.mjs
           node --check scripts/ci/build-functional-grep.mjs
           node --check scripts/ci/run-functional-playwright.mjs
+          node --check scripts/ci/run-functional-domain.mjs
+          bash -n scripts/ci/package-pr-functional-runtime.sh
 
       - name: Load Functional Playwright config and discover an actual spec
         shell: bash

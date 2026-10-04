@@ -5,6 +5,7 @@ import {
   request,
   test,
   type APIRequestContext,
+  type APIResponse,
   type TestInfo,
 } from '@playwright/test';
 
@@ -245,14 +246,10 @@ test.describe('FCI-07 real-stack authorization negative matrix', () => {
         });
         evidence.foreignTaskStatus = foreignTaskDenial.status;
 
-        const foreignFile = await alphaOwnerApi.get(`/api/files/${beta.fileId}`);
-        evidence.foreignFileStatus = (
-          await assertSafeDenial(foreignFile, {
-            label: 'FCI-07 cross-Tenant File ID swap',
-            expectedStatus: [403, 404],
-            forbiddenMarkers: BETA_PROTECTED_MARKERS,
-          })
-        ).status;
+        evidence.foreignFileStatus = await assertFileMetadataDenial(alphaOwnerApi, beta.fileId, {
+          label: 'FCI-07 cross-Tenant File ID swap',
+          forbiddenMarkers: BETA_PROTECTED_MARKERS,
+        });
 
         const sameTenantWorkspace = await alphaMemberApi.get(`/api/workspaces/${sameTenant.workspaceId}`);
         evidence.sameTenantWorkspaceStatus = (
@@ -281,17 +278,23 @@ test.describe('FCI-07 real-stack authorization negative matrix', () => {
           })
         ).status;
 
-        const sameTenantFile = await alphaMemberApi.get(`/api/files/${sameTenant.fileId}`);
-        evidence.sameTenantFileStatus = (
-          await assertSafeDenial(sameTenantFile, {
-            label: 'FCI-07 same-Tenant cross-Workspace File ID swap',
-            expectedStatus: [403, 404],
-            forbiddenMarkers: sameTenant.protectedMarkers,
-          })
-        ).status;
+        evidence.sameTenantFileStatus = await assertFileMetadataDenial(alphaMemberApi, sameTenant.fileId, {
+          label: 'FCI-07 same-Tenant cross-Workspace File ID swap',
+          forbiddenMarkers: sameTenant.protectedMarkers,
+        });
+        evidence.fileMetadataOracleStatusAligned = true;
 
         await page.setExtraHTTPHeaders(singleHeader('X-Tenant-Slug', ALPHA_TENANT));
-        await loginViaUi(page, { email: ALPHA_MEMBER_EMAIL, password: securityPassword });
+        const tenantPromise = page.waitForResponse((response) =>
+          response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/tenants/current',
+        );
+        const login = await loginViaUi(page, { email: ALPHA_MEMBER_EMAIL, password: securityPassword });
+        const actor = asRecord(await login.json(), 'FCI-07 browser login actor');
+        expect(readString(actor, 'email', 'Email') === ALPHA_MEMBER_EMAIL, 'FCI-07 browser login must use the Alpha member').toBe(true);
+        const tenant = await tenantPromise;
+        expect(tenant.status()).toBe(200);
+        const scope = asRecord(await tenant.json(), 'FCI-07 browser login Tenant');
+        expect(readString(scope, 'tenantSlug', 'TenantSlug') === ALPHA_TENANT, 'FCI-07 browser login must resolve the Alpha Tenant').toBe(true);
 
         await page.goto(`/app/projects/${beta.projectId}/tasks/${beta.taskId}`);
         await expect(page.getByTestId('permission-denied-state')).toBeVisible();
@@ -397,6 +400,50 @@ interface CoreFixtureGraph {
 
 interface SameTenantRestrictedGraph extends CoreFixtureGraph {
   protectedMarkers: readonly string[];
+}
+
+async function assertFileMetadataDenial(
+  api: APIRequestContext,
+  fileId: string,
+  options: { label: string; forbiddenMarkers: readonly string[] },
+): Promise<number> {
+  // FilesController preserves the existing 400 contract for denied and absent
+  // metadata; both must carry the same canonical redacted error envelope.
+  const denied = await assertFileMetadataDeniedResponse(await api.get(`/api/files/${fileId}`), options);
+  const absent = await assertFileMetadataDeniedResponse(await api.get(`/api/files/${randomUUID()}`), {
+    ...options,
+    label: `${options.label} unknown File oracle control`,
+  });
+  expect(absent.status).toBe(denied.status);
+  expect(Math.abs(absent.bodyBytes - denied.bodyBytes)).toBeLessThanOrEqual(256);
+  return denied.status;
+}
+
+async function assertFileMetadataDeniedResponse(
+  response: APIResponse,
+  options: { label: string; forbiddenMarkers: readonly string[] },
+): Promise<{ status: number; bodyBytes: number }> {
+  const denial = await assertSafeDenial(response, { ...options, expectedStatus: 400, maxBodyBytes: 2048 });
+  const envelope = asRecord(await response.json(), `${options.label} envelope`);
+  const error = asRecord(envelope.error, `${options.label} error`);
+  const validCorrelation = (value: unknown): boolean =>
+    typeof value === 'string' && value.length > 0 && value.length <= 256;
+  const canonical =
+    Object.keys(envelope).sort().join(',') === 'error,requestId,status,traceId' &&
+    envelope.status === 400 &&
+    validCorrelation(envelope.requestId) &&
+    validCorrelation(envelope.traceId) &&
+    Object.keys(error).sort().join(',') === 'code,details,message,redactionApplied,target' &&
+    error.code === 'FileMetadataFailed' &&
+    error.message === 'The request could not be completed.' &&
+    error.target === null &&
+    Array.isArray(error.details) && error.details.length === 0 &&
+    error.redactionApplied === true;
+  if (!canonical) {
+    // Report only the failed contract, never an unexpected protected payload.
+    throw new Error(`${options.label} did not return the canonical redacted File metadata denial.`);
+  }
+  return denial;
 }
 
 async function createTenantApi(tenantSlug: string): Promise<APIRequestContext> {
@@ -513,12 +560,25 @@ async function resolveCoreGraph(
 
   const taskFilesResponse = await api.get(`/api/tasks/${taskId}/files?page=1&pageSize=100`);
   await assertSafeResponse(taskFilesResponse, { label: 'FCI-07 Task File fixture list', expectedStatus: 200 });
-  const taskFiles = readItems(await taskFilesResponse.json(), 'Task File fixture list');
-  const file = taskFiles.find((item) => readString(item, 'fileName', 'FileName') === expected.fileName);
-  if (!file) {
-    throw new Error('FCI-07 expected Task File fixture was not found.');
-  }
+  const taskFilesPage = asRecord(await taskFilesResponse.json(), 'Task File fixture page');
+  const taskFiles = readItems(taskFilesPage, 'Task File fixture list');
+  // SEC-02 seeds exactly one attachment for this uniquely resolved Task.
+  // FileMetadata protects its filename even for a record-authorized owner.
+  expect(requireNumber(taskFilesPage, 'totalCount', 'TotalCount')).toBe(1);
+  expect(taskFiles).toHaveLength(1);
+  const [file] = taskFiles;
+  expect(readString(file, 'fileName', 'FileName')).toBe('[redacted:file]');
   const fileId = requireString(file, 'fileObjectId', 'FileObjectId');
+  const fileResponse = await api.get(`/api/files/${fileId}`);
+  await assertSafeResponse(fileResponse, { label: 'FCI-07 Task File fixture identity', expectedStatus: 200 });
+  const fileData = asRecord(await fileResponse.json(), 'Task File fixture identity');
+  expect(requireString(fileData, 'id', 'Id')).toBe(fileId);
+  expect(requireString(fileData, 'workspaceId', 'WorkspaceId')).toBe(workspaceId);
+  expect(requireString(fileData, 'projectId', 'ProjectId')).toBe(projectId);
+  expect(readString(fileData, 'originalFileName', 'OriginalFileName')).toBe('[redacted:file]');
+  expect(readString(fileData, 'originalFileName', 'OriginalFileName')).not.toBe(expected.fileName);
+  expect(readString(fileData, 'contentType', 'ContentType')).toBe('text/plain');
+  expect(readString(fileData, 'status', 'Status')).toBe('Active');
 
   return { workspaceId, projectId, taskId, fileId };
 }

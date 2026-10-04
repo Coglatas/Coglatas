@@ -1,0 +1,72 @@
+name: Functional Extended
+
+on:
+  schedule:
+    - cron: '17 18 * * *' # 03:17 JST
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Exact main commit to validate (empty means current main)
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: functional-extended-${{ inputs.candidate_sha || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.candidate.outputs.sha }}
+      run_id: ${{ steps.producer.outputs.run_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - id: candidate
+        env:
+          REQUESTED_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/main || { echo 'Extended dispatch must use main.' >&2; exit 1; }
+          candidate="${REQUESTED_SHA:-$(git rev-parse HEAD)}"
+          [[ "$candidate" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          git merge-base --is-ancestor "$candidate" origin/main || exit 1
+          echo "sha=$candidate" >> "$GITHUB_OUTPUT"
+      - name: Resolve exact-candidate trusted main producer
+        id: producer
+        env:
+          TARGET_SHA: ${{ steps.candidate.outputs.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          base = os.environ['GITHUB_API_URL'] + '/repos/' + os.environ['GITHUB_REPOSITORY']
+          request = urllib.request.Request(base + '/actions/runs?head_sha=' + os.environ['TARGET_SHA'] + '&event=push&per_page=100',
+              headers={'Authorization': 'Bearer ' + os.environ['GITHUB_TOKEN'], 'Accept': 'application/vnd.github+json'})
+          with urllib.request.urlopen(request, timeout=30) as response:
+              runs = json.load(response)['workflow_runs']
+          matches = [run for run in runs if run['head_sha'] == os.environ['TARGET_SHA'] and run['event'] == 'push'
+              and run['head_branch'] == 'main' and run['path'] == '.github/workflows/main-build-artifacts.yml']
+          assert matches, 'No trusted exact-candidate main producer is available'
+          latest = max(matches, key=lambda run: run['id'])
+          assert latest.get('status') == 'completed' and latest.get('conclusion') not in (None, 'cancelled'), \
+              'Latest trusted exact-candidate main producer is incomplete or cancelled; older runs cannot substitute'
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as destination:
+              destination.write('run_id=' + str(latest['id']) + '\n')
+          PY
+  extended:
+    needs: candidate
+    uses: ./.github/workflows/functional-validation.yml
+    with:
+      gate: functional-extended
+      candidate_sha: ${{ needs.candidate.outputs.sha }}
+      artifact_run_id: ${{ needs.candidate.outputs.run_id }}
+      reuse_main_artifacts: true

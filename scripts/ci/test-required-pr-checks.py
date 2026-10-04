@@ -50,9 +50,9 @@ def dual_registry(context: str = "build-test-v2") -> dict[str, Any]:
 
 class RegistryTests(unittest.TestCase):
     def test_registry_matches_governance_policy(self) -> None:
-        self.assertEqual(4, len(REGISTRY["checks"]))
+        self.assertEqual(6, len(REGISTRY["checks"]))
         self.assertEqual(
-            ["build-test", "frontend-test", "security-scan", "publication-readiness"],
+            ["build-test", "frontend-test", "security-scan", "publication-readiness", "functional-fast", "performance-fast"],
             [item["context"] for item in REGISTRY["checks"]],
         )
 
@@ -76,6 +76,58 @@ class RegistryTests(unittest.TestCase):
 
 
 class StaticTopologyTests(unittest.TestCase):
+    def routed_workflow(self, condition: str = "always()", route: str = "needs.route.outputs.required == 'true'") -> str:
+        return f"""
+on:
+  pull_request:
+jobs:
+  route:
+    runs-on: ubuntu-latest
+  benchmark:
+    if: {route}
+    needs: route
+    runs-on: ubuntu-latest
+  gate:
+    name: performance-fast
+    if: {condition}
+    needs: [route, benchmark]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+"""
+
+    def test_routed_prerequisite_requires_always_aggregate(self) -> None:
+        registry = registry_for_contexts("performance-fast")
+        errors = guard.required_check_errors(
+            ".github/workflows/performance-api.yml", self.routed_workflow(), registry
+        )
+        self.assertEqual([], errors)
+        errors = guard.required_check_errors(
+            ".github/workflows/performance-api.yml", self.routed_workflow("success()"), registry
+        )
+        self.assertTrue(any("routed aggregate must use always()" in error for error in errors))
+
+    def test_routed_prerequisite_rejects_changed_predicate(self) -> None:
+        registry = registry_for_contexts("performance-fast")
+        errors = guard.required_check_errors(
+            ".github/workflows/performance-api.yml",
+            self.routed_workflow(route="needs.route.outputs.required != 'false'"), registry,
+        )
+        self.assertTrue(any("prerequisite job 'benchmark'" in error for error in errors))
+
+    def test_routed_prerequisite_does_not_allow_filtered_router(self) -> None:
+        registry = registry_for_contexts("performance-fast")
+        text = self.routed_workflow().replace(
+            "  route:\n    runs-on:", "  route:\n    if: github.actor != 'x'\n    runs-on:"
+        )
+        errors = guard.required_check_errors(".github/workflows/performance-api.yml", text, registry)
+        self.assertTrue(any("prerequisite job 'route'" in error for error in errors))
+
+    def test_routed_prerequisite_rejects_failure_masking(self) -> None:
+        registry = registry_for_contexts("performance-fast")
+        text = self.routed_workflow().replace("  benchmark:\n", "  benchmark:\n    continue-on-error: true\n")
+        errors = guard.required_check_errors(".github/workflows/performance-api.yml", text, registry)
+        self.assertTrue(any("must not use continue-on-error" in error for error in errors))
+
     def test_unfiltered_required_job_passes(self) -> None:
         text = """
 name: Publication Readiness

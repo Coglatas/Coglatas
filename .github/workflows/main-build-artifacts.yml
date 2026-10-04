@@ -500,6 +500,38 @@ jobs:
       suite: all
       reuse_main_artifacts: true
 
+  functional-domains:
+    name: Main Full Functional domains
+    needs: main-build-artifacts
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/functional-validation.yml
+    with:
+      gate: functional-full
+      reuse_main_artifacts: true
+      candidate_sha: ${{ github.sha }}
+
+  functional-full:
+    name: functional-full
+    needs: [main-build-artifacts, functional-domains]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require exact-SHA producer and all Functional domains
+        env:
+          PRODUCER_RESULT: ${{ needs.main-build-artifacts.result }}
+          DOMAIN_RESULT: ${{ needs.functional-domains.result }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          echo "### Main Full Functional: $CANDIDATE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$PRODUCER_RESULT" != 'success' || "$DOMAIN_RESULT" != 'success' ]]; then
+            echo 'NO-GO: missing, failed, cancelled or blocked producer/domain evidence.' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo 'GO: all four domains consumed the same exact-SHA Main runtime.' >> "$GITHUB_STEP_SUMMARY"
+
   sbom-image-security:
     name: SBOM image scan from main artifacts
     needs: main-build-artifacts

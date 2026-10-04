@@ -8,6 +8,12 @@ real-functional coverage, result states, quarantine, duplicate ownership, and
 runtime budgets are in
 [`functional-test-policy.md`](./functional-test-policy.md).
 
+The artifact-only canonical domain execution and schema-v1 evidence slice is
+described in [`functional-execution-evidence.md`](./functional-execution-evidence.md).
+Use its explicit source/runtime qualifications when reconciling #605/#611/#615;
+the existing historical matrix owners and #481/#482 remain separate acceptance
+requirements.
+
 ## 1. Target topology
 
 ```text
@@ -86,28 +92,38 @@ binding that mechanism to Functional journey IDs without weakening these rules.
 
 ## 4. Current repository topology and migration target
 
-Issue #577 is a taxonomy/ownership issue. It documents the target topology
-without pretending the later FCI wiring already exists.
+The repository now implements the bounded artifact-only domain contract
+described in [`functional-execution-evidence.md`](./functional-execution-evidence.md).
+The target scopes in sections 1, 2, and 5 remain unchanged: the implemented
+seven-owner Full/Extended slice does not complete every historical P0/P1 row.
 
-| Current mechanism on `main` | Current behavior | Canonical Functional interpretation | Migration owner |
+| Current mechanism on `main` | Current behavior | Canonical Functional interpretation | Continuing owner |
 | --- | --- | --- | --- |
-| `.github/workflows/ci.yml` | PR/main build + backend tests + Angular unit/build/Storybook + Docker `angular-smoke` | existing non-functional foundation plus focused mock/visual regression. `angular-smoke` is not `functional-fast` when core routes are intercepted | FCI-08 (#605) adds the real PR Functional gate |
-| `.github/workflows/licensed-real-backend-acceptance.yml` | on `main` runs P0, authz, My Tasks, MBJ-01/02/03; manual dispatch can select suites | current closest implementation of `functional-full` and explicit extended acceptance. Its existing suites are mapped to stable IDs in the matrix | FCI-09 (#611) normalizes full/nightly topology and sharding |
-| `tests/ui/run-real-backend-p0.mjs` | manifest-selected Compose-backed P0 Playwright slice | reusable real-functional owner slice; future input to `functional-fast` and `functional-full` | FCI-03/04/05/06/07 and FCI-08/09 |
-| `tests/ui/run-real-backend-my-tasks.mjs` | one manifest-verified real My Tasks acceptance | owner for `FUNC-TASK-002` | retained/reorganized under FCI-03/09 |
-| MBJ-01/02/03 scripts | dedicated real backend acceptance with isolated fixtures | real owner evidence for bootstrap/invite/session stable IDs | retained as focused owner/extended suites unless consolidated explicitly |
-| `scripts/ci/run-mvp-a-authz-boundary-acceptance.sh` | anonymous/admin/member/CSRF/logout boundary against real backend | representative P0 authz owner slice suitable for fast/full | FCI-07/08/09 |
-| `.github/workflows/public-https-golden-path.yml` | protected manual test against real public HTTPS deployment | downstream `functional-release` deployment projection for #481; intentionally not a PR check | FCI-10 (#615) consumes evidence; #481 owns public path |
-| `.github/workflows/mvp-a-final-gate.yml` | manual exact-commit check aggregator on `main` | release evidence consumer; must eventually require Functional evidence on the same SHA | FCI-10 (#615) |
-| #482 | open terminal cross-screen regression Issue | downstream integrated regression evidence for `functional-release`; does not replace domain owner journeys | #482 + FCI-10 |
+| `.github/workflows/ci.yml` | `pull_request` build/unit/static/mock/visual checks plus conservatively routed real `functional-fast`; its stable aggregate always checks routing and execution results | The public Test-only runtime consumes shared build artifacts for the tested merge SHA and records the PR head separately. Relevant or unknown changes run all four Fast domains and six canonical owners. A validated documentation-only exemption requires successful routing and skipped runtime/domain jobs | FCI-08 (#605); domain journeys retain their stable owners |
+| `.github/workflows/main-build-artifacts.yml` with `functional-validation.yml` | Every Main push produces the exact-SHA runtime and calls all four Full domains; the always-evaluated `functional-full` aggregate requires producer and domain success | The canonical artifact-only Full contract requires seven owners on the first attempt, including all eleven core completion steps. It is the implemented domain slice, with no P0 path-routing exemption | FCI-09 (#611); remaining historical matrix acceptance stays explicit |
+| `.github/workflows/functional-extended.yml` | Nightly at 03:17 JST and explicit dispatch execute the existing Full expansions for current Main or an exact ancestor, using the latest trusted exact-SHA Main run only after it is completed and not cancelled; no older run substitutes | Implemented extended execution and provenance plumbing; it does not claim every P1 owner or expanded negative/realtime case is complete | FCI-09 (#611) |
+| `.github/workflows/licensed-real-backend-acceptance.yml` | The Main hub independently calls P0, authz, My Tasks, and MBJ-01/02/03 acceptance using its artifacts; manual dispatch can select focused suites | Independent acceptance remains required by the final verifier. Its legacy owners and expansions are mapped to stable matrix IDs and are not replaced by the seven-owner domain contract | Existing suite owners and FCI-09 (#611) |
+| `tests/ui/run-real-backend-p0.mjs` | Manifest-selected Compose-backed P0 acceptance | Retained independent legacy acceptance and focused expansions; canonical domain owners are identified separately in the matrix | FCI-03/04/05/06/07 and FCI-09 |
+| `tests/ui/run-real-backend-my-tasks.mjs` | One manifest-verified real My Tasks acceptance | Owner for `FUNC-TASK-002`; the core domain's My Tasks discovery step does not replace this owner | Retained under FCI-03/09 |
+| MBJ-01/02/03 scripts | Dedicated real backend acceptance with isolated fixtures | Real owner evidence for bootstrap/invite/session stable IDs | Retained as focused owner/extended suites unless consolidated explicitly |
+| `scripts/ci/run-mvp-a-authz-boundary-acceptance.sh` | Anonymous/admin/member/CSRF/logout boundary against the real backend | Independent authorization acceptance alongside the canonical `FUNC-AUTHZ-001`/`FUNC-AUTHZ-002` domain owners | Existing authz owner and FCI-07/09 |
+| `.github/workflows/public-https-golden-path.yml` | Protected manual test against a real public HTTPS deployment | Downstream `functional-release` deployment projection for #481; intentionally not a PR check | FCI-10 (#615) consumes evidence; #481 owns the public path |
+| `.github/workflows/mvp-a-final-gate.yml` | Manual exact-commit aggregator on `main`; requires nine authoritative Main check contexts, including `functional-full`, and validates its exact SHA/run/attempt artifact | MVP-A candidate evidence consumer. Its Main obligations are separate from the six-context PR registry, and it does not replace #481/#482 production release requirements | FCI-10 (#615) |
+| #482 | Open terminal cross-screen regression Issue | Downstream integrated regression evidence for `functional-release`; does not replace domain owner journeys | #482 + FCI-10 |
 
 ### Important current-state distinction
 
-`licensed-real-backend-acceptance.yml` runs its acceptance suites on `main` and
-manual dispatch, while `.github/workflows/ci.yml` currently runs the static/mock
-Angular Playwright smoke on pull requests. Therefore the repository does **not**
-yet have the final target `functional-fast` PR gate solely because this policy
-exists. That implementation is explicitly deferred to FCI-08 (#605).
+`ci.yml` owns PR validation, while the Main artifact hub owns Main Full
+execution. The stable PR `functional-fast` gate is implemented; Functional
+policy/harness documentation remains relevant and selects Fast. Other
+positively identified documentation may produce the explicit
+`NOT_APPLICABLE: validated documentation-only change` aggregate result.
+Missing, failed, or cancelled routed execution cannot use that exemption.
+
+The configured topology does not establish hosted Main Full execution.
+Exact-SHA/run/attempt evidence remains required before runtime readiness is
+recorded; the target P0/P1 scopes and independent acceptance requirements
+remain unchanged.
 
 ## 5. Gate-to-journey ownership
 

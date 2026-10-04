@@ -1,0 +1,12 @@
+# Canonical domain command; layer after the existing real stack and optional security fixture.
+services:
+  real-backend-playwright:
+    environment:
+      COGLATAS_FUNCTIONAL_DOMAIN: ${COGLATAS_FUNCTIONAL_DOMAIN:?Functional domain is required}
+      COGLATAS_FUNCTIONAL_SELECTED_GATES: ${COGLATAS_FUNCTIONAL_SELECTED_GATES:?Functional gate is required}
+      COGLATAS_FUNCTIONAL_EVIDENCE: "1"
+      GITHUB_RUN_ID: ${GITHUB_RUN_ID:?Run identity is required}
+      GITHUB_RUN_ATTEMPT: ${GITHUB_RUN_ATTEMPT:?Run attempt is required}
+    command: >
+      bash -lc "npm ci --prefer-offline --ignore-scripts --no-audit --no-fund &&
+      node scripts/ci/run-functional-domain.mjs"

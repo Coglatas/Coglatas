@@ -40,6 +40,8 @@ jobs:
       security_compose: ${{ steps.route.outputs.security_compose }}
       security_migration: ${{ steps.route.outputs.security_migration }}
       security_image: ${{ steps.route.outputs.security_image }}
+      functional: ${{ steps.route.outputs.functional }}
+      functional_reason: ${{ steps.route.outputs.functional_reason }}
 
     steps:
       - name: Checkout
@@ -223,8 +225,93 @@ jobs:
           retention-days: 1
           compression-level: 0
 
+  functional-runtime:
+    name: PR Functional runtime from shared artifacts
+    needs: [changes, dotnet-build, frontend-build]
+    if: needs.changes.outputs.functional == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout tested PR merge revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+      - name: Download shared .NET build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dotnet-release-build
+          path: ${{ runner.temp }}/functional-inputs
+      - name: Download shared frontend build
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: frontend-build-artifacts
+          path: ${{ runner.temp }}/functional-inputs
+      - name: Assemble Test runtime without rebuilding either application
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: bash scripts/ci/package-pr-functional-runtime.sh "$RUNNER_TEMP/functional-inputs" "$RUNNER_TEMP/pr-functional-runtime"
+      - name: Upload same-run Functional runtime
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: pr-functional-runtime
+          path: ${{ runner.temp }}/pr-functional-runtime
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  functional-run:
+    name: PR Fast Functional domains
+    permissions:
+      contents: read
+      actions: read
+    needs: [changes, functional-runtime]
+    if: needs.changes.outputs.functional == 'true'
+    uses: ./.github/workflows/functional-validation.yml
+    with:
+      gate: functional-fast
+      artifact_name: pr-functional-runtime
+
+  functional-fast:
+    name: functional-fast
+    needs: [changes, functional-runtime, functional-run]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enforce selected Functional evidence or explicit exemption
+        env:
+          ROUTE_RESULT: ${{ needs.changes.result }}
+          REQUIRED: ${{ needs.changes.outputs.functional }}
+          ROUTING_REASON: ${{ needs.changes.outputs.functional_reason }}
+          RUNTIME_RESULT: ${{ needs.functional-runtime.result }}
+          FUNCTIONAL_RESULT: ${{ needs.functional-run.result }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$ROUTE_RESULT" = success
+          echo "PR head: $PR_HEAD_SHA; tested merge revision: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Functional routing: $ROUTING_REASON" >> "$GITHUB_STEP_SUMMARY"
+          case "$REQUIRED" in
+            true)
+              test "$RUNTIME_RESULT" = success
+              test "$FUNCTIONAL_RESULT" = success
+              ;;
+            false)
+              test "$ROUTING_REASON" = validated-documentation-only
+              test "$RUNTIME_RESULT" = skipped
+              test "$FUNCTIONAL_RESULT" = skipped
+              echo "NOT_APPLICABLE: validated documentation-only change" >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *) exit 1 ;;
+          esac
+
   build-test:
     name: build-test
+    if: ${{ always() }}
     needs: dotnet-build
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -257,6 +344,11 @@ jobs:
       POSTGRES_TEST_CONNECTION_STRING: Host=localhost;Port=5432;Database=coglatas_ci;Username=coglatas_ci;Password=coglatas_ci_password
 
     steps:
+      - name: Require successful build producer
+        env:
+          PRODUCER_RESULT: ${{ needs.dotnet-build.result }}
+        run: test "$PRODUCER_RESULT" = success
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -513,11 +605,17 @@ jobs:
 
   frontend-test:
     name: frontend-test
+    if: ${{ always() }}
     needs: frontend-build
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
     steps:
+      - name: Require successful frontend producer
+        env:
+          PRODUCER_RESULT: ${{ needs.frontend-build.result }}
+        run: test "$PRODUCER_RESULT" = success
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -630,6 +728,7 @@ jobs:
 
   security-scan:
     name: security-scan
+    if: ${{ always() }}
     needs: dotnet-build
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -642,6 +741,11 @@ jobs:
       LOCAL_ADMIN_PASSWORD: ci_dummy_local_admin_password
 
     steps:
+      - name: Require successful build producer
+        env:
+          PRODUCER_RESULT: ${{ needs.dotnet-build.result }}
+        run: test "$PRODUCER_RESULT" = success
+
       - name: Checkout complete history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:

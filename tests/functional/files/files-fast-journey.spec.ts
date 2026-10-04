@@ -7,7 +7,7 @@ import { functionalFullExpansionEnabled } from '../fixtures/functional-gate-sele
 import { loginViaApi } from '../helpers/auth';
 import { csrfAwareRequest } from '../helpers/csrf';
 import { safeResponsePreview } from '../helpers/safe-response';
-import { runFilesLifecycle } from './files-lifecycle-steps';
+import { fileRowAction, runFilesLifecycle } from './files-lifecycle-steps';
 
 const smokeEmail = process.env.COGLATAS_BROWSER_SMOKE_EMAIL ?? '';
 const smokePassword = process.env.COGLATAS_BROWSER_SMOKE_PASSWORD ?? '';
@@ -49,6 +49,7 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
       const fileContent = 'FCI-05 deterministic synthetic Files owner content.\n';
       let fileObjectId: string | null = null;
       let workspaceId: string | null = null;
+      let baselineFileIds: string[] = [];
       let uploadAttempted = false;
       let cleanupSucceeded = false;
 
@@ -73,6 +74,7 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
         await loginViaApi(api, { email: smokeEmail, password: smokePassword });
         workspaceId = await resolveWorkspaceId(api, smokeWorkspaceTitle);
         evidence.workspaceId = workspaceId;
+        baselineFileIds = await fileIdsForWorkspace(api, workspaceId);
 
         // A rejected upload must not manufacture a FileObject or storage-visible metadata.
         const rejectedUpload = await csrfAwareRequest(api, 'POST', '/api/files', {
@@ -84,10 +86,19 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
         });
         assertSafeResponse(rejectedUpload, { label: 'FCI-05 rejected upload', expectedStatus: 400 });
         evidence.failedMutationStatus = rejectedUpload.status();
-        expect(await fileNamesForWorkspace(api, workspaceId)).not.toContain(failedFileName);
+        expect(await fileIdsForWorkspace(api, workspaceId), 'Rejected upload leaves scoped object identities unchanged').toEqual(baselineFileIds);
 
+        // NavigationEnd commits Workspace scope after the page component mounts.
+        // Wait for its scoped inventory read before acting on the uploader.
+        const initialFileListPromise = page.waitForResponse((response) =>
+          response.request().method() === 'GET' &&
+          new URL(response.url()).pathname === '/api/files' &&
+          new URL(response.url()).searchParams.get('workspaceId') === workspaceId,
+        );
         await page.goto(`/app/workspaces/${workspaceId}/files`);
+        assertSafeResponse(await initialFileListPromise, { label: 'FCI-05 initial scoped inventory', expectedStatus: 200 });
         await expect(page.getByTestId('files-page')).toBeVisible();
+        await expect(page.locator('app-coglatas-file-uploader input[type="file"]')).toBeEnabled();
 
         const uploadResponsePromise = page.waitForResponse((response) =>
           response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/files',
@@ -104,46 +115,55 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
 
         const uploadBody = asRecord(await uploadResponse.json(), 'File upload response');
         fileObjectId = requireStringField(uploadBody, 'fileObjectId', 'FileObjectId');
+        expect(baselineFileIds, 'Upload response identifies a new run-owned object').not.toContain(fileObjectId);
+        expect(requireStringField(uploadBody, 'originalFileName', 'OriginalFileName')).toBe('[redacted:file]');
+        assertNoStorageLeak(uploadBody);
         evidence.fileObjectId = fileObjectId;
 
         const freshRead = await api.get(`/api/files/${fileObjectId}`);
         assertSafeResponse(freshRead, { label: 'FCI-05 fresh FileObject read', expectedStatus: 200 });
         const freshBody = asRecord(await freshRead.json(), 'fresh FileObject read');
         expect(requireStringField(freshBody, 'id', 'Id')).toBe(fileObjectId);
-        expect(requireStringField(freshBody, 'originalFileName', 'OriginalFileName')).toBe(fileName);
+        expect(requireStringField(freshBody, 'workspaceId', 'WorkspaceId')).toBe(workspaceId);
+        expect(requireStringField(freshBody, 'originalFileName', 'OriginalFileName')).toBe('[redacted:file]');
         expect(freshBody.sizeBytes).toBe(Buffer.byteLength(fileContent, 'utf8'));
         expect(freshBody.contentType).toBe('text/plain');
         assertNoStorageLeak(freshBody);
         evidence.freshReadStatus = freshRead.status();
 
         const listAfterUpload = await readFileList(api, workspaceId);
-        const uploadedListItem = listAfterUpload.find((item) =>
+        const uploadedListItems = listAfterUpload.filter((item) =>
           readOptionalString(item, 'fileObjectId', 'FileObjectId') === fileObjectId,
         );
-        if (!uploadedListItem) {
-          throw new Error('Fresh list did not contain the uploaded FileObject.');
-        }
-        expect(readOptionalString(uploadedListItem, 'originalFileName', 'OriginalFileName')).toBe(fileName);
+        expect(uploadedListItems, 'Fresh scoped inventory contains exactly the uploaded object').toHaveLength(1);
+        const [uploadedListItem] = uploadedListItems;
+        const inventoryRowId = requireStringField(uploadedListItem, 'id', 'Id');
+        expect(inventoryRowId).toBe(requireStringField(uploadBody, 'id', 'Id'));
+        expect(listAfterUpload.map((item) => requireStringField(item, 'fileObjectId', 'FileObjectId')).sort())
+          .toEqual([...baselineFileIds, fileObjectId].sort());
+        expect(readOptionalString(uploadedListItem, 'workspaceId', 'WorkspaceId')).toBe(workspaceId);
+        expect(readOptionalString(uploadedListItem, 'originalFileName', 'OriginalFileName')).toBe('[redacted:file]');
         assertNoStorageLeak(uploadedListItem);
 
-        const previewAction = page.getByRole('button', { name: fileName, exact: true });
+        const previewAction = fileRowAction(page, inventoryRowId);
         await expect(previewAction).toBeVisible({ timeout: 20_000 });
+        await expect(previewAction).toHaveAccessibleName('[redacted:file]');
         await previewAction.click();
         const inspector = page.getByTestId('files-preview-pane');
         await expect(inspector).toBeVisible();
-        await expect(inspector.getByRole('heading', { name: fileName })).toBeVisible();
+        await expect(inspector.getByRole('heading', { name: '[redacted:file]', exact: true })).toBeVisible();
 
         const sharingResponse = await api.get(`/api/files/${fileObjectId}/sharing`);
         assertSafeResponse(sharingResponse, { label: 'FCI-05 File sharing read', expectedStatus: 200 });
         const sharing = asRecord(await sharingResponse.json(), 'File sharing response');
         const accessState = requireStringField(sharing, 'accessState', 'AccessState');
         evidence.sharingAccessState = accessState;
-        await expect(inspector.getByTestId('files-preview-access-state')).toHaveText(new RegExp(`^${accessState}$`, 'iu'));
+        await expect(inspector.getByTestId('files-preview-access-state')).toHaveText(accessState);
         assertNoStorageLeak(sharing);
 
         await inspector.getByTestId('files-inspector-tab-details').click();
         await expect(inspector.getByTestId('files-inspector-panel-details')).toBeVisible();
-        await expect(inspector.getByRole('heading', { name: fileName })).toBeVisible();
+        await expect(inspector.getByRole('heading', { name: '[redacted:file]', exact: true })).toBeVisible();
         await inspector.getByTestId('files-inspector-tab-preview').click();
         await inspector.getByTestId('files-preview-more').click();
 
@@ -168,19 +188,21 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
 
         await page.reload();
         await expect(page.getByTestId('files-page')).toBeVisible();
-        await expect(page.getByRole('button', { name: fileName, exact: true })).toBeVisible({ timeout: 20_000 });
+        await expect(previewAction).toBeVisible({ timeout: 20_000 });
+        await expect(previewAction).toHaveAccessibleName('[redacted:file]');
 
         const reloadRead = await api.get(`/api/files/${fileObjectId}`);
         assertSafeResponse(reloadRead, { label: 'FCI-05 reload-backed FileObject read', expectedStatus: 200 });
         const reloadBody = asRecord(await reloadRead.json(), 'reload-backed FileObject read');
         expect(requireStringField(reloadBody, 'id', 'Id')).toBe(fileObjectId);
-        expect(requireStringField(reloadBody, 'originalFileName', 'OriginalFileName')).toBe(fileName);
+        expect(requireStringField(reloadBody, 'workspaceId', 'WorkspaceId')).toBe(workspaceId);
+        expect(requireStringField(reloadBody, 'originalFileName', 'OriginalFileName')).toBe('[redacted:file]');
         assertNoStorageLeak(reloadBody);
         evidence.reloadReadStatus = reloadRead.status();
 
         if (functionalFullExpansionEnabled()) {
           const lifecycleEvidence = await runFilesLifecycle({
-            api, page, workspaceId, fileObjectId, fileName, content: Buffer.from(fileContent, 'utf8'),
+            api, page, workspaceId, fileObjectId, inventoryRowId, fileName, content: Buffer.from(fileContent, 'utf8'),
           });
           Object.assign(evidence, lifecycleEvidence);
         }
@@ -191,10 +213,11 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
           `/api/files/${fileObjectId}?reason=fci-05-cleanup`,
         );
         assertSafeResponse(deleteResponse, { label: 'FCI-05 cleanup delete', expectedStatus: 200 });
+        const fileIdsAfterDelete = await fileIdsForWorkspace(api, workspaceId);
+        expect(fileIdsAfterDelete, 'Deleted object identity is absent').not.toContain(fileObjectId);
+        expect(fileIdsAfterDelete, 'Deletion preserves every baseline object identity').toEqual(baselineFileIds);
         cleanupSucceeded = true;
         evidence.cleanupSucceeded = true;
-
-        expect(await fileNamesForWorkspace(api, workspaceId)).not.toContain(fileName);
 
         const deletedRead = await api.get(`/api/files/${fileObjectId}`);
         assertSafeResponse(deletedRead, {
@@ -230,7 +253,7 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
       } finally {
         // Recover only this run's object if response delivery/parsing failed.
         if (!cleanupSucceeded && uploadAttempted && workspaceId) {
-          cleanupSucceeded = await cleanupUploadedFile(api, workspaceId, fileName, fileObjectId);
+          cleanupSucceeded = await cleanupUploadedFile(api, workspaceId, baselineFileIds, fileObjectId);
           evidence.cleanupSucceeded = cleanupSucceeded;
         }
 
@@ -270,14 +293,23 @@ async function readFileList(api: APIRequestContext, workspaceId: string): Promis
   if (!Array.isArray(items)) {
     throw new Error('FCI-05 File list response is missing items.');
   }
-  return items.map((item) => asRecord(item, 'File list item'));
+  if ((body.totalCount ?? body.TotalCount) !== items.length || (body.page ?? body.Page) !== 1) {
+    throw new Error('FCI-05 requires a complete scoped inventory before comparing or cleaning object identities.');
+  }
+  const records = items.map((item) => asRecord(item, 'File list item'));
+  for (const item of records) {
+    expect(requireStringField(item, 'workspaceId', 'WorkspaceId')).toBe(workspaceId);
+    expect(requireStringField(item, 'originalFileName', 'OriginalFileName')).toBe('[redacted:file]');
+    assertNoStorageLeak(item);
+  }
+  return records;
 }
 
-async function fileNamesForWorkspace(api: APIRequestContext, workspaceId: string): Promise<string[]> {
+async function fileIdsForWorkspace(api: APIRequestContext, workspaceId: string): Promise<string[]> {
   const items = await readFileList(api, workspaceId);
-  return items
-    .map((item) => readOptionalString(item, 'originalFileName', 'OriginalFileName'))
-    .filter((value): value is string => Boolean(value));
+  const ids = items.map((item) => requireStringField(item, 'fileObjectId', 'FileObjectId')).sort();
+  expect(new Set(ids).size, 'Scoped inventory object identities are unique').toBe(ids.length);
+  return ids;
 }
 
 function asRecord(value: unknown, label: string): Record<string, unknown> {
@@ -331,22 +363,22 @@ function assertSafeResponse(
 }
 
 async function cleanupUploadedFile(
-  api: APIRequestContext, workspaceId: string, fileName: string, fileObjectId: string | null,
+  api: APIRequestContext, workspaceId: string, baselineFileIds: string[], fileObjectId: string | null,
 ): Promise<boolean> {
   try {
-    const candidates = (await readFileList(api, workspaceId)).filter((item) =>
-      readOptionalString(item, 'originalFileName', 'OriginalFileName') === fileName,
-    );
-    if (candidates.length > 1) {
+    const currentIds = await fileIdsForWorkspace(api, workspaceId);
+    const candidates = currentIds.filter((id) => !baselineFileIds.includes(id));
+    if (candidates.length > 1 || baselineFileIds.some((id) => !currentIds.includes(id)) ||
+      (fileObjectId && baselineFileIds.includes(fileObjectId))) {
       return false;
     }
-    const recoveredId = candidates.length === 1
-      ? requireStringField(candidates[0], 'fileObjectId', 'FileObjectId')
-      : null;
+    const recoveredId = candidates[0] ?? null;
     if (fileObjectId && recoveredId && fileObjectId !== recoveredId) {
       return false;
     }
-    const cleanupTargetId = fileObjectId ?? recoveredId;
+    // This owner runs alone in an isolated runtime. Recovery requires exactly
+    // one new scoped identity; a baseline/ambiguous object is never deleted.
+    const cleanupTargetId = recoveredId;
     if (cleanupTargetId) {
       const cleanup = await csrfAwareRequest(
         api, 'DELETE', `/api/files/${cleanupTargetId}?reason=fci-05-finally-cleanup`,
@@ -355,7 +387,10 @@ async function cleanupUploadedFile(
         return false;
       }
     }
-    return !(await fileNamesForWorkspace(api, workspaceId)).includes(fileName);
+    const afterCleanup = await fileIdsForWorkspace(api, workspaceId);
+    return afterCleanup.length === baselineFileIds.length &&
+      afterCleanup.every((id) => baselineFileIds.includes(id)) &&
+      (!fileObjectId || !afterCleanup.includes(fileObjectId));
   } catch {
     // The isolated Compose project remains volume-cleaned by the outer harness.
     return false;
