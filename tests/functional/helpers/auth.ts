@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Page, type Response } from '@playwright/test';
 
 import { csrfAwareRequest } from './csrf';
 import { assertSafeResponse } from './safe-response';
@@ -27,15 +27,25 @@ export async function readCurrentSession(api: APIRequestContext): Promise<Record
   return (await response.json()) as Record<string, unknown>;
 }
 
-export async function loginViaUi(page: Page, credentials: FunctionalCredentials): Promise<void> {
-  await page.goto('/login');
-  await page.getByLabel('Email').fill(credentials.email);
-  await page.getByLabel('Password').fill(credentials.password);
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page).toHaveURL(/\/workspaces(?:[/?#]|$)/u);
+export async function loginViaUi(page: Page, credentials: FunctionalCredentials): Promise<Response> {
+  const document = await page.goto('/app/login');
+  expect(document?.status()).toBe(200);
+  await expect(page.getByTestId('login-page')).toBeVisible();
+  await page.getByTestId('login-email').fill(credentials.email);
+  await page.getByTestId('login-password').fill(credentials.password);
+  const loginPromise = page.waitForResponse((response) =>
+    response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/auth/login',
+  );
+  await page.getByTestId('login-submit').click();
+  const login = await loginPromise;
+  expect(login.status()).toBe(200);
+  await expect(page).toHaveURL(/\/app\/workspaces(?:[/?#]|$)/u);
+  await expect(page.getByTestId('app-shell')).toBeVisible();
+  return login;
 }
 
 export async function expectLoggedOut(page: Page): Promise<void> {
-  await page.goto('/workspaces');
-  await expect(page).toHaveURL(/\/login(?:[/?#]|$)/u);
+  await page.goto('/app/workspaces');
+  await expect(page).toHaveURL(/\/app\/login(?:[/?#]|$)/u);
+  await expect(page.getByTestId('login-page')).toBeVisible();
 }

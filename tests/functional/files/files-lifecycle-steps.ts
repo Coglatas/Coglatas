@@ -179,7 +179,7 @@ export async function runFilesLifecycle(context: FilesLifecycleContext): Promise
     expect(version.versionId).toBe(fileObjectId);
     const sharingEvents = items.filter((item) => item.kind === 'sharingChanged');
     expect(sharingEvents.length).toBeGreaterThan(0);
-    expect(sharingEvents.some((item) => record(item.sharing).accessState === 'Workspace')).toBe(true);
+    expect(sharingEvents.some((item) => record(item.sharing).accessState === 'workspace')).toBe(true);
     const versionRead = await api.get(`/api/files/${fileObjectId}/versions/${fileObjectId}/content`);
     requireStatus(versionRead, 200, 'F05-FULL-04 version content');
     expect((await versionRead.body()).equals(content), 'Version bytes match the uploaded fixture').toBe(true);

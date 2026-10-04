@@ -285,7 +285,16 @@ test.describe('FCI-07 real-stack authorization negative matrix', () => {
         evidence.fileMetadataOracleStatusAligned = true;
 
         await page.setExtraHTTPHeaders(singleHeader('X-Tenant-Slug', ALPHA_TENANT));
-        await loginViaUi(page, { email: ALPHA_MEMBER_EMAIL, password: securityPassword });
+        const tenantPromise = page.waitForResponse((response) =>
+          response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/tenants/current',
+        );
+        const login = await loginViaUi(page, { email: ALPHA_MEMBER_EMAIL, password: securityPassword });
+        const actor = asRecord(await login.json(), 'FCI-07 browser login actor');
+        expect(readString(actor, 'email', 'Email') === ALPHA_MEMBER_EMAIL, 'FCI-07 browser login must use the Alpha member').toBe(true);
+        const tenant = await tenantPromise;
+        expect(tenant.status()).toBe(200);
+        const scope = asRecord(await tenant.json(), 'FCI-07 browser login Tenant');
+        expect(readString(scope, 'tenantSlug', 'TenantSlug') === ALPHA_TENANT, 'FCI-07 browser login must resolve the Alpha Tenant').toBe(true);
 
         await page.goto(`/app/projects/${beta.projectId}/tasks/${beta.taskId}`);
         await expect(page.getByTestId('permission-denied-state')).toBeVisible();
