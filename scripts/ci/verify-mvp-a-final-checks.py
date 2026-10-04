@@ -21,15 +21,15 @@ GITHUB_ACTIONS_APP_SLUG = "github-actions"
 PAGE_SIZE = 100
 MAX_PAGES = 20
 REQUIRED_CHECKS = (
-    "build-test",
-    "frontend-test",
-    "security-scan",
+    "Main Test / Frontend / Security / Main Test",
+    "Main Test / Frontend / Security / Main Frontend",
+    "Main Test / Frontend / Security / Main Security",
     "publication-readiness",
     "frontend-static-analysis",
-    "licensed-real-backend",
+    "Real-backend E2E from main artifacts / licensed-real-backend",
     "functional-full",
     "sbom-source",
-    "sbom-image-trusted",
+    "SBOM image scan from main artifacts / sbom-image-trusted",
 )
 
 EVIDENCE_SPEC = importlib.util.spec_from_file_location(

@@ -89,7 +89,11 @@ can still execute cleanup steps. No evidence after a hard cancellation means
 NO-GO.
 
 The final verifier requires `functional-full` alongside existing required
-checks. It selects the latest trusted GitHub Actions check for the exact SHA,
+checks. Backend, frontend, security, licensed acceptance and image-SBOM use
+the Main hub's actual reusable-workflow contexts; bare PR names cannot alias
+those Main obligations. All nine Main requirements remain enforced, separately
+from the six-context PR registry. It selects the latest trusted GitHub Actions
+check for the exact SHA,
 binds its artifact to the trusted main push workflow/run/attempt, validates the
 bounded archive and schema, and requires every canonical owner to pass exactly
 once. Download redirects never forward the GitHub API token.
