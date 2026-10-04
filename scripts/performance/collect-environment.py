@@ -77,10 +77,11 @@ def memory_bytes() -> int:
 
 
 def git_sha() -> str:
-    candidate = os.environ.get("GITHUB_SHA")
-    if candidate and len(candidate) >= 7:
-        return candidate
-    return run(["git", "rev-parse", "HEAD"])
+    actual = run(["git", "rev-parse", "HEAD"])
+    candidate = os.environ.get("COGLATAS_PERFORMANCE_TARGET_SHA") or os.environ.get("GITHUB_SHA") or actual
+    if candidate != actual:
+        raise PerformanceContractError("fingerprint source does not match checkout")
+    return actual
 
 
 def locked_playwright_version(root: Path) -> str:

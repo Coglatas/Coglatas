@@ -29,6 +29,13 @@ public sealed class PerformanceCiHostingStartup : IHostingStartup
             }
 
             services.AddHostedService<PerformanceCiFixtureHostedService>();
+            if (context.Configuration.GetValue<bool>("COGLATAS_PERFORMANCE_DB_CAPTURE_ENABLED"))
+            {
+                services.AddSingleton<PerformanceDbCapture>();
+                services.AddDbContext<AppDbContext>((provider, options) =>
+                    options.AddInterceptors(provider.GetRequiredService<PerformanceDbCapture>()));
+                services.AddTransient<IStartupFilter, PerformanceDbStartupFilter>();
+            }
         });
     }
 }
@@ -112,7 +119,8 @@ internal sealed class PerformanceCiFixtureHostedService(
             profile,
             password,
             evidencePath,
-            cancellationToken);
+            dbScenarioFixture: configuration.GetValue<bool>("COGLATAS_PERFORMANCE_DB_CAPTURE_ENABLED"),
+            cancellationToken: cancellationToken);
 
         _seeded = true;
     }

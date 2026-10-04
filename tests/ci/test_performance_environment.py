@@ -8,6 +8,7 @@ import tempfile
 import textwrap
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 COMMON_PATH = ROOT / "scripts" / "performance" / "common.py"
@@ -18,6 +19,16 @@ spec.loader.exec_module(common)
 
 
 class PerformanceEnvironmentContractTests(unittest.TestCase):
+    def test_db_opt_in_has_a_distinct_fixture_hash_and_preserves_the_base_version(self) -> None:
+        with patch.dict("os.environ", {"COGLATAS_PERFORMANCE_DB_CAPTURE_ENABLED": "false"}):
+            base_hash = common.fixture_hash("small")
+            self.assertEqual(common.FIXTURE_VERSION, common.active_fixture_version())
+        with patch.dict("os.environ", {"COGLATAS_PERFORMANCE_DB_CAPTURE_ENABLED": "true"}):
+            db_hash = common.fixture_hash("small")
+            self.assertEqual(common.DB_FIXTURE_VERSION, common.active_fixture_version())
+        self.assertNotEqual(base_hash, db_hash)
+        self.assertEqual(db_hash, common.fixture_hash("small", fixture_version=common.DB_FIXTURE_VERSION))
+
     def test_load_json_accepts_utf8_bom_but_remains_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             temp = Path(directory)
@@ -49,7 +60,7 @@ class PerformanceEnvironmentContractTests(unittest.TestCase):
         _, profile = common.load_profile("small")
         evidence = {
             "schemaVersion": 1,
-            "fixtureVersion": 1,
+            "fixtureVersion": common.FIXTURE_VERSION,
             "seedManifestVersion": 1,
             "profile": "small",
             "seed": profile["seed"],
@@ -178,7 +189,7 @@ class PerformanceEnvironmentContractTests(unittest.TestCase):
 class PerformanceEnvironmentRepeatStartTests(unittest.TestCase):
     def setUp(self) -> None:
         self.fixture = {
-            "fixtureVersion": 1,
+            "fixtureVersion": common.FIXTURE_VERSION,
             "seedManifestVersion": 1,
             "profile": "small",
             "seed": 592001,
@@ -233,7 +244,7 @@ class PerformanceEnvironmentRepeatStartTests(unittest.TestCase):
 
     def test_repeat_start_rejects_drift_in_every_compared_field(self) -> None:
         mutations = {
-            "fixtureVersion": 2,
+            "fixtureVersion": common.FIXTURE_VERSION + 1,
             "seedManifestVersion": 2,
             "profile": "medium",
             "seed": 592002,
