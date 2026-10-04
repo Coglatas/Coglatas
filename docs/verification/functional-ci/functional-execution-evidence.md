@@ -61,9 +61,12 @@ skipped required owner remains visible and blocks its gate.
 
 Main calls `functional-full` using the exact Main CI producer. The explicit/
 nightly wrapper calls `functional-extended` at 03:17 JST with current main or
-an exact ancestor of main. It retrieves the latest non-cancelled Main CI
-producer for that SHA and verifies artifact stamps. Missing artifacts block
-execution. Extended runs use a candidate-specific concurrency group and do not
+an exact ancestor of main. It selects the latest trusted exact-SHA Main push
+first, then requires that run
+to be completed and non-cancelled. It never falls back to an older success when
+the latest run is missing, incomplete, or cancelled. Artifact stamps must match.
+Missing artifacts block execution. Extended runs use a candidate-specific
+concurrency group and do not
 cancel an explicit candidate run. Failed/cancelled matrix lanes fail the stable
 aggregate even when another lane succeeded.
 
@@ -74,8 +77,10 @@ durations, stable Journey IDs, classified states, attempts, and owner duration.
 It contains no assertion text, headers, cookies, tokens, password/license,
 connection strings, filenames, storage paths, protected bodies, or attachments.
 High-risk traces/screenshots/video remain disabled. Sanitized local harness
-diagnostics remain available to the runner; this slice uploads only bounded
-metadata, because string redaction alone does not prove protected-body privacy.
+diagnostics remain available to the runner. On failure, a short-retention artifact
+contains only four allowlisted service/status/health/exit-code records collected
+before teardown; logs, environment values, identifiers and protected payloads
+are excluded. String redaction alone does not prove protected-body privacy.
 
 Lane metadata is retained 14 days and validated aggregate metadata 90 days.
 The stable aggregate records owners, setup/test durations, slowest owners, and

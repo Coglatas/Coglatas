@@ -53,10 +53,12 @@ jobs:
               headers={'Authorization': 'Bearer ' + os.environ['GITHUB_TOKEN'], 'Accept': 'application/vnd.github+json'})
           with urllib.request.urlopen(request, timeout=30) as response:
               runs = json.load(response)['workflow_runs']
-          matches = [run for run in runs if run['head_sha'] == os.environ['TARGET_SHA'] and run['head_branch'] == 'main'
-              and run['path'] == '.github/workflows/main-build-artifacts.yml' and run['conclusion'] != 'cancelled']
+          matches = [run for run in runs if run['head_sha'] == os.environ['TARGET_SHA'] and run['event'] == 'push'
+              and run['head_branch'] == 'main' and run['path'] == '.github/workflows/main-build-artifacts.yml']
           assert matches, 'No trusted exact-candidate main producer is available'
           latest = max(matches, key=lambda run: run['id'])
+          assert latest.get('status') == 'completed' and latest.get('conclusion') not in (None, 'cancelled'), \
+              'Latest trusted exact-candidate main producer is incomplete or cancelled; older runs cannot substitute'
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as destination:
               destination.write('run_id=' + str(latest['id']) + '\n')
           PY

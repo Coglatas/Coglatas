@@ -2,6 +2,9 @@
 import copy
 import io
 import json
+import os
+import tempfile
+import textwrap
 import unittest
 import zipfile
 import importlib.util
@@ -30,6 +33,48 @@ def complete_manifest():
 class FunctionalEvidenceTests(unittest.TestCase):
     def validate(self, data):
         return validate_manifest(data, SHA, "functional-full", "100", "1")
+
+    def execute_extended_producer(self, runs):
+        workflow = Path(__file__).resolve().parents[2] / ".github/workflows/functional-extended.yml"
+        source = workflow.read_text(encoding="utf-8").split("          python3 - <<'PY'\n", 1)[1].split("          PY", 1)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "producer-output"
+            environment = {"GITHUB_API_URL": "https://api.github.com", "GITHUB_REPOSITORY": "NYGsatoshi/Coglatas",
+                           "TARGET_SHA": SHA, "GITHUB_TOKEN": "synthetic-token", "GITHUB_OUTPUT": str(output)}
+            response = io.BytesIO(json.dumps({"workflow_runs": runs}).encode())
+            with patch.dict(os.environ, environment), patch("urllib.request.urlopen", return_value=response):
+                exec(compile(textwrap.dedent(source), str(workflow), "exec"), {})
+            return output.read_text(encoding="utf-8")
+
+    def main_producer(self, **changes):
+        return {"id": 100, "head_sha": SHA, "event": "push", "head_branch": "main",
+                "path": ".github/workflows/main-build-artifacts.yml", "status": "completed",
+                "conclusion": "success", **changes}
+
+    def test_extended_selects_latest_completed_trusted_producer(self):
+        runs = [self.main_producer(id=101), self.main_producer()]
+        self.assertEqual(self.execute_extended_producer(runs), "run_id=101\n")
+
+    def test_extended_latest_cancelled_cannot_fall_back_to_older_success(self):
+        runs = [self.main_producer(), self.main_producer(id=101, conclusion="cancelled")]
+        with self.assertRaisesRegex(AssertionError, "older runs cannot substitute"):
+            self.execute_extended_producer(runs)
+
+    def test_extended_latest_incomplete_cannot_fall_back_to_older_success(self):
+        for state in ("queued", "in_progress", "completed"):
+            with self.subTest(state=state):
+                runs = [self.main_producer(), self.main_producer(id=101, status=state, conclusion=None)]
+                with self.assertRaisesRegex(AssertionError, "older runs cannot substitute"):
+                    self.execute_extended_producer(runs)
+
+    def test_extended_rejects_wrong_producer_trust_identity(self):
+        for field, value in (("head_sha", "b" * 40), ("event", "pull_request"),
+                             ("head_branch", "candidate"), ("path", ".github/workflows/ci.yml")):
+            with self.subTest(field=field):
+                untrusted = self.main_producer(id=101, **{field: value})
+                with self.assertRaisesRegex(AssertionError, "No trusted exact-candidate"):
+                    self.execute_extended_producer([untrusted])
+                self.assertEqual(self.execute_extended_producer([self.main_producer(), untrusted]), "run_id=100\n")
 
     def test_complete_exact_run_passes(self):
         self.validate(complete_manifest())
