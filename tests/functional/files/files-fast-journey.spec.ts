@@ -158,7 +158,7 @@ test.describe('FCI-05 Files real-backend fast journey', () => {
         const sharing = asRecord(await sharingResponse.json(), 'File sharing response');
         const accessState = requireStringField(sharing, 'accessState', 'AccessState');
         evidence.sharingAccessState = accessState;
-        await expect(inspector.getByTestId('files-preview-access-state')).toHaveText(new RegExp(`^${accessState}$`, 'iu'));
+        await expect(inspector.getByTestId('files-preview-access-state')).toHaveText(accessState);
         assertNoStorageLeak(sharing);
 
         await inspector.getByTestId('files-inspector-tab-details').click();
