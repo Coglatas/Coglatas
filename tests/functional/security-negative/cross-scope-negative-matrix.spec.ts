@@ -5,6 +5,7 @@ import {
   request,
   test,
   type APIRequestContext,
+  type APIResponse,
   type TestInfo,
 } from '@playwright/test';
 
@@ -245,14 +246,10 @@ test.describe('FCI-07 real-stack authorization negative matrix', () => {
         });
         evidence.foreignTaskStatus = foreignTaskDenial.status;
 
-        const foreignFile = await alphaOwnerApi.get(`/api/files/${beta.fileId}`);
-        evidence.foreignFileStatus = (
-          await assertSafeDenial(foreignFile, {
-            label: 'FCI-07 cross-Tenant File ID swap',
-            expectedStatus: [403, 404],
-            forbiddenMarkers: BETA_PROTECTED_MARKERS,
-          })
-        ).status;
+        evidence.foreignFileStatus = await assertFileMetadataDenial(alphaOwnerApi, beta.fileId, {
+          label: 'FCI-07 cross-Tenant File ID swap',
+          forbiddenMarkers: BETA_PROTECTED_MARKERS,
+        });
 
         const sameTenantWorkspace = await alphaMemberApi.get(`/api/workspaces/${sameTenant.workspaceId}`);
         evidence.sameTenantWorkspaceStatus = (
@@ -281,14 +278,11 @@ test.describe('FCI-07 real-stack authorization negative matrix', () => {
           })
         ).status;
 
-        const sameTenantFile = await alphaMemberApi.get(`/api/files/${sameTenant.fileId}`);
-        evidence.sameTenantFileStatus = (
-          await assertSafeDenial(sameTenantFile, {
-            label: 'FCI-07 same-Tenant cross-Workspace File ID swap',
-            expectedStatus: [403, 404],
-            forbiddenMarkers: sameTenant.protectedMarkers,
-          })
-        ).status;
+        evidence.sameTenantFileStatus = await assertFileMetadataDenial(alphaMemberApi, sameTenant.fileId, {
+          label: 'FCI-07 same-Tenant cross-Workspace File ID swap',
+          forbiddenMarkers: sameTenant.protectedMarkers,
+        });
+        evidence.fileMetadataOracleStatusAligned = true;
 
         await page.setExtraHTTPHeaders(singleHeader('X-Tenant-Slug', ALPHA_TENANT));
         await loginViaUi(page, { email: ALPHA_MEMBER_EMAIL, password: securityPassword });
@@ -397,6 +391,50 @@ interface CoreFixtureGraph {
 
 interface SameTenantRestrictedGraph extends CoreFixtureGraph {
   protectedMarkers: readonly string[];
+}
+
+async function assertFileMetadataDenial(
+  api: APIRequestContext,
+  fileId: string,
+  options: { label: string; forbiddenMarkers: readonly string[] },
+): Promise<number> {
+  // FilesController preserves the existing 400 contract for denied and absent
+  // metadata; both must carry the same canonical redacted error envelope.
+  const denied = await assertFileMetadataDeniedResponse(await api.get(`/api/files/${fileId}`), options);
+  const absent = await assertFileMetadataDeniedResponse(await api.get(`/api/files/${randomUUID()}`), {
+    ...options,
+    label: `${options.label} unknown File oracle control`,
+  });
+  expect(absent.status).toBe(denied.status);
+  expect(Math.abs(absent.bodyBytes - denied.bodyBytes)).toBeLessThanOrEqual(256);
+  return denied.status;
+}
+
+async function assertFileMetadataDeniedResponse(
+  response: APIResponse,
+  options: { label: string; forbiddenMarkers: readonly string[] },
+): Promise<{ status: number; bodyBytes: number }> {
+  const denial = await assertSafeDenial(response, { ...options, expectedStatus: 400, maxBodyBytes: 2048 });
+  const envelope = asRecord(await response.json(), `${options.label} envelope`);
+  const error = asRecord(envelope.error, `${options.label} error`);
+  const validCorrelation = (value: unknown): boolean =>
+    typeof value === 'string' && value.length > 0 && value.length <= 256;
+  const canonical =
+    Object.keys(envelope).sort().join(',') === 'error,requestId,status,traceId' &&
+    envelope.status === 400 &&
+    validCorrelation(envelope.requestId) &&
+    validCorrelation(envelope.traceId) &&
+    Object.keys(error).sort().join(',') === 'code,details,message,redactionApplied,target' &&
+    error.code === 'FileMetadataFailed' &&
+    error.message === 'The request could not be completed.' &&
+    error.target === null &&
+    Array.isArray(error.details) && error.details.length === 0 &&
+    error.redactionApplied === true;
+  if (!canonical) {
+    // Report only the failed contract, never an unexpected protected payload.
+    throw new Error(`${options.label} did not return the canonical redacted File metadata denial.`);
+  }
+  return denial;
 }
 
 async function createTenantApi(tenantSlug: string): Promise<APIRequestContext> {
